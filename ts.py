@@ -2,6 +2,7 @@ import numpy as np
 import scipy.signal as signal
 import scipy.fftpack as fftpack
 
+
 def FindLargestSegment(input):
     import numpy as np
 
@@ -10,6 +11,7 @@ def FindLargestSegment(input):
     imax = np.argmax(GapLength)
 
     return start[imax], stop[imax]
+
 
 def FindSegments(input):
     '''
@@ -42,12 +44,13 @@ def FindSegments(input):
 
     return start, stop
 
+
 def CenteredFFT(input, dt=1.0):
     N = len(input)
 
     # Generate frequency index
     if np.mod(N, 2) == 0:
-        m = np.arange(-N/2, N/2)
+        m = np.arange(-N/2, N/2-1+1)
     else:
         m = np.arange(-(N-1)/2, (N-1)/2+1)
 
@@ -57,6 +60,7 @@ def CenteredFFT(input, dt=1.0):
 
     return X, freq
 
+
 def AliasFreq(f0, dt):
 
     fs = 1/dt
@@ -65,17 +69,19 @@ def AliasFreq(f0, dt):
     upper = np.floor(f0/fs + 0.5)
 
     for n in [lower, upper, -lower, -upper]:
-        fa = f0 + n/dt
-        if fa <= 1/(2*dt) and fa >= -1/(2*dt):
-            return np.abs(fa)
+        fa = np.abs(f0 + n/dt)
+        if fa <= 1/(2*dt):
+            return fa
 
     raise ValueError('No integer found for aliasing')
+
 
 def ConfChi2(alpha, dof):
     import numpy as np
     from scipy.stats import chi2
 
     return np.sort(dof/np.array(chi2.interval(1-alpha, dof)))
+
 
 def SpectralDensity(input, dt=1, nsmooth=5):
     """ Calculates spectral density for longest valid segment
@@ -116,19 +122,19 @@ def SpectralDensity(input, dt=1, nsmooth=5):
     f = dcpy.util.MovingAverage(freq, nsmooth)
     conf = ConfChi2(0.05, 2*nsmooth)
 
-    return S, f, conf, var, window
+    return S, f, conf
+
 
 def HighPassButter(input, freq):
-    import scipy.signal as signal
 
     b, a = signal.butter(1, freq/(1/2), btype='high')
 
     return GappyFilter(input, b, a, 10)
 
-def GappyFilter(input, b, a, num_discard=None):
-    import scipy.signal as signal
 
-    segstart,segend = FindSegments(input)
+def GappyFilter(input, b, a, num_discard=None):
+
+    segstart, segend = FindSegments(input)
     out = np.empty(input.shape) * np.nan
     for index, start in np.ndenumerate(segstart):
         stop = segend[index]
@@ -139,8 +145,10 @@ def GappyFilter(input, b, a, num_discard=None):
 
     return out
 
+
 def HighPassAndPlot(input, CutoffFreq, titlestr=None):
 
+    import matplotlib.pyplot as plt
     start, stop = FindLargestSegment(input)
     filtered = HighPassButter(input, CutoffFreq)
 
