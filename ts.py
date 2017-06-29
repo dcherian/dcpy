@@ -45,6 +45,39 @@ def FindSegments(input):
     return start, stop
 
 
+def synthetic(N, dt, α, β):
+    '''
+    Generate time series with spectrum S = α ω^β
+
+    Input:
+        N : number of points
+        dt : time interval
+        α, β : spectrum parameters
+
+    Output:
+        yfilt : time series with desired spectral shape
+
+    Ack:
+       Copied from Tom Farrar's synthetic_timeseries_known_spectrum
+    '''
+
+    from numpy import sqrt
+
+    y = np.random.randn(N)
+
+    [Y, freq] = CenteredFFT(y, dt)
+
+    Yfilt = sqrt(α) * sqrt(1./(2*dt)) \
+        * (np.abs(freq)**(β/2)) * Y
+
+    ff = np.where(freq == 0)
+    Yfilt[ff] = 0
+    Yfilt2 = fftpack.ifftshift(Yfilt)
+    yfilt = fftpack.ifft(Yfilt2)
+
+    return yfilt
+
+
 def CenteredFFT(input, dt=1.0):
     N = len(input)
 
