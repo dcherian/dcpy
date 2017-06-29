@@ -88,7 +88,7 @@ def CenteredFFT(input, dt=1.0):
         m = np.arange(-(N-1)/2, (N-1)/2+1)
 
     freq = m/(N*dt)
-    X = fftpack.rfft(input)
+    X = fftpack.fft(input)
     X = fftpack.fftshift(X)
 
     return X, freq
