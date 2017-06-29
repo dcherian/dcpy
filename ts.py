@@ -75,7 +75,7 @@ def synthetic(N, dt, α, β):
     Yfilt2 = fftpack.ifftshift(Yfilt)
     yfilt = fftpack.ifft(Yfilt2)
 
-    return yfilt
+    return np.real(yfilt)
 
 
 def CenteredFFT(input, dt=1.0):
