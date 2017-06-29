@@ -116,14 +116,17 @@ def ConfChi2(alpha, dof):
     return np.sort(dof/np.array(chi2.interval(1-alpha, dof)))
 
 
-def SpectralDensity(input, dt=1, nsmooth=5):
+def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None):
     """ Calculates spectral density for longest valid segment
         Direct translation of Tom's spectrum_band_avg.
         Always applies a Hann window.
         Input:
-            input : variable whos spectral density you want
-            dt : Δtime
-            nsmooth : number of frequency bands to average over
+            input : variable whose spectral density you want
+            dt : (optional) Δtime
+            nsmooth : (optional) number of frequency bands to average over
+            SubsetLength : (optional) Max length of data segment.
+                            Spectra from multiple segments
+                            are averaged.
 
         Returns:
             S : estimated spectral density
@@ -134,22 +137,48 @@ def SpectralDensity(input, dt=1, nsmooth=5):
     import dcpy.util
     import numpy as np
 
-    start, stop = FindLargestSegment(input)
-    var = input[start:stop]
+    if SubsetLength is None:
+        start, stop = FindLargestSegment(input)
+        SubsetLength = stop - start
+        start = [start]
+        stop = [stop]
+    else:
+        start, stop = FindSegments(input)
 
-    N = len(var)
-    T = N*dt
-    window = signal.hann(N)
-    # variance correction
-    window /= np.sqrt(np.sum(window**2)/N)
+    YY_raw = []
+    for s0, s1 in zip(start, stop):
+        SegmentLength = s1 - s0
 
-    var -= var.mean()
-    var = var * window
+        if SegmentLength < SubsetLength:
+            continue
 
-    [Y, freq] = CenteredFFT(var, dt)
-    Y = Y[freq > 0]
-    freq = freq[freq > 0]
-    YY_raw = 2*T/N**2 * Y * np.conj(Y)
+        for zz in range(s0, s1, SubsetLength+1):
+            if zz+SubsetLength > s1:
+                continue
+
+            var = input[zz:zz+SubsetLength].copy()
+
+            if np.any(np.isnan(var)):
+                raise ValueError('Subset has NaNs!')
+
+            N = len(var)
+            T = N*dt
+            window = signal.hann(N)
+            # variance correction
+            window /= np.sqrt(np.sum(window**2)/N)
+
+            var -= var.mean()
+            var = var * window
+
+            Y, freq = CenteredFFT(var, dt)
+            Y = Y[freq > 0]
+            freq = freq[freq > 0]
+            YY_raw.append(2*T/N**2 * Y * np.conj(Y))
+
+    if len(YY_raw) > 1:
+        YY_raw = np.mean(np.abs(np.array(YY_raw)), axis=0)
+    else:
+        YY_raw = np.abs(YY_raw[0])
 
     if nsmooth is not None:
         S = dcpy.util.MovingAverage(YY_raw, nsmooth, decimate=False)
