@@ -72,9 +72,15 @@ def smooth(x, window_len=11, window='hanning'):
     y = np.convolve(w/w.sum(), s, mode='valid')
     return y[(window_len/2-1):-(window_len/2+1)]
 
-def MovingAverage(input, N):
+
+def MovingAverage(input, N, decimate=True):
     from bottleneck import move_mean
 
-    y = move_mean(input, window=N)
-
-    return y[N:len(y)-N:N]
+    if N == 1:
+        return input
+    else:
+        y = move_mean(input, window=N)
+        if decimate:
+            return y[N-1:len(y)-N+1:N]
+        else:
+            return y
