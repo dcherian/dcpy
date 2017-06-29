@@ -75,13 +75,13 @@ def smooth(x, window_len=11, window='hanning'):
     return y[(window_len/2-1):-(window_len/2+1)]
 
 
-def MovingAverage(input, N, decimate=True):
+def MovingAverage(input, N, decimate=True, **kwargs):
     from bottleneck import move_mean
 
     if N == 1:
         return input
     else:
-        y = move_mean(input, window=N)
+        y = move_mean(input, window=N, **kwargs)
         if decimate:
             return y[N-1:len(y)-N+1:N]
         else:
