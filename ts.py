@@ -151,9 +151,14 @@ def SpectralDensity(input, dt=1, nsmooth=5):
     freq = freq[freq > 0]
     YY_raw = 2*T/N**2 * Y * np.conj(Y)
 
-    S = dcpy.util.MovingAverage(YY_raw, nsmooth)
-    f = dcpy.util.MovingAverage(freq, nsmooth)
-    conf = ConfChi2(0.05, 2*nsmooth)
+    if nsmooth is not None:
+        S = dcpy.util.MovingAverage(YY_raw, nsmooth, decimate=False)
+        f = dcpy.util.MovingAverage(freq, nsmooth, decimate=False)
+        conf = ConfChi2(0.05, 2*nsmooth)
+    else:
+        S = YY_raw
+        f = freq
+        conf = ConfChi2(0.05, 1)
 
     return S, f, conf
 
