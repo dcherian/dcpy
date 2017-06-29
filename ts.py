@@ -4,7 +4,6 @@ import scipy.fftpack as fftpack
 
 
 def FindLargestSegment(input):
-    import numpy as np
 
     start, stop = FindSegments(input)
     GapLength = stop-start+1
@@ -13,36 +12,49 @@ def FindLargestSegment(input):
     return start[imax], stop[imax]
 
 
-def FindSegments(input):
+def FindSegments(var):
     '''
       Finds and return valid index ranges for the input time series.
       Input:
-            input - input time series
+            var - input time series
       Output:
             start - starting indices of valid ranges
             stop  - ending indices of valid ranges
     '''
 
-    import numpy as np
-
-    NotNans = np.double(~np.isnan(input))
+    NotNans = np.double(~np.isnan(var))
     edges = np.diff(NotNans)
     start = np.where(edges == 1)[0]
     stop = np.where(edges == -1)[0]
 
     if start.size == 0 and stop.size == 0:
         start = np.array([0])
-        stop = np.array([len(input)-1])
+        stop = np.array([len(var)-1])
 
     else:
         start = start + 1
-        if ~np.isnan(input[0]):
+        if ~np.isnan(var[0]):
             start = np.insert(start, 0, 0)
 
-            if ~np.isnan(input[-1]):
-                stop = np.append(stop, len(input)-1)
+        if ~np.isnan(var[-1]):
+            stop = np.append(stop, len(var)-1)
 
     return start, stop
+
+
+def PlotSpectrum(var, ax=None, **kwargs):
+
+    import matplotlib.pyplot as plt
+
+    start, stop = FindLargestSegment(var)
+    S, f, conf = SpectralDensity(var, **kwargs)
+
+    if ax is None:
+        ax = plt.gca()
+
+    hdl = ax.loglog(f, S)
+
+    return hdl
 
 
 def synthetic(N, dt, α, β):
