@@ -156,6 +156,8 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None):
         stop = [stop]
     else:
         start, stop = FindSegments(input)
+        # Force subset length to be an integer
+        SubsetLength = np.int(np.rint(SubsetLength))
 
     YY_raw = []
     for s0, s1 in zip(start, stop):
