@@ -193,8 +193,13 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None):
         YY_raw = np.abs(YY_raw[0])
 
     if nsmooth is not None:
-        S = dcpy.util.MovingAverage(YY_raw, nsmooth, decimate=False)
-        f = dcpy.util.MovingAverage(freq, nsmooth, decimate=False)
+        decimate = False
+        S = dcpy.util.MovingAverage(YY_raw, nsmooth, decimate=decimate)
+        if decimate:
+            f = dcpy.util.MovingAverage(freq, nsmooth, decimate=decimate)
+        else:
+            f = freq
+
         conf = ConfChi2(0.05, 2*nsmooth)
     else:
         S = YY_raw
