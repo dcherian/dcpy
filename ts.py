@@ -129,7 +129,8 @@ def ConfChi2(alpha, dof):
     return np.sort(dof/np.array(chi2.interval(1-alpha, dof)))
 
 
-def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None):
+def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
+                    multitaper=True):
     """ Calculates spectral density for longest valid segment
         Direct translation of Tom's spectrum_band_avg.
         Always applies a Hann window.
@@ -149,6 +150,7 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None):
     import scipy.signal as signal
     import dcpy.util
     import numpy as np
+    import mtspec
 
     if SubsetLength is None:
         start, stop = FindLargestSegment(input)
@@ -185,10 +187,18 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None):
             var -= var.mean()
             var = var * window
 
-            Y, freq = CenteredFFT(var, dt)
-            Y = Y[freq > 0]
-            freq = freq[freq > 0]
-            YY_raw.append(2*T/N**2 * Y * np.conj(Y))
+            if multitaper:
+                Y, freq = mtspec.mtspec(
+                    data=var, delta=dt, number_of_tapers=5,
+                    time_bandwidth=4)
+                Y = Y[freq > 0]
+                freq = freq[freq > 0]
+                YY_raw.append(Y)
+            else:
+                Y, freq = CenteredFFT(var, dt)
+                Y = Y[freq > 0]
+                freq = freq[freq > 0]
+                YY_raw.append(2*T/N**2 * Y * np.conj(Y))
 
     if YY_raw == []:
         raise ValueError('No subsets of specified length found.')
