@@ -190,6 +190,9 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None):
             freq = freq[freq > 0]
             YY_raw.append(2*T/N**2 * Y * np.conj(Y))
 
+    if YY_raw == []:
+        raise ValueError('No subsets of specified length found.')
+
     if len(YY_raw) > 1:
         YY_raw = np.mean(np.abs(np.array(YY_raw)), axis=0)
     else:
