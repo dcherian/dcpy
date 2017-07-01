@@ -42,17 +42,18 @@ def FindSegments(var):
     return start, stop
 
 
-def PlotSpectrum(var, ax=None, **kwargs):
+def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
+                 SubsetLength=None, **kwargs):
 
     import matplotlib.pyplot as plt
 
     start, stop = FindLargestSegment(var)
-    S, f, conf = SpectralDensity(var, **kwargs)
+    S, f, conf = SpectralDensity(var, dt, nsmooth, SubsetLength)
 
     if ax is None:
         ax = plt.gca()
 
-    hdl = ax.loglog(f, S)
+    hdl = ax.loglog(f, S, **kwargs)
 
     return hdl
 
