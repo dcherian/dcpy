@@ -212,7 +212,7 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None):
         f = freq
         conf = ConfChi2(0.05, 1)
 
-    return S, f, conf
+    return S[~np.isnan(S)], f[~np.isnan(S)], conf
 
 
 def HighPassButter(input, freq):
