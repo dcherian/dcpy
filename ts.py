@@ -54,6 +54,9 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
         ax = plt.gca()
 
     hdl = ax.loglog(f, S, **kwargs)
+    if len(conf) > 2:
+        ax.fill_between(f, conf[:, 0], conf[:, 1],
+                        color=hdl.color, alpha=0.3)
 
     return hdl
 
@@ -130,7 +133,7 @@ def ConfChi2(alpha, dof):
 
 
 def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
-                    multitaper=True):
+                    multitaper=False):
     """ Calculates spectral density for longest valid segment
         Direct translation of Tom's spectrum_band_avg.
         Always applies a Hann window.
@@ -188,16 +191,18 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
             var = var * window
 
             if multitaper:
-                Y, freq = mtspec.mtspec(
+                Y, freq, conf, _, _ = mtspec.mtspec(
                     data=var, delta=dt, number_of_tapers=5,
-                    time_bandwidth=4)
+                    time_bandwidth=4, statistics=True)
                 Y = Y[freq > 0]
                 freq = freq[freq > 0]
+                conf = conf[freq > 0]
                 YY_raw.append(Y)
             else:
                 Y, freq = CenteredFFT(var, dt)
                 Y = Y[freq > 0]
                 freq = freq[freq > 0]
+                confint = ConfChi2(0.05, 1)
                 YY_raw.append(2*T/N**2 * Y * np.conj(Y))
 
     if YY_raw == []:
@@ -216,13 +221,17 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
         else:
             f = freq
 
-        conf = ConfChi2(0.05, 2*nsmooth)
+        confint = ConfChi2(0.05, 2*nsmooth)
     else:
         S = YY_raw
         f = freq
-        conf = ConfChi2(0.05, 1)
 
-    return S[~np.isnan(S)], f[~np.isnan(S)], conf
+    if not multitaper:
+        conf = np.array([confint[0]*S, confint[1]*S]).T
+
+    mask = ~np.isnan(S)
+
+    return S[mask], f[mask], conf[mask, :]
 
 
 def HighPassButter(input, freq):
