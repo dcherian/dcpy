@@ -43,12 +43,13 @@ def FindSegments(var):
 
 
 def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
-                 SubsetLength=None, **kwargs):
+                 SubsetLength=None, breakpts=[], **kwargs):
 
     import matplotlib.pyplot as plt
 
     start, stop = FindLargestSegment(var)
-    S, f, conf = SpectralDensity(var, dt, nsmooth, SubsetLength)
+    S, f, conf = SpectralDensity(var, dt, nsmooth, SubsetLength,
+                                 breakpts=breakpts)
 
     if ax is None:
         ax = plt.gca()
@@ -133,7 +134,7 @@ def ConfChi2(alpha, dof):
 
 
 def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
-                    multitaper=False):
+                    multitaper=False, breakpts=[]):
     """ Calculates spectral density for longest valid segment
         Direct translation of Tom's spectrum_band_avg.
         Always applies a Hann window.
@@ -144,6 +145,8 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
             SubsetLength : (optional) Max length of data segment.
                             Spectra from multiple segments
                             are averaged.
+            multitaper : Use multitaper method (default False)
+            breakpts : List of breakpoints at which to change nsmooth
 
         Returns:
             S : estimated spectral density
@@ -208,26 +211,54 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
     if YY_raw == []:
         raise ValueError('No subsets of specified length found.')
 
+    # segment averaging
     if len(YY_raw) > 1:
         YY_raw = np.mean(np.abs(np.array(YY_raw)), axis=0)
     else:
         YY_raw = np.abs(YY_raw[0])
 
+    # frequency band averaging
     if nsmooth is not None:
-        decimate = False
-        S = dcpy.util.MovingAverage(YY_raw, nsmooth, decimate=decimate)
-        if decimate:
-            f = dcpy.util.MovingAverage(freq, nsmooth, decimate=decimate)
+        if type(nsmooth) is not list:
+            nsmooth = [nsmooth]
+            breakpts = []
         else:
-            f = freq
+            nsmooth = nsmooth + [nsmooth[-1]]
+            if breakpts == []:
+                raise ValueError('SpectralDensity: ' +
+                                 'Nsmooth is a list but breakpts is empty!')
 
-        confint = ConfChi2(0.05, 2*nsmooth)
+            breakpts = [np.where(freq > bb)[0][0]
+                        for bb in breakpts]
+
+        breakpts.append(len(YY_raw))
+
+        S = []
+        f = []
+        conf = []
+        i1 = 0
+        for idx, smth in enumerate(nsmooth):
+            i0 = i1
+            i1 = breakpts[idx]
+            S.append(dcpy.util.MovingAverage(
+                YY_raw[i0:i1], smth, decimate=True))
+            f.append(dcpy.util.MovingAverage(
+                freq[i0:i1], smth, decimate=True))
+
+            confint = ConfChi2(0.05, 2*smth)
+            if not multitaper:
+                conf.append(np.array([confint[0]*S[idx],
+                                      confint[1]*S[idx]]).T)
+
+        S = np.concatenate(S)
+        f = np.concatenate(f)
+        conf = np.concatenate(conf)
+
     else:
         S = YY_raw
         f = freq
-
-    if not multitaper:
-        conf = np.array([confint[0]*S, confint[1]*S]).T
+        if not multitaper:
+            conf = np.array([confint[0]*S, confint[1]*S]).T
 
     mask = ~np.isnan(S)
 
