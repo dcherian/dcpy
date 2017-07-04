@@ -60,6 +60,9 @@ def smooth(x, window_len=11, window='hanning'):
     if window_len < 3:
         return x
 
+    window_len = np.int(np.ceil(window_len))
+    wlb2 = np.int(np.ceil(window_len/2))
+
     if window not in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
         raise ValueError("Window is on of 'flat', 'hanning',"
                          + "'hamming', 'bartlett', 'blackman'")
@@ -72,16 +75,20 @@ def smooth(x, window_len=11, window='hanning'):
         w = eval('np.'+window+'(window_len)')
 
     y = np.convolve(w/w.sum(), s, mode='valid')
-    return y[(window_len/2-1):-(window_len/2+1)]
+    return y[(wlb2-1):-(wlb2+1)]
 
 
-def MovingAverage(input, N, decimate=True, **kwargs):
+def MovingAverage(input, N, decimate=True, min_count=1, **kwargs):
     from bottleneck import move_mean
+    import numpy as np
+
+    N = np.int(np.floor(N))
 
     if N == 1:
         return input
     else:
-        y = move_mean(input, window=N, **kwargs)
+        y = move_mean(input, window=N, min_count=min_count,
+                      **kwargs)
         if decimate:
             return y[N-1:len(y)-N+1:N]
         else:
