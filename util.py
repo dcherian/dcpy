@@ -84,7 +84,7 @@ def MovingAverage(input, N, decimate=True, min_count=1, **kwargs):
 
     N = np.int(np.floor(N))
 
-    if N == 1:
+    if N == 1 or N == 0:
         return input
     else:
         y = move_mean(input, window=N, min_count=min_count,
