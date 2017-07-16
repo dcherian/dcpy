@@ -265,9 +265,18 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
     return S[mask], f[mask], conf[mask, :]
 
 
-def HighPassButter(input, freq):
+def BandPassButter(input, freqs, dt=1, order=1, **kwargs):
 
-    b, a = signal.butter(1, freq/(1/2), btype='high')
+    b, a = signal.butter(N=order,
+                         Wn=np.sort(freqs)*dt/(1/2),
+                         btype='bandpass')
+
+    return GappyFilter(input, b, a, num_discard=20)
+
+
+def HighPassButter(input, freq, order=1):
+
+    b, a = signal.butter(order, freq/(1/2), btype='high')
 
     return GappyFilter(input, b, a, 10)
 
@@ -278,10 +287,16 @@ def GappyFilter(input, b, a, num_discard=None):
     out = np.empty(input.shape) * np.nan
     for index, start in np.ndenumerate(segstart):
         stop = segend[index]
-        out[start:stop] = signal.lfilter(b, a, input[start:stop])
-        if num_discard is not None:
-            out[start:start+num_discard] = np.nan
-            out[stop-num_discard:stop] = np.nan
+        try:
+            out[start:stop] = signal.filtfilt(b, a,
+                                              input[start:stop],
+                                              axis=0)
+            if num_discard is not None:
+                out[start:start+num_discard] = np.nan
+                out[stop-num_discard:stop] = np.nan
+        except ValueError:
+            # segment is not long enough for filtfilt
+            pass
 
     return out
 
