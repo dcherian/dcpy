@@ -1,3 +1,9 @@
+import seawater as sw
+import matplotlib.pyplot as plt
+import cmocean as cmo
+import numpy as np
+
+
 def ReadWoa(lon, lat, time='annual', depth=None):
     ''' Given lon, lat and type, return WOA data.
         Input:
@@ -51,3 +57,32 @@ def ReadWoa(lon, lat, time='annual', depth=None):
         woa['S'] = woa['S'][:, index]
 
     return woa
+
+
+def TSplot(S, T, P, Pref=0, ax=None):
+
+    colormap = cmo.cm.matter
+
+    if ax is None:
+        plt.figure()
+        ax = plt.gca()
+
+    ax.plot(S, T, '.', color='teal')
+    # ax.scatter(S, T, s=4*120, c=P,
+    #            alpha=0.5, linewidth=0.15, edgecolor='gray',
+    #            cmap=colormap, zorder=-10)
+    Slim = ax.get_xlim()
+    Tlim = ax.get_ylim()
+
+    Tvec = np.arange(Tlim[0], Tlim[1], 0.1)
+    Svec = np.arange(Slim[0], Slim[1], 0.1)
+    [Smat, Tmat] = np.meshgrid(Svec, Tvec)
+
+    ρ = sw.pden(Smat, Tmat, Pref) - 1000
+
+    cs = ax.contour(Smat, Tmat, ρ, colors='gray',
+                    linestyles='dashed')
+    ax.clabel(cs, fmt='%.1f')
+
+    ax.set_xlabel('S')
+    ax.set_ylabel('T')
