@@ -93,3 +93,30 @@ def MovingAverage(input, N, decimate=True, min_count=1, **kwargs):
             return y[N-1:len(y)-N+1:N]
         else:
             return y
+
+
+def BinEqualizeHist(coords, bins=10, offset=0.0, label=None):
+    """
+    Given a set of coordinates, bins them into a 2d histogram grid
+    of the specified size, and optionally transforms the counts
+    and/or compresses them into a visible range starting at a
+    specified offset between 0 and 1.0.
+    """
+    from skimage.exposure import equalize_hist
+    import numpy as np
+
+    def eq_hist(d, m):
+        return equalize_hist(1*d, nbins=100000, mask=m)
+
+    x = coords[0]
+    y = coords[1]
+
+    mask = np.logical_not(np.logical_or(np.isnan(x), np.isnan(y)))
+    hist, xs, ys = np.histogram2d(x[mask], y[mask], bins=bins)
+    counts = hist[:, ::-1].T
+    transformed = eq_hist(counts, counts != 0)
+    span = transformed.max() - transformed.min()
+    compressed = np.where(counts != 0,
+                          offset+(1.0-offset)*transformed/span,
+                          np.nan)
+    return xs[:-1], ys[:-1], np.ma.masked_invalid(compressed)
