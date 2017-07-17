@@ -265,6 +265,27 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
     return S[mask], f[mask], conf[mask, :]
 
 
+def Coherence(v1, v2, dt=1, nsmooth=5, **kwargs):
+    from dcpy.util import MovingAverage
+
+    mask = ~(np.isnan(v1) | np.isnan(v2))
+
+    f, Cxy = signal.coherence(v1[mask], v2[mask], fs=1/dt, **kwargs)
+
+    if np.mod(nsmooth, 2) < 1:
+        nsmooth -= 1
+
+    f = MovingAverage(f, nsmooth)
+    Cxy = MovingAverage(Cxy, nsmooth)
+
+    if nsmooth > 1:
+        siglevel = np.sqrt(1 - (0.05)**(1/(nsmooth-1)))
+    else:
+        siglevel = 1
+
+    return f, Cxy, siglevel
+
+
 def BandPassButter(input, freqs, dt=1, order=1, **kwargs):
 
     b, a = signal.butter(N=order,
