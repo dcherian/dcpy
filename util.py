@@ -1,6 +1,6 @@
 def find_approx(vec, value):
     import numpy as np
-    ind = np.argmin(vec == value)
+    ind = np.argmin(np.abs(vec - value))
     return ind
 
 

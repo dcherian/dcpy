@@ -57,7 +57,7 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
     hdl = ax.loglog(f, S, **kwargs)
     if len(conf) > 2:
         ax.fill_between(f, conf[:, 0], conf[:, 1],
-                        color=hdl.color, alpha=0.3)
+                        color=hdl[0].get_color(), alpha=0.3)
 
     return hdl
 
