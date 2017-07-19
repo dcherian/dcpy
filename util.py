@@ -1,3 +1,41 @@
+def ExtractSeason(time, var, season):
+    ''' Given a season, return data only for the months in that season
+    season can be one of SW, NE, SW->NE, NE→SW or any 3 letter
+    month abbreviation.
+    '''
+
+    import numpy as np
+    from dcpy.util import datenum2datetime
+
+    mask = np.isnan(time)
+    time = time[~mask]
+    var = var[~mask]
+
+    dates = datenum2datetime(time)
+    months = [d.month for d in dates]
+
+    seasonMonths = {'SW':  [5, 6, 7, 8],
+                    'SW→NE': [9, 10],
+                    'NE':  [11, 12, 1, 2],
+                    'NE→SW': [3, 4],
+                    'Jan': [1],
+                    'Feb': [2],
+                    'Mar': [3],
+                    'Apr': [4],
+                    'May': [5],
+                    'Jun': [6],
+                    'Jul': [7],
+                    'Aug': [8],
+                    'Sep': [9],
+                    'Oct': [10],
+                    'Nov': [11],
+                    'Dec': [12]}
+
+    mask = np.asarray([m in seasonMonths[season] for m in months])
+
+    return time[mask], var[mask]
+
+
 def find_approx(vec, value):
     import numpy as np
     ind = np.argmin(np.abs(vec - value))
