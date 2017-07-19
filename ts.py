@@ -104,6 +104,13 @@ def CenteredFFT(input, dt=1.0):
     else:
         m = np.arange(-(N-1)/2, (N-1)/2+1)
 
+    window = signal.hann(N)
+    # variance correction
+    window /= np.sqrt(np.sum(window**2)/N)
+
+    input -= input.mean()
+    input = input * window
+
     freq = m/(N*dt)
     X = fftpack.fft(input)
     X = fftpack.fftshift(X)
@@ -153,7 +160,6 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
             f : frequency bands
          conf : 95% confidence interval for 2*nsmooth dof
     """
-    import scipy.signal as signal
     import dcpy.util
     import numpy as np
     import mtspec
@@ -184,15 +190,6 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
             if np.any(np.isnan(var)):
                 raise ValueError('Subset has NaNs!')
 
-            N = len(var)
-            T = N*dt
-            window = signal.hann(N)
-            # variance correction
-            window /= np.sqrt(np.sum(window**2)/N)
-
-            var -= var.mean()
-            var = var * window
-
             if multitaper:
                 Y, freq, conf, _, _ = mtspec.mtspec(
                     data=var, delta=dt, number_of_tapers=5,
@@ -202,6 +199,8 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
                 conf = conf[freq > 0]
                 YY_raw.append(Y)
             else:
+                N = len(var)
+                T = N * dt
                 Y, freq = CenteredFFT(var, dt)
                 Y = Y[freq > 0]
                 freq = freq[freq > 0]
@@ -268,22 +267,29 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
 def Coherence(v1, v2, dt=1, nsmooth=5, **kwargs):
     from dcpy.util import MovingAverage
 
-    mask = ~(np.isnan(v1) | np.isnan(v2))
+    if np.any(np.isnan(v1) | np.isnan(v2)):
+        raise ValueError('NaNs in times series provided to Coherence')
 
-    f, Cxy = signal.coherence(v1[mask], v2[mask], fs=1/dt, **kwargs)
+    y1, freq = CenteredFFT(v1, dt)
+    y1 = y1[freq > 0]
+    freq = freq[freq > 0]
 
-    if np.mod(nsmooth, 2) < 1:
-        nsmooth -= 1
+    y2, freq = CenteredFFT(v2, dt)
+    y2 = y2[freq > 0]
+    freq = freq[freq > 0]
 
-    f = MovingAverage(f, nsmooth)
-    Cxy = MovingAverage(Cxy, nsmooth)
+    P12 = MovingAverage(y1 * np.conj(y2), nsmooth)
+    P11 = MovingAverage(y1 * np.conj(y1), nsmooth)
+    P22 = MovingAverage(y2 * np.conj(y2), nsmooth)
 
-    if nsmooth > 1:
-        siglevel = np.sqrt(1 - (0.05)**(1/(nsmooth-1)))
-    else:
-        siglevel = 1
+    f = MovingAverage(freq, nsmooth)
+    C = P12/np.sqrt(P11*P22)
 
-    return f, Cxy, siglevel
+    Cxy = np.abs(C)
+    phase = np.angle(C)
+    siglevel = np.sqrt(1 - (0.05)**(1/(nsmooth-1)))
+
+    return f, Cxy, phase, siglevel
 
 
 def BandPassButter(input, freqs, dt=1, order=1, **kwargs):
