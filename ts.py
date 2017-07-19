@@ -310,22 +310,29 @@ def HighPassButter(input, freq, order=1):
 
 def GappyFilter(input, b, a, num_discard=None):
 
-    segstart, segend = FindSegments(input)
-    out = np.empty(input.shape) * np.nan
-    for index, start in np.ndenumerate(segstart):
-        stop = segend[index]
-        try:
-            out[start:stop] = signal.filtfilt(b, a,
-                                              input[start:stop],
-                                              axis=0)
-            if num_discard is not None:
-                out[start:start+num_discard] = np.nan
-                out[stop-num_discard:stop] = np.nan
-        except ValueError:
-            # segment is not long enough for filtfilt
-            pass
+    if input.ndim == 1:
+        input = np.reshape(input, (len(input), 1))
 
-    return out
+    out = np.empty(input.shape) * np.nan
+
+    for ii in range(input.shape[1]):
+        segstart, segend = FindSegments(input[:, ii])
+
+        for index, start in np.ndenumerate(segstart):
+            stop = segend[index]
+            try:
+                out[start:stop, ii] = \
+                          signal.filtfilt(b, a,
+                                          input[start:stop, ii],
+                                          axis=0)
+                if num_discard is not None:
+                    out[start:start+num_discard, ii] = np.nan
+                    out[stop-num_discard:stop, ii] = np.nan
+            except ValueError:
+                # segment is not long enough for filtfilt
+                pass
+
+    return out.squeeze()
 
 
 def HighPassAndPlot(input, CutoffFreq, titlestr=None):
