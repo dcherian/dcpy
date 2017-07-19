@@ -104,12 +104,7 @@ def CenteredFFT(input, dt=1.0):
     else:
         m = np.arange(-(N-1)/2, (N-1)/2+1)
 
-    window = signal.hann(N)
-    # variance correction
-    window /= np.sqrt(np.sum(window**2)/N)
-
     input -= input.mean()
-    input = input * window
 
     freq = m/(N*dt)
     X = fftpack.fft(input)
@@ -201,7 +196,11 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
             else:
                 N = len(var)
                 T = N * dt
-                Y, freq = CenteredFFT(var, dt)
+                window = signal.hann(N)
+                # variance correction
+                window /= np.sqrt(np.sum(window**2)/N)
+
+                Y, freq = CenteredFFT(var*window, dt)
                 Y = Y[freq > 0]
                 freq = freq[freq > 0]
                 confint = ConfChi2(0.05, 1)
