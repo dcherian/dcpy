@@ -285,10 +285,54 @@ def Coherence(v1, v2, dt=1, nsmooth=5, **kwargs):
     C = P12/np.sqrt(P11*P22)
 
     Cxy = np.abs(C)
-    phase = np.angle(C)
-    siglevel = np.sqrt(1 - (0.05)**(1/(nsmooth-1)))
+    phase = np.angle(C)*180/np.pi
+    if nsmooth > 1:
+        siglevel = np.sqrt(1 - (0.05)**(1/(nsmooth-1)))
+    else:
+        siglevel = 1
 
     return f, Cxy, phase, siglevel
+
+
+def MultiTaperCoherence(y0, y1, dt=1, ntapers=7):
+    from mtspec import mt_coherence
+
+    # common defaults are time-bandwidth product tbp=4
+    # ntapers = 2*tbp - 1 (jLab)
+
+    if np.all(np.equal(y0, y1)):
+        raise ValueError('Multitaper autocoherence doesn\'t work!')
+
+    out = mt_coherence(1/dt, y0, y1, tbp=4, kspec=ntapers,
+                       nf=np.int(len(y0)), p=0.95, iadapt=1,
+                       freq=True, cohe=True, phase=True)
+
+    if ntapers > 1:
+        siglevel = np.sqrt(1 - (0.05)**(1/(ntapers-1)))
+    else:
+        siglevel = 1
+
+    return out['freq'], out['cohe'], out['phase'], siglevel
+
+
+def PlotCoherence(y0, y1, nsmooth=5, multitaper=False):
+
+    import matplotlib.pyplot as plt
+
+    if multitaper:
+        f, Cxy, phase, siglevel = MultiTaperCoherence(y0, y1, nsmooth)
+    else:
+        f, Cxy, phase, siglevel = Coherence(y0, y1, nsmooth)
+
+    plt.subplot(211)
+    plt.plot(f, Cxy)
+    plt.axhline(siglevel, color='gray', linestyle='--', zorder=-1)
+    plt.title(str(sum(Cxy > siglevel)/len(Cxy)*100)
+              + '% above 95% significance')
+    plt.ylim([0, 1])
+
+    plt.subplot(212)
+    plt.plot(f, phase)
 
 
 def BandPassButter(input, freqs, dt=1, order=1, **kwargs):
