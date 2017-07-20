@@ -335,13 +335,50 @@ def PlotCoherence(y0, y1, nsmooth=5, multitaper=False):
     plt.plot(f, phase)
 
 
-def BandPassButter(input, freqs, dt=1, order=1, **kwargs):
+def BandPassButter(input, freqs, dt=1, order=1,
+                   num_discard='auto', returnba=False):
 
     b, a = signal.butter(N=order,
                          Wn=np.sort(freqs)*dt/(1/2),
                          btype='bandpass')
 
-    return GappyFilter(input, b, a, num_discard=20)
+    if returnba:
+        return b, a
+    else:
+        return GappyFilter(input, b, a, num_discard=num_discard)
+
+
+def ImpulseResponse(b, a, eps=1e-2):
+
+    import matplotlib.pyplot as plt
+
+    implen = EstimateImpulseResponseLength(b, a, eps=eps)
+    ntime = implen*4
+
+    x = np.arange(0, ntime)
+    impulse = np.repeat(1, ntime)
+    response = GappyFilter(impulse, b, a, num_discard=None)
+    step = np.cumsum(response)
+
+    plt.subplot(211)
+    plt.plot(x, impulse, color='gray')
+    plt.stem(x, response)
+    plt.legend(['input', 'response'])
+    plt.ylabel('Amplitude')
+    plt.xlabel('n (samples)')
+    plt.title('Response differences drops to ' + str(eps) + ' in '
+              + str(implen) + ' samples.')
+    plt.axvline(implen + int(ntime/2))
+    plt.axvline(-implen + int(ntime/2))
+
+    plt.subplot(212)
+    plt.stem(x, step)
+    plt.ylabel('Amplitude')
+    plt.xlabel('n (samples)')
+    plt.title('Step response')
+    plt.axvline(implen)
+    plt.subplots_adjust(hspace=0.5)
+    plt.show()
 
 
 def HighPassButter(input, freq, order=1):
@@ -351,12 +388,29 @@ def HighPassButter(input, freq, order=1):
     return GappyFilter(input, b, a, 10)
 
 
+def EstimateImpulseResponseLength(b, a, eps=1e-2):
+    ''' From scipy filtfilt docs.
+        Input:
+             b, a : filter params
+             eps  : How low must the signal drop to? (default 1e-2)
+    '''
+
+    z, p, k = signal.tf2zpk(b, a)
+    r = np.max(np.abs(p))
+    approx_impulse_len = int(np.ceil(np.log(eps)/np.log(r)))
+
+    return approx_impulse_len
+
+
 def GappyFilter(input, b, a, num_discard=None):
 
     if input.ndim == 1:
         input = np.reshape(input, (len(input), 1))
 
     out = np.empty(input.shape) * np.nan
+
+    if num_discard == 'auto':
+        num_discard = EstimateImpulseResponseLength(b, a, eps=1e-2)
 
     for ii in range(input.shape[1]):
         segstart, segend = FindSegments(input[:, ii])
@@ -367,7 +421,8 @@ def GappyFilter(input, b, a, num_discard=None):
                 out[start:stop, ii] = \
                           signal.filtfilt(b, a,
                                           input[start:stop, ii],
-                                          axis=0)
+                                          axis=0, method='gust',
+                                          irlen=num_discard)
                 if num_discard is not None:
                     out[start:start+num_discard, ii] = np.nan
                     out[stop-num_discard:stop, ii] = np.nan
