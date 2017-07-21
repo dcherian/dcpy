@@ -1,7 +1,22 @@
-def hist(var, log=False, bins=100, alpha=0.5, normed=True, **kwargs):
+import matplotlib.pyplot as plt
+import numpy as np
 
-    import matplotlib.pyplot as plt
-    import numpy as np
+
+def linex(var, color='gray', linestyle='--', zorder=-1):
+
+    var = np.array(var, ndmin=1)
+    for vv in var:
+        plt.axvline(vv, color=color, linestyle=linestyle, zorder=zorder)
+
+
+def liney(var, color='gray', linestyle='--', zorder=-1):
+
+    var = np.array(var, ndmin=1)
+    for vv in var:
+        plt.axhline(vv, color=color, linestyle=linestyle, zorder=zorder)
+
+
+def hist(var, log=False, bins=100, alpha=0.5, normed=True, **kwargs):
 
     if log:
         var = np.log10(abs(var))
