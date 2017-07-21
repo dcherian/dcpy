@@ -43,21 +43,40 @@ def FindSegments(var):
 
 
 def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
-                 SubsetLength=None, breakpts=[], **kwargs):
+                 SubsetLength=None, breakpts=[], multitaper=False,
+                 preserve_area=False, scale=1, linearx=False, **kwargs):
 
     import matplotlib.pyplot as plt
 
-    start, stop = FindLargestSegment(var)
-    S, f, conf = SpectralDensity(var, dt, nsmooth, SubsetLength,
-                                 breakpts=breakpts)
-
     if ax is None:
-        ax = plt.gca()
+            ax = plt.gca()
 
-    hdl = ax.loglog(f, S, **kwargs)
-    if len(conf) > 2:
-        ax.fill_between(f, conf[:, 0], conf[:, 1],
-                        color=hdl[0].get_color(), alpha=0.3)
+    var = np.array(var, ndmin=2)
+
+    if var.shape[1] > var.shape[0]:
+        var = var.T
+
+    hdl = []
+    for zz in range(var.shape[-1]):
+        S, f, conf = SpectralDensity(var[:, zz]/(scale)**zz, dt,
+                                     nsmooth, SubsetLength,
+                                     breakpts=breakpts, multitaper=multitaper)
+
+        if preserve_area:
+            S = S*f
+            conf = conf*f[:, np.newaxis]
+
+        hdl.append(ax.plot(f, S, **kwargs)[0])
+        if len(conf) > 2:
+            ax.fill_between(f, conf[:, 0], conf[:, 1],
+                            color=hdl[-1].get_color(), alpha=0.3)
+
+    ax.set_yscale('log')
+    if not linearx:
+        ax.set_xscale('log')
+
+    if len(hdl) == 1:
+        hdl = hdl[0]
 
     return hdl
 
