@@ -4,6 +4,11 @@ import cmocean as cmo
 import numpy as np
 
 
+def inertial(lat):
+    π = np.pi
+    return 2*(2*π/86400) * np.sin(lat * π/180)
+
+
 def ReadWoa(lon, lat, time='annual', depth=None):
     ''' Given lon, lat and type, return WOA data.
         Input:
