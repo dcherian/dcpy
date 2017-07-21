@@ -139,11 +139,12 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
                     multitaper=False, breakpts=[]):
     """ Calculates spectral density for longest valid segment
         Direct translation of Tom's spectrum_band_avg.
-        Always applies a Hann window.
+        Always applies a Hann window if not multitaper.
         Input:
             input : variable whose spectral density you want
             dt : (optional) Δtime
             nsmooth : (optional) number of frequency bands to average over
+                      OR time-bandwidth product for multitaper.
             SubsetLength : (optional) Max length of data segment.
                             Spectra from multiple segments
                             are averaged.
@@ -187,8 +188,8 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
 
             if multitaper:
                 Y, freq, conf, _, _ = mtspec.mtspec(
-                    data=var, delta=dt, number_of_tapers=5,
-                    time_bandwidth=4, statistics=True)
+                    data=var, delta=dt, time_bandwidth=nsmooth,
+                    statistics=True, verbose=False, adaptive=True)
                 Y = Y[freq > 0]
                 freq = freq[freq > 0]
                 conf = conf[freq > 0]
@@ -216,7 +217,7 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
         YY_raw = np.abs(YY_raw[0])
 
     # frequency band averaging
-    if nsmooth is not None:
+    if nsmooth is not None and not multitaper:
         if type(nsmooth) is not list:
             nsmooth = [nsmooth]
             breakpts = []
@@ -244,9 +245,8 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
                 freq[i0:i1], smth, decimate=True))
 
             confint = ConfChi2(0.05, 2*smth)
-            if not multitaper:
-                conf.append(np.array([confint[0]*S[idx],
-                                      confint[1]*S[idx]]).T)
+            conf.append(np.array([confint[0]*S[idx],
+                                  confint[1]*S[idx]]).T)
 
         S = np.concatenate(S)
         f = np.concatenate(f)
@@ -294,7 +294,7 @@ def Coherence(v1, v2, dt=1, nsmooth=5, **kwargs):
     return f, Cxy, phase, siglevel
 
 
-def MultiTaperCoherence(y0, y1, dt=1, ntapers=7):
+def MultiTaperCoherence(y0, y1, dt=1, tbp=4):
     from mtspec import mt_coherence
 
     # common defaults are time-bandwidth product tbp=4
@@ -303,7 +303,8 @@ def MultiTaperCoherence(y0, y1, dt=1, ntapers=7):
     if np.all(np.equal(y0, y1)):
         raise ValueError('Multitaper autocoherence doesn\'t work!')
 
-    out = mt_coherence(1/dt, y0, y1, tbp=4, kspec=ntapers,
+    ntapers = 2*tbp - 1
+    out = mt_coherence(1/dt, y0, y1, tbp=tbp, kspec=ntapers,
                        nf=np.int(len(y0)), p=0.95, iadapt=1,
                        freq=True, cohe=True, phase=True)
 
