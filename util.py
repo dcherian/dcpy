@@ -54,6 +54,19 @@ def datenum2datetime(matlab_datenum):
     return np.asarray(python_datetime)
 
 
+def calc95(input, kind='twosided'):
+
+    import numpy as np
+    input = np.sort(input)
+    if kind is 'twosided':
+        interval = input[[np.int(np.floor(0.025*len(input))),
+                          np.int(np.ceil(0.975*len(input)))]]
+    else:
+        interval = input[np.int(np.ceil(0.95*len(input)))]
+
+    return interval
+
+
 def smooth(x, window_len=11, window='hanning'):
     """smooth the data using a window with requested size.
 
