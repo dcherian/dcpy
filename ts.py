@@ -210,8 +210,8 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
                     data=var, delta=dt, time_bandwidth=nsmooth,
                     statistics=True, verbose=False, adaptive=True)
                 Y = Y[freq > 0]
+                conf = conf[freq > 0, :]
                 freq = freq[freq > 0]
-                conf = conf[freq > 0]
                 YY_raw.append(Y)
             else:
                 N = len(var)
