@@ -342,8 +342,9 @@ def Coherence(v1, v2, dt=1, nsmooth=5, **kwargs):
     return f, Cxy, phase, siglevel
 
 
-def MultiTaperCoherence(y0, y1, dt=1, tbp=4):
+def MultiTaperCoherence(y0, y1, dt=1, tbp=5, ntapers=None):
     from mtspec import mt_coherence
+    from dcpy.util import calc95
 
     # common defaults are time-bandwidth product tbp=4
     # ntapers = 2*tbp - 1 (jLab)
@@ -351,31 +352,54 @@ def MultiTaperCoherence(y0, y1, dt=1, tbp=4):
     if np.all(np.equal(y0, y1)):
         raise ValueError('Multitaper autocoherence doesn\'t work!')
 
-    ntapers = 2*tbp - 1
+    if ntapers is None:
+        ntapers = 2*tbp - 1
+
     out = mt_coherence(1/dt, y0, y1, tbp=tbp, kspec=ntapers,
                        nf=np.int(len(y0)), p=0.95, iadapt=1,
-                       freq=True, cohe=True, phase=True)
+                       freq=True, cohe=True, phase=True,
+                       cohe_ci=False, phase_ci=False)
+
+    f = out['freq']
+    cohe = out['cohe']
+    phase = out['phase']
 
     if ntapers > 1:
-        siglevel = np.sqrt(1 - (0.05)**(1/(ntapers-1)))
+        siglevel = np.sqrt(1 - (0.05)**(1/(tbp/2*ntapers-1)))
     else:
         siglevel = 1
 
-    return out['freq'], out['cohe'], out['phase'], siglevel
+    # monte-carlo significance level agrees with tbp/2*ntapers
+    # being (degrees of freedom)/2
+    niters = 1500
+    y1 = np.random.randn(len(y0), niters)
+
+    c = []
+    for ii in range(niters):
+        out = mt_coherence(1/dt, y0, y1[:, ii], tbp=tbp, kspec=ntapers,
+                           nf=np.int(len(y0)), p=0.95, iadapt=1,
+                           freq=True, cohe=True)
+        c.append(out['cohe'])
+
+    siglevel = [calc95(np.concatenate(c), 'onesided'), siglevel]
+
+    return f, cohe, phase, siglevel
 
 
 def PlotCoherence(y0, y1, nsmooth=5, multitaper=False):
 
     import matplotlib.pyplot as plt
+    import dcpy.plots
 
     if multitaper:
         f, Cxy, phase, siglevel = MultiTaperCoherence(y0, y1, nsmooth)
+        siglevel = siglevel[0]
     else:
         f, Cxy, phase, siglevel = Coherence(y0, y1, nsmooth)
 
     plt.subplot(211)
     plt.plot(f, Cxy)
-    plt.axhline(siglevel, color='gray', linestyle='--', zorder=-1)
+    dcpy.plots.liney(siglevel)
     plt.title(str(sum(Cxy > siglevel)/len(Cxy)*100)
               + '% above 95% significance')
     plt.ylim([0, 1])
