@@ -418,7 +418,7 @@ def BandPassButter(input, freqs, dt=1, order=1,
     if returnba:
         return b, a
     else:
-        return GappyFilter(input, b, a, num_discard=num_discard)
+        return GappyFilter(input.copy(), b, a, num_discard=num_discard)
 
 
 def ImpulseResponse(b, a, eps=1e-2):
