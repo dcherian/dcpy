@@ -2,14 +2,34 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
+def FillRectangle(x, y=None, ax=None, color='k', alpha=0.05, zorder=-1, **kwargs):
+    if ax is None:
+        ax = plt.gca()
+
+    if len(x) > 2:
+        raise ValueError('FillRectangle: len(x) should be 2!')
+
+    if y is None:
+        yl = ax.get_ylim()
+        y = [yl[1], yl[1], yl[0],  yl[0]]
+
+    ax.fill([x[0], x[1], x[1], x[0]], y,
+            color=color, alpha=alpha, zorder=zorder,
+            linewidth=None, **kwargs)
+
+
 def linex(var, ax=None, color='gray', linestyle='--', zorder=-1):
 
     if ax is None:
         ax = plt.gca()
 
+    if not isinstance(ax, list):
+        ax = [ax]
+
     var = np.array(var, ndmin=1)
     for vv in var:
-        ax.axvline(vv, color=color, linestyle=linestyle, zorder=zorder)
+        for aa in ax:
+            aa.axvline(vv, color=color, linestyle=linestyle, zorder=zorder)
 
 
 def liney(var, ax=None, color='gray', linestyle='--', zorder=-1):
@@ -17,9 +37,13 @@ def liney(var, ax=None, color='gray', linestyle='--', zorder=-1):
     if ax is None:
         ax = plt.gca()
 
+    if not isinstance(ax, list):
+        ax = [ax]
+
     var = np.array(var, ndmin=1)
     for vv in var:
-        ax.axhline(vv, color=color, linestyle=linestyle, zorder=zorder)
+        for aa in ax:
+            aa.axhline(vv, color=color, linestyle=linestyle, zorder=zorder)
 
 
 def hist(var, log=False, bins=100, alpha=0.5, normed=True,
