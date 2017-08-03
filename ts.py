@@ -147,6 +147,35 @@ def AliasFreq(f0, dt):
     raise ValueError('No integer found for aliasing')
 
 
+def TidalAliases(dt, kind='freq'):
+    ''' Returns alias frequencies of tides as a dictionary.
+
+        Input:
+              dt = sampling time interval (days)
+
+    '''
+
+    # values from, and agree with, Schlax & Chelton (1994)
+    TideAlias = dict()
+    if kind == 'freq':
+        TideAlias['M2'] = AliasFreq(1/(12.420601/24), dt)
+        TideAlias['S2'] = AliasFreq(1/(12.0/24), dt)
+        TideAlias['N2'] = AliasFreq(1/(12.658348/24), dt)
+        TideAlias['K1'] = AliasFreq(1/(23.93447/24), dt)
+        TideAlias['O1'] = AliasFreq(1/(25.819342/24), dt)
+        TideAlias['P1'] = AliasFreq(1/(24.06589/24), dt)
+
+    if kind == 'period':
+        TideAlias['M2'] = 1/AliasFreq(1/(12.420601/24), dt)
+        TideAlias['S2'] = 1/AliasFreq(1/(12.0/24), dt)
+        TideAlias['N2'] = 1/AliasFreq(1/(12.658348/24), dt)
+        TideAlias['K1'] = 1/AliasFreq(1/(23.93447/24), dt)
+        TideAlias['O1'] = 1/AliasFreq(1/(25.819342/24), dt)
+        TideAlias['P1'] = 1/AliasFreq(1/(24.06589/24), dt)
+
+    return TideAlias
+
+
 def ConfChi2(alpha, dof):
     import numpy as np
     from scipy.stats import chi2
