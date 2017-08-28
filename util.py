@@ -38,7 +38,7 @@ def ExtractSeason(time, var, season):
 
 def find_approx(vec, value):
     import numpy as np
-    ind = np.argmin(np.abs(vec - value))
+    ind = np.nanargmin(np.abs(vec - value))
     return ind
 
 
