@@ -379,10 +379,10 @@ def MultiTaperCoherence(y0, y1, dt=1, tbp=5, ntapers=None):
     cohe = out['cohe']
     phase = out['phase']
 
-    if ntapers > 1:
-        siglevel = np.sqrt(1 - (0.05)**(1/(tbp/2*ntapers-1)))
-    else:
-        siglevel = 1
+    # if ntapers > 1:
+    #     siglevel = np.sqrt(1 - (0.05)**(1/(tbp/2*ntapers-1)))
+    # else:
+    #     siglevel = 1
 
     # monte-carlo significance level agrees with tbp/2*ntapers
     # being (degrees of freedom)/2
@@ -396,7 +396,7 @@ def MultiTaperCoherence(y0, y1, dt=1, tbp=5, ntapers=None):
                            freq=True, cohe=True)
         c.append(out['cohe'])
 
-    siglevel = [calc95(np.concatenate(c), 'onesided'), siglevel]
+    siglevel = calc95(np.concatenate(c), 'onesided')
 
     return f, cohe, phase, siglevel
 
