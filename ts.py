@@ -343,6 +343,11 @@ def Coherence(v1, v2, dt=1, nsmooth=5, **kwargs):
 
 
 def MultiTaperCoherence(y0, y1, dt=1, tbp=5, ntapers=None):
+    '''
+        Call out to mt_coherence from mtspec.
+        Phase is φ(y0) - φ(y1)
+    '''
+
     from mtspec import mt_coherence
     from dcpy.util import calc95
 
@@ -355,8 +360,9 @@ def MultiTaperCoherence(y0, y1, dt=1, tbp=5, ntapers=None):
     if ntapers is None:
         ntapers = 2*tbp - 1
 
-    out = mt_coherence(1/dt, y0, y1, tbp=tbp, kspec=ntapers,
-                       nf=np.int(len(y0)), p=0.95, iadapt=1,
+    nf = np.int(len(y0)/2)+1
+    out = mt_coherence(dt, y0, y1, tbp=tbp, kspec=ntapers,
+                       nf=nf, p=0.95, iadapt=1,
                        freq=True, cohe=True, phase=True,
                        cohe_ci=False, phase_ci=False)
 
@@ -376,8 +382,8 @@ def MultiTaperCoherence(y0, y1, dt=1, tbp=5, ntapers=None):
 
     c = []
     for ii in range(niters):
-        out = mt_coherence(1/dt, y0, y1[:, ii], tbp=tbp, kspec=ntapers,
-                           nf=np.int(len(y0)), p=0.95, iadapt=1,
+        out = mt_coherence(dt, y0, y1[:, ii], tbp=tbp, kspec=ntapers,
+                           nf=nf, p=0.95, iadapt=1,
                            freq=True, cohe=True)
         c.append(out['cohe'])
 
@@ -386,25 +392,28 @@ def MultiTaperCoherence(y0, y1, dt=1, tbp=5, ntapers=None):
     return f, cohe, phase, siglevel
 
 
-def PlotCoherence(y0, y1, nsmooth=5, multitaper=False):
+def PlotCoherence(y0, y1, dt=1, nsmooth=5, multitaper=False):
 
     import matplotlib.pyplot as plt
     import dcpy.plots
 
     if multitaper:
-        f, Cxy, phase, siglevel = MultiTaperCoherence(y0, y1, nsmooth)
+        f, Cxy, phase, siglevel = MultiTaperCoherence(y0, y1,
+                                                      dt=dt,
+                                                      tbp=nsmooth)
         siglevel = siglevel[0]
     else:
-        f, Cxy, phase, siglevel = Coherence(y0, y1, nsmooth)
+        f, Cxy, phase, siglevel = Coherence(y0, y1, dt=dt,
+                                            nsmooth=nsmooth)
 
-    plt.subplot(211)
+    ax1 = plt.subplot(211)
     plt.plot(f, Cxy)
     dcpy.plots.liney(siglevel)
     plt.title(str(sum(Cxy > siglevel)/len(Cxy)*100)
               + '% above 95% significance')
     plt.ylim([0, 1])
 
-    plt.subplot(212)
+    plt.subplot(212, sharex=ax1)
     plt.plot(f, phase)
 
 
