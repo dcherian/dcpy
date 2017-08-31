@@ -64,12 +64,14 @@ def hist(var, log=False, bins=100, alpha=0.5, normed=True,
 
 def line45():
 
-    import matplotlib.pyplot as plt
-    import numpy as np
-
     xylimits = np.asarray([plt.xlim(), plt.ylim()]).ravel()
     newlimits = [min(xylimits), max(xylimits)]
     plt.axis('square')
     plt.xlim(newlimits)
     plt.ylim(newlimits)
     plt.plot(plt.xlim(), plt.ylim(), color='gray')
+
+def symyaxis():
+
+    ylim = plt.gca().get_ylim()
+    plt.gca().set_ylim(np.array([-1,1]) * np.max(np.abs(ylim)))
