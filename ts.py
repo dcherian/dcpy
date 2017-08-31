@@ -234,6 +234,8 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
             if np.any(np.isnan(var)):
                 raise ValueError('Subset has NaNs!')
 
+            var = signal.detrend(var)
+
             if multitaper:
                 Y, freq, conf, _, _ = mtspec.mtspec(
                     data=var, delta=dt, time_bandwidth=nsmooth,
@@ -313,15 +315,20 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
 
 def Coherence(v1, v2, dt=1, nsmooth=5, **kwargs):
     from dcpy.util import MovingAverage
+    from scipy.signal import detrend
 
     if np.any(np.isnan(v1) | np.isnan(v2)):
         raise ValueError('NaNs in times series provided to Coherence')
 
-    y1, freq = CenteredFFT(v1, dt)
+    window = signal.hann(len(v1))
+    # variance correction
+    window /= np.sqrt(np.sum(window**2)/len(v1))
+
+    y1, freq = CenteredFFT(detrend(v1)*window, dt)
     y1 = y1[freq > 0]
     freq = freq[freq > 0]
 
-    y2, freq = CenteredFFT(v2, dt)
+    y2, freq = CenteredFFT(detrend(v2)*window, dt)
     y2 = y2[freq > 0]
     freq = freq[freq > 0]
 
@@ -360,8 +367,11 @@ def MultiTaperCoherence(y0, y1, dt=1, tbp=5, ntapers=None):
     if ntapers is None:
         ntapers = 2*tbp - 1
 
+    from scipy.signal import detrend
+
     nf = np.int(len(y0)/2)+1
-    out = mt_coherence(dt, y0, y1, tbp=tbp, kspec=ntapers,
+    out = mt_coherence(dt, detrend(y0), detrend(y1),
+                       tbp=tbp, kspec=ntapers,
                        nf=nf, p=0.95, iadapt=1,
                        freq=True, cohe=True, phase=True,
                        cohe_ci=False, phase_ci=False)
