@@ -401,7 +401,7 @@ def MultiTaperCoherence(y0, y1, dt=1, tbp=5, ntapers=None):
     return f, cohe, phase, siglevel
 
 
-def PlotCoherence(y0, y1, dt=1, nsmooth=5, multitaper=False):
+def PlotCoherence(y0, y1, dt=1, nsmooth=5, multitaper=False, scale=1):
 
     import dcpy.plots
 
@@ -409,20 +409,29 @@ def PlotCoherence(y0, y1, dt=1, nsmooth=5, multitaper=False):
         f, Cxy, phase, siglevel = MultiTaperCoherence(y0, y1,
                                                       dt=dt,
                                                       tbp=nsmooth)
-        siglevel = siglevel[0]
     else:
         f, Cxy, phase, siglevel = Coherence(y0, y1, dt=dt,
                                             nsmooth=nsmooth)
 
-    ax1 = plt.subplot(211)
+    plt.figure(figsize=(8, 9))
+    ax1 = plt.subplot(311)
+    PlotSpectrum(y0, ax=ax1, dt=dt, scale=scale,
+                 nsmooth=nsmooth, multitaper=multitaper)
+    PlotSpectrum(y1, ax=ax1, dt=dt, scale=scale,
+                 nsmooth=nsmooth, multitaper=multitaper)
+
+    plt.subplot(312, sharex=ax1)
     plt.plot(f, Cxy)
     dcpy.plots.liney(siglevel)
-    plt.title(str(sum(Cxy > siglevel)/len(Cxy)*100)
+    plt.title('{0:.2f}'.format(sum(Cxy > siglevel)/len(Cxy)*100)
               + '% above 95% significance')
     plt.ylim([0, 1])
 
-    plt.subplot(212, sharex=ax1)
+    plt.subplot(313, sharex=ax1)
     plt.plot(f, phase)
+    plt.title('+ve = y0 leads y1')
+
+    plt.tight_layout()
 
 
 def BandPassButter(input, freqs, dt=1, order=1,
