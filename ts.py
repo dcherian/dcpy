@@ -539,3 +539,14 @@ def HighPassAndPlot(input, CutoffFreq, titlestr=None):
     plt.legend()
 
     return filtered
+
+
+def FillGaps(t, v, method='linear'):
+
+    if method is 'linear':
+        import numpy as np
+        valid = np.logical_not(np.isnan(v))
+        vi = np.interp(t, t[valid], v[valid])
+
+        return vi
+
