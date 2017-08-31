@@ -559,3 +559,27 @@ def FillGaps(t, v, method='linear'):
 
         return vi
 
+
+def Spectrogram(var, window, shift, time=None, dt=1,
+                nsmooth=5, multitaper=False):
+
+    spec = []
+    window = np.int(window)
+    shift = np.int(shift)
+
+    for ii in np.arange(0, len(var), shift):
+        if ii > (len(var)-window):
+            break
+
+        S, f, _ = SpectralDensity(var[ii:ii+window], dt,
+                                  nsmooth, multitaper=multitaper)
+        spec.append(S)
+
+    spec = np.stack(spec)
+
+    if time is None:
+        time = np.arange(0, len(var), shift)
+    else:
+        time = time.copy()[::shift]
+
+    return f, spec, time[:spec.shape[0]]
