@@ -101,6 +101,7 @@ def smooth(x, window_len=11, window='hanning'):
     """
 
     import numpy as np
+    from astropy.convolution import convolve
 
     if x.ndim != 1:
         raise ValueError("smooth only accepts 1 dimension arrays.")
@@ -112,21 +113,19 @@ def smooth(x, window_len=11, window='hanning'):
         return x
 
     window_len = np.int(np.ceil(window_len))
+    if np.mod(window_len, 2) < 1e-4:
+        window_len = window_len+1
+
     wlb2 = np.int(np.ceil(window_len/2))
-
-    if window not in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
-        raise ValueError("Window is on of 'flat', 'hanning',"
-                         + "'hamming', 'bartlett', 'blackman'")
-
-    s = np.r_[x[window_len-1:0:-1], x, x[-1:-window_len:-1]]
 
     if window == 'flat':  # moving average
         w = np.ones(window_len, 'd')
     else:
         w = eval('np.'+window+'(window_len)')
 
-    y = np.convolve(w/w.sum(), s, mode='valid')
-    return y[(wlb2-1):-(wlb2+1)]
+    y = convolve(x, w, boundary=None, normalize_kernel=True,
+                 preserve_nan=True, nan_treatment='interpolate')
+    return y
 
 
 def MovingAverage(input, N, decimate=True, min_count=1, **kwargs):
