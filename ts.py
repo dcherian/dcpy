@@ -1,6 +1,7 @@
 import numpy as np
 import scipy.signal as signal
 import scipy.fftpack as fftpack
+import matplotlib.pyplot as plt
 
 
 def FindLargestSegment(input):
@@ -45,11 +46,9 @@ def FindSegments(var):
 def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
                  SubsetLength=None, breakpts=[], multitaper=False,
                  preserve_area=False, scale=1, linearx=False, **kwargs):
-
-    import matplotlib.pyplot as plt
-
     if ax is None:
-            ax = plt.gca()
+        plt.figure(figsize=(8.5, 8.5/1.617))
+        ax = plt.gca()
 
     var = np.array(var, ndmin=2)
 
@@ -404,7 +403,6 @@ def MultiTaperCoherence(y0, y1, dt=1, tbp=5, ntapers=None):
 
 def PlotCoherence(y0, y1, dt=1, nsmooth=5, multitaper=False):
 
-    import matplotlib.pyplot as plt
     import dcpy.plots
 
     if multitaper:
@@ -441,8 +439,6 @@ def BandPassButter(input, freqs, dt=1, order=1,
 
 
 def ImpulseResponse(b, a, eps=1e-2):
-
-    import matplotlib.pyplot as plt
 
     implen = EstimateImpulseResponseLength(b, a, eps=eps)
     ntime = implen*4
@@ -527,7 +523,6 @@ def GappyFilter(input, b, a, num_discard=None):
 
 def HighPassAndPlot(input, CutoffFreq, titlestr=None):
 
-    import matplotlib.pyplot as plt
     start, stop = FindLargestSegment(input)
     filtered = HighPassButter(input, CutoffFreq)
 
