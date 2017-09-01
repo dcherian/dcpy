@@ -83,7 +83,7 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
         if var.dtype == 'complex64' and twoside is True:
             plt.figure(figsize=(8.5, 8.5/2.2))
             ax.append(plt.subplot(121))
-            ax.append(plt.subplot(122, sharey=ax[0]))
+            ax.append(plt.subplot(122))
             ax[0].set_title('CW (cyclonic)')
             ax[1].set_title('CCW (anti-cyclonic)')
         else:
@@ -114,14 +114,17 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
 
         else:
             cw, ccw, f, conf_cw, conf_ccw = \
-                    RotaryPSD(var[:, zz]/(scale)**zz, dt)
+                    RotaryPSD(var[:, zz]/(scale)**zz, dt,
+                              multitaper=multitaper)
             hdl.append(ax[0].plot(f, cw, **kwargs)[0])
-            ax[0].fill_between(f, conf_cw[:, 0], conf_cw[:, 1],
-                               color=hdl[-1].get_color(), alpha=0.3)
+            if conf_cw != []:
+                ax[0].fill_between(f, conf_cw[:, 0], conf_cw[:, 1],
+                                   color=hdl[-1].get_color(), alpha=0.3)
+
             hdl.append(ax[1].plot(f, ccw, **kwargs)[0])
-            ax[1].fill_between(f, conf_ccw[:, 0], conf_ccw[:, 1],
-                               color=hdl[-1].get_color(), alpha=0.3)
-            ax[0].invert_xaxis()
+            if conf_ccw != []:
+                ax[1].fill_between(f, conf_ccw[:, 0], conf_ccw[:, 1],
+                                   color=hdl[-1].get_color(), alpha=0.3)
 
     for aa in ax:
         aa.set_yscale('log')
@@ -132,11 +135,17 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
 
     if twoside is False:
         ax[0].legend(['CW', 'CCW'])
+    else:
+        if not ax[0].xaxis_inverted():
+            ax[0].invert_xaxis()
+
+        ax[1].set_yticklabels([])
+        plt.tight_layout()
 
     if len(hdl) == 1:
         hdl = hdl[0]
 
-    return hdl
+    return hdl, ax
 
 
 def synthetic(N, dt, α, β):
@@ -465,36 +474,58 @@ def MultiTaperCoherence(y0, y1, dt=1, tbp=5, ntapers=None):
     return f, cohe, phase, siglevel
 
 
-def RotaryPSD(y, dt=1, nsmooth=5):
+def RotaryPSD(y, dt=1, nsmooth=5, multitaper=False):
 
     from scipy.signal import detrend
     from dcpy.util import MovingAverage
 
     N = len(y)
-    window = signal.hann(N)
-    window /= np.sqrt(np.sum(window**2)/N)
 
-    X, freq = CenteredFFT(detrend(np.real(y))*window, dt)
-    Y, freq = CenteredFFT(detrend(np.imag(y))*window, dt)
-    Z, freq = CenteredFFT(y*window, dt)
+    if multitaper is True:
+        import mtspec
+        _, freq, xspec, X, _ = mtspec.mtspec(
+                        data=detrend(np.real(y)), delta=dt,
+                        time_bandwidth=nsmooth, optional_output=True,
+                        statistics=False, verbose=False, adaptive=False)
+
+        _, freq, yspec, Y, _ = mtspec.mtspec(
+                        data=detrend(np.imag(y)), delta=dt,
+                        time_bandwidth=nsmooth, optional_output=True,
+                        statistics=False, verbose=False, adaptive=False)
+
+    else:
+        window = signal.hann(N)
+        window /= np.sqrt(np.sum(window**2)/N)
+
+        X, freq = CenteredFFT(detrend(np.real(y))*window, dt)
+        Y, freq = CenteredFFT(detrend(np.imag(y))*window, dt)
 
     Gxx = dt/N * X * np.conjugate(X)
     Gyy = dt/N * Y * np.conjugate(Y)
-    # Gxy = Z * np.conjugate(Z)
-    # Cxy = 2/N * (np.real(X)*np.real(Y) + np.imag(X)*np.imag(Y))
     Qxy = dt/N * (np.real(X)*np.imag(Y) - np.imag(X)*np.real(Y))
+
+    if multitaper:
+        Gxx = np.mean(Gxx[0:len(freq)], axis=1)
+        Gyy = np.mean(Gyy[0:len(freq)], axis=1)
+        Qxy = np.mean(Qxy[0:len(freq)], axis=1)
+
+    else:
+        Gxx = MovingAverage(Gxx, nsmooth, decimate=True)
+        Gyy = MovingAverage(Gyy, nsmooth, decimate=True)
+        Qxy = MovingAverage(Qxy, nsmooth, decimate=True)
+        freq = MovingAverage(freq, nsmooth, decimate=True)
 
     cw = 0.5 * (Gxx + Gyy - 2*Qxy)[freq > 0]
     ccw = 0.5 * (Gxx + Gyy + 2*Qxy)[freq > 0]
     freq = freq[freq > 0]
 
-    cw = MovingAverage(cw, nsmooth, decimate=True)
-    ccw = MovingAverage(ccw, nsmooth, decimate=True)
-    freq = MovingAverage(freq, nsmooth, decimate=True)
-
-    confint = np.array(ConfChi2(0.05, 2*nsmooth))[np.newaxis, :]
-    conf_cw = confint * cw[:, np.newaxis]
-    conf_ccw = confint * ccw[:, np.newaxis]
+    if multitaper:
+        conf_cw = []
+        conf_ccw = []
+    else:
+        confint = np.array(ConfChi2(0.05, 2*nsmooth))[np.newaxis, :]
+        conf_cw = confint * cw[:, np.newaxis]
+        conf_ccw = confint * ccw[:, np.newaxis]
 
     return cw, ccw, freq, conf_cw, conf_ccw
 
