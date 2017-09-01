@@ -45,10 +45,20 @@ def FindSegments(var):
 
 def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
                  SubsetLength=None, breakpts=[], multitaper=False,
-                 preserve_area=False, scale=1, linearx=False, **kwargs):
+                 preserve_area=False, scale=1, linearx=False,
+                 twoside=True, **kwargs):
+
     if ax is None:
-        plt.figure(figsize=(8.5, 8.5/1.617))
-        ax = plt.gca()
+        ax = []
+        if var.dtype == 'complex64' and twoside is True:
+            plt.figure(figsize=(8.5, 8.5/2.2))
+            ax.append(plt.subplot(121))
+            ax.append(plt.subplot(122, sharey=ax[0]))
+            ax[0].set_title('CW (cyclonic)')
+            ax[1].set_title('CCW (anti-cyclonic)')
+        else:
+            plt.figure(figsize=(8.5, 8.5/1.617))
+            ax = [plt.gca(), plt.gca()]
 
     var = np.array(var, ndmin=2)
 
@@ -57,22 +67,39 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
 
     hdl = []
     for zz in range(var.shape[-1]):
-        S, f, conf = SpectralDensity(var[:, zz]/(scale)**zz, dt,
-                                     nsmooth, SubsetLength,
-                                     breakpts=breakpts, multitaper=multitaper)
+        if np.all(np.isreal(var)):
+            S, f, conf = SpectralDensity(var[:, zz]/(scale)**zz, dt,
+                                         nsmooth, SubsetLength,
+                                         breakpts=breakpts,
+                                         multitaper=multitaper)
 
-        if preserve_area:
-            S = S*f
-            conf = conf*f[:, np.newaxis]
+            if preserve_area:
+                S = S*f
+                conf = conf*f[:, np.newaxis]
 
-        hdl.append(ax.plot(f, S, **kwargs)[0])
-        if len(conf) > 2:
-            ax.fill_between(f, conf[:, 0], conf[:, 1],
-                            color=hdl[-1].get_color(), alpha=0.3)
+            hdl.append(ax.plot(f, S, **kwargs)[0])
+            if len(conf) > 2:
+                ax.fill_between(f, conf[:, 0], conf[:, 1],
+                                color=hdl[-1].get_color(), alpha=0.3)
 
-    ax.set_yscale('log')
-    if not linearx:
-        ax.set_xscale('log')
+        else:
+            cw, ccw, f, conf_cw, conf_ccw = \
+                    RotaryPSD(var[:, zz]/(scale)**zz, dt)
+            hdl.append(ax[0].plot(f, cw, **kwargs)[0])
+            ax[0].fill_between(f, conf_cw[:, 0], conf_cw[:, 1],
+                               color=hdl[-1].get_color(), alpha=0.3)
+            hdl.append(ax[1].plot(f, ccw, **kwargs)[0])
+            ax[1].fill_between(f, conf_ccw[:, 0], conf_ccw[:, 1],
+                               color=hdl[-1].get_color(), alpha=0.3)
+            ax[0].invert_xaxis()
+
+    for aa in ax:
+        aa.set_yscale('log')
+        if not linearx:
+            aa.set_xscale('log')
+
+    if twoside is False:
+        ax[0].legend(['CW', 'CCW'])
 
     if len(hdl) == 1:
         hdl = hdl[0]
@@ -399,6 +426,40 @@ def MultiTaperCoherence(y0, y1, dt=1, tbp=5, ntapers=None):
     siglevel = calc95(np.concatenate(c), 'onesided')
 
     return f, cohe, phase, siglevel
+
+
+def RotaryPSD(y, dt=1, nsmooth=5):
+
+    from scipy.signal import detrend
+    from dcpy.util import MovingAverage
+
+    N = len(y)
+    window = signal.hann(N)
+    window /= np.sqrt(np.sum(window**2)/N)
+
+    X, freq = CenteredFFT(detrend(np.real(y))*window, dt)
+    Y, freq = CenteredFFT(detrend(np.imag(y))*window, dt)
+    Z, freq = CenteredFFT(y*window, dt)
+
+    Gxx = dt/N * X * np.conjugate(X)
+    Gyy = dt/N * Y * np.conjugate(Y)
+    # Gxy = Z * np.conjugate(Z)
+    # Cxy = 2/N * (np.real(X)*np.real(Y) + np.imag(X)*np.imag(Y))
+    Qxy = dt/N * (np.real(X)*np.imag(Y) - np.imag(X)*np.real(Y))
+
+    cw = 0.5 * (Gxx + Gyy - 2*Qxy)[freq > 0]
+    ccw = 0.5 * (Gxx + Gyy + 2*Qxy)[freq > 0]
+    freq = freq[freq > 0]
+
+    cw = MovingAverage(cw, nsmooth, decimate=True)
+    ccw = MovingAverage(ccw, nsmooth, decimate=True)
+    freq = MovingAverage(freq, nsmooth, decimate=True)
+
+    confint = np.array(ConfChi2(0.05, 2*nsmooth))[np.newaxis, :]
+    conf_cw = confint * cw[:, np.newaxis]
+    conf_ccw = confint * ccw[:, np.newaxis]
+
+    return cw, ccw, freq, conf_cw, conf_ccw
 
 
 def PlotCoherence(y0, y1, dt=1, nsmooth=5, multitaper=False, scale=1):
