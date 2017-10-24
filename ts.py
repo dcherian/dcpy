@@ -715,8 +715,7 @@ def Spectrogram(var, window, shift, time=None, **kwargs):
         if ii > (len(var)-window):
             break
 
-        S, f, _ = SpectralDensity(var[ii:ii+window], dt,
-                                  nsmooth, multitaper=multitaper)
+        S, f, _ = SpectralDensity(var[ii:ii+window], **kwargs)
         spec.append(S)
 
     spec = np.stack(spec)
