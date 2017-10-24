@@ -728,3 +728,13 @@ def Spectrogram(var, window, shift, time=None, **kwargs):
         time = time.copy()[::shift]
 
     return f, spec, time[:spec.shape[0]]
+
+
+def PlotSpectrogram(time, spec, ax=None):
+
+    if ax is None:
+        ax = plt.gca()
+
+    plt.contourf(time, f, np.log10(spec.T))
+    plt.gca().set_yscale('log')
+    plt.colorbar()
