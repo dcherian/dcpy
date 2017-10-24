@@ -2,7 +2,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def FillRectangle(x, y=None, ax=None, color='k', alpha=0.05, zorder=-1, **kwargs):
+def FillRectangle(x, y=None, ax=None, color='k', alpha=0.05,
+                  zorder=-1, **kwargs):
     if ax is None:
         ax = plt.gca()
 

@@ -128,6 +128,8 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
         if not linearx:
             aa.set_xscale('log')
 
+        aa.set_xlabel('Freq')
+
     if twoside is False:
         ax[0].legend(['CW', 'CCW'])
 
