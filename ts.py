@@ -43,6 +43,36 @@ def FindSegments(var):
     return start, stop
 
 
+def FindGaps(var):
+    '''
+      Finds and returns index ranges for gaps in the input time series.
+      Input:
+            var - input time series
+      Output:
+            start - starting indices of gap (NaN)
+            stop  - ending indices of gap (NaN)
+    '''
+
+    NotNans = np.double(~np.isnan(var))
+    edges = np.diff(NotNans)
+    start = np.where(edges == -1)[0]
+    stop = np.where(edges == 1)[0]
+
+    if start.size == 0 and stop.size == 0:
+        start = np.array([0])
+        stop = np.array([len(var)-1])
+
+    else:
+        start = start + 1
+        if np.isnan(var[0]):
+            start = np.insert(start, 0, 0)
+
+        if np.isnan(var[-1]):
+            stop = np.append(stop, len(var)-1)
+
+    return start, stop
+
+
 def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
                  SubsetLength=None, breakpts=[], multitaper=False,
                  preserve_area=False, scale=1, linearx=False,
