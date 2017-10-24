@@ -240,7 +240,7 @@ def ConfChi2(alpha, dof):
 
 
 def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
-                    multitaper=False, breakpts=[]):
+                    multitaper=False, fillgaps=False, maxlen=None, breakpts=[]):
     """ Calculates spectral density for longest valid segment
         Direct translation of Tom's spectrum_band_avg.
         Always applies a Hann window if not multitaper.
@@ -254,6 +254,8 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
                             are averaged.
             multitaper : Use multitaper method (default False)
             breakpts : List of breakpoints at which to change nsmooth
+            fillgaps : (logical) Fill gaps < maxlen in input
+            maxlen : Maximum length of gaps to fill (None for all gaps)
 
         Returns:
             S : estimated spectral density
@@ -263,6 +265,9 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
     import dcpy.util
     import numpy as np
     import mtspec
+
+    if fillgaps:
+        input = FillGaps(input, maxlen=maxlen)
 
     if SubsetLength is None:
         start, stop = FindLargestSegment(input)
@@ -641,18 +646,66 @@ def HighPassAndPlot(input, CutoffFreq, titlestr=None):
     return filtered
 
 
-def FillGaps(t, v, method='linear'):
+def FillGaps(y, x=None, maxlen=None):
+    ''' Use linear interpolation to fill gaps < maxlen
+        Input:
+            y : value vector with gaps
+            x : [optional] x (time) vector
+            maxlen : max length of gaps to be filled
+        Output:
+            interpolated array
+    '''
 
-    if method is 'linear':
-        import numpy as np
-        valid = np.logical_not(np.isnan(v))
-        vi = np.interp(t, t[valid], v[valid])
+    import numpy as np
+    import xarray as xr
+    if isinstance(y, xr.core.dataarray.DataArray):
+        isxarray = True
+    else:
+        isxarray = False
 
-        return vi
+    if x is None:
+        x = np.arange(len(y))
+
+    if maxlen is None:
+        yfill = y.copy()
+        # fill all gaps
+        valid = np.logical_not(np.isnan(y))
+        if isxarray:
+            yfill.values = np.interp(x, x[valid], y[valid])
+        else:
+            yfill = np.interp(x, x[valid], y[valid])
+    else:
+        yfill = y.copy()
+        # fill only gaps < gaplen
+        gapstart, gapstop = FindGaps(y)
+
+        for g0, g1 in zip(gapstart, gapstop):
+            if g0 == 0:
+                continue
+
+            if g1 == len(y)-1:
+                continue
+
+            glen = g1 - g0 + 1  # gap length
+            if glen > maxlen:
+                continue
+
+            yfill[g0:g1+1] = np.interp(x[g0:g1+1],
+                                       x[[g0-1, g1+1]],
+                                       y[[g0-1, g1+1]])
+
+    if isxarray:
+        yfill.attrs['GapFilled'] = 'True'
+        yfill.attrs['MaxGapLen'] = maxlen
+        if 'numTimesGapFilled' in yfill.attrs:
+            yfill.attrs['numTimesGapFilled'] += 1
+        else:
+            yfill.attrs['numTimesGapFilled'] = 1
+
+    return yfill
 
 
-def Spectrogram(var, window, shift, time=None, dt=1,
-                nsmooth=5, multitaper=False):
+def Spectrogram(var, window, shift, time=None, **kwargs):
 
     spec = []
     window = np.int(window)
