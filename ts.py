@@ -84,8 +84,8 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
             plt.figure(figsize=(8.5, 8.5/2.2))
             ax.append(plt.subplot(121))
             ax.append(plt.subplot(122))
-            ax[0].set_title('CW (cyclonic)')
-            ax[1].set_title('CCW (anti-cyclonic)')
+            ax[0].set_title('CW (anti-cyclonic)')
+            ax[1].set_title('CCW (cyclonic)')
         else:
             plt.figure(figsize=(8.5, 8.5/1.617))
             ax = [plt.gca(), plt.gca()]
@@ -126,6 +126,9 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
                 ax[1].fill_between(f, conf_ccw[:, 0], conf_ccw[:, 1],
                                    color=hdl[-1].get_color(), alpha=0.3)
 
+    if not isinstance(ax, list):
+        ax = [ax, ax]
+
     for aa in ax:
         aa.set_yscale('log')
         if not linearx:
@@ -144,6 +147,9 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
 
     if len(hdl) == 1:
         hdl = hdl[0]
+
+    if len(ax) == 1:
+        ax = ax[0]
 
     return hdl, ax
 
@@ -548,6 +554,7 @@ def PlotCoherence(y0, y1, dt=1, nsmooth=5, multitaper=False, scale=1):
                  nsmooth=nsmooth, multitaper=multitaper)
     PlotSpectrum(y1, ax=ax1, dt=dt, scale=scale,
                  nsmooth=nsmooth, multitaper=multitaper)
+    ax1.invert_xaxis()
 
     plt.subplot(312, sharex=ax1)
     plt.plot(f, Cxy)
