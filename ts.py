@@ -98,7 +98,7 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
     hdl = []
     for zz in range(var.shape[-1]):
         if np.all(np.isreal(var)):
-            S, f, conf = SpectralDensity(var[:, zz]/(scale)**zz, dt,
+            S, f, conf = SpectralDensity(var[:, zz]/(scale)**(zz+1), dt,
                                          nsmooth, SubsetLength,
                                          breakpts=breakpts,
                                          multitaper=multitaper)
@@ -114,7 +114,7 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
 
         else:
             cw, ccw, f, conf_cw, conf_ccw = \
-                    RotaryPSD(var[:, zz]/(scale)**zz, dt,
+                    RotaryPSD(var[:, zz]/(scale)**(zz+1), dt,
                               multitaper=multitaper)
             hdl.append(ax[0].plot(f, cw, **kwargs)[0])
             if conf_cw != []:
