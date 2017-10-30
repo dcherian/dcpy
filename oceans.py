@@ -71,6 +71,49 @@ def ReadWoa(lon, lat, time='annual', depth=None, return_xr=False):
     return woa
 
 
+def GM(lat, N, N0, b=1000, oned=False):
+    import GM81.gm as gm
+    import seawater as sw
+    import numpy as np
+
+    # Coriolis frequency
+    f = sw.f(lat=12)
+
+    # frequency
+    omg = np.logspace(np.log10(1.01*f), np.log10(N), 401)
+
+    # horizontal wavenumber
+    k = 2*np.pi*np.logspace(-6, -2, 401)
+
+    # mode number
+    j = np.arange(1, 100)
+
+    # reshape to allow multiplication into 2D array
+    Omg = np.reshape(omg, (omg.size, 1))
+    K = np.reshape(k, (k.size, 1))
+    J = np.reshape(j, (1, j.size))
+
+    # frequency spectra (KE and PE)
+    K_omg_j = gm.K_omg_j(Omg, J, f, N, N0, b)
+    P_omg_j = gm.P_omg_j(Omg, J, f, N, N0, b)
+
+    # wavenumber spectra (KE and PE)
+    K_k_j = gm.K_k_j(K, J, f, N, N0, b)
+    P_k_j = gm.P_k_j(K, J, f, N, N0, b)
+
+    # sum over modes
+    K_omg = np.sum(K_omg_j, axis=1)
+    P_omg = np.sum(P_omg_j, axis=1)
+    K_k = np.sum(K_k_j, axis=1)
+    P_k = np.sum(P_k_j, axis=1)
+
+    # compute 1D spectra from 2D spectra
+    K_k_1d = gm.calc_1d(k, K_k)
+    P_k_1d = gm.calc_1d(k, P_k)
+
+    return (omg, K_omg, P_omg, k, K_k_1d, P_k_1d)
+
+
 def TSplot(S, T, P, Pref=0, ax=None):
 
     colormap = cmo.cm.matter
