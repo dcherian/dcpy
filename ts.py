@@ -78,17 +78,22 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
                  preserve_area=False, scale=1, linearx=False,
                  twoside=True, **kwargs):
 
+    iscomplex = not np.all(np.isreal(var))
+    if not iscomplex:
+        twoside = False  # meaningless for real data
+
     if ax is None:
         ax = []
-        if var.dtype == 'complex64' and twoside is True:
+        if iscomplex and twoside is True:
             plt.figure(figsize=(8.5, 8.5/2.2))
             ax.append(plt.subplot(121))
             ax.append(plt.subplot(122))
             ax[0].set_title('CW (anti-cyclonic)')
             ax[1].set_title('CCW (cyclonic)')
         else:
-            plt.figure(figsize=(8.5, 8.5/1.617))
-            ax = [plt.gca(), plt.gca()]
+            ax.append(plt.gca())
+            ax.append(plt.gca())
+            plt.gcf().set_size_inches(8.5, 8.5/1.617)
 
     var = np.array(var, ndmin=2)
 
@@ -97,7 +102,7 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
 
     hdl = []
     for zz in range(var.shape[-1]):
-        if np.all(np.isreal(var)):
+        if not iscomplex:
             S, f, conf = SpectralDensity(var[:, zz]/(scale)**(zz+1), dt,
                                          nsmooth, SubsetLength,
                                          breakpts=breakpts,
@@ -107,9 +112,9 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
                 S = S*f
                 conf = conf*f[:, np.newaxis]
 
-            hdl.append(ax.plot(f, S, **kwargs)[0])
+            hdl.append(ax[0].plot(f, S, **kwargs)[0])
             if len(conf) > 2:
-                ax.fill_between(f, conf[:, 0], conf[:, 1],
+                ax[0].fill_between(f, conf[:, 0], conf[:, 1],
                                 color=hdl[-1].get_color(), alpha=0.3)
 
         else:
@@ -126,9 +131,6 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
                 ax[1].fill_between(f, conf_ccw[:, 0], conf_ccw[:, 1],
                                    color=hdl[-1].get_color(), alpha=0.3)
 
-    if not isinstance(ax, list):
-        ax = [ax, ax]
-
     for aa in ax:
         aa.set_yscale('log')
         if not linearx:
@@ -136,20 +138,20 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
 
         aa.set_xlabel('Freq')
 
-    if twoside is False:
-        ax[0].legend(['CW', 'CCW'])
+    ax[0].set_ylabel('PSD')
+
+    if not twoside:
+        if iscomplex:
+            ax[0].legend(['CW', 'CCW'])
+
+        hdl = hdl[0]
+        ax = ax[0]
     else:
         if not ax[0].xaxis_inverted():
             ax[0].invert_xaxis()
 
         ax[1].set_yticklabels([])
         plt.tight_layout()
-
-    if len(hdl) == 1:
-        hdl = hdl[0]
-
-    if len(ax) == 1:
-        ax = ax[0]
 
     return hdl, ax
 
@@ -482,6 +484,24 @@ def MultiTaperCoherence(y0, y1, dt=1, tbp=5, ntapers=None):
 
 def RotaryPSD(y, dt=1, nsmooth=5, multitaper=False):
 
+    """
+    Inputs
+    ------
+        y : Time series
+       dt : sampling period
+    multitaper : Boolean
+    nsmooth :
+        amount of smoothing
+        number of points if multitaper=False,
+        tbp if multitaper=True
+
+    Returns
+    -------
+    (cw, ccw, freq,conf_cw, conf_ccw)
+    Clockwise, counter-clockwise, freq and confidence intervals.
+
+    Confidence intervals for multitaper not implemented!
+    """
     from scipy.signal import detrend
     from dcpy.util import MovingAverage
 
@@ -498,6 +518,10 @@ def RotaryPSD(y, dt=1, nsmooth=5, multitaper=False):
                         data=detrend(np.imag(y)), delta=dt,
                         time_bandwidth=nsmooth, optional_output=True,
                         statistics=False, verbose=False, adaptive=False)
+
+        # for some reason, this normalization is needed :|
+        X *= np.sqrt(N)
+        Y *= np.sqrt(N)
 
     else:
         window = signal.hann(N)
