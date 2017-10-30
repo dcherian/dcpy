@@ -204,6 +204,9 @@ def CenteredFFT(input, dt=1.0):
     X = fftpack.fft(input)
     X = fftpack.fftshift(X)
 
+    if (np.sum(abs(X)**2)/N - np.sum(input**2))/np.sum(input**2) > 1e-3:
+        raise ValueError('Parseval\'s theorem not satisfied!')
+
     return X, freq
 
 
