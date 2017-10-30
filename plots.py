@@ -10,13 +10,17 @@ def FillRectangle(x, y=None, ax=None, color='k', alpha=0.05,
     if len(x) > 2:
         raise ValueError('FillRectangle: len(x) should be 2!')
 
-    if y is None:
-        yl = ax.get_ylim()
-        y = [yl[1], yl[1], yl[0],  yl[0]]
+    if not isinstance(ax, list):
+        ax = [ax]
 
-    ax.fill([x[0], x[1], x[1], x[0]], y,
-            color=color, alpha=alpha, zorder=zorder,
-            linewidth=None, **kwargs)
+    for aa in ax:
+        if y is None:
+            yl = aa.get_ylim()
+            y = [yl[1], yl[1], yl[0],  yl[0]]
+
+        aa.fill([x[0], x[1], x[1], x[0]], y,
+                color=color, alpha=alpha, zorder=zorder,
+                linewidth=None, **kwargs)
 
 
 def linex(var, ax=None, color='gray', linestyle='--', zorder=-1):
