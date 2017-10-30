@@ -9,7 +9,7 @@ def inertial(lat):
     return 2*(2*π/86400) * np.sin(lat * π/180)
 
 
-def ReadWoa(lon, lat, time='annual', depth=None):
+def ReadWoa(lon, lat, time='annual', depth=None, return_xr=False):
     ''' Given lon, lat and type, return WOA data.
         Input:
               lon : +ve East
@@ -35,8 +35,8 @@ def ReadWoa(lon, lat, time='annual', depth=None):
         woaS = nc.MFDataset('/home/deepak/datasets/woa13-season/'
                             + 'woa13_decav_s*_01v2.nc', 'r', aggdim='time')
 
-    latind = np.where(woaT['lat'][:] < 12)[0][-1]
-    lonind = np.where(woaT['lon'][:] < 90)[0][-1]
+    latind = np.where(woaT['lat'][:] < lat)[0][-1]
+    lonind = np.where(woaT['lon'][:] < lon)[0][-1]
 
     def ConcatAndAverage(variable, lonind, latind):
         shape = list(variable[:, :, latind, lonind].shape)
@@ -61,6 +61,13 @@ def ReadWoa(lon, lat, time='annual', depth=None):
         woa['T'] = woa['T'][:, index]
         woa['S'] = woa['S'][:, index]
 
+    if return_xr:
+        import xarray as xr
+        woadict = woa
+
+        woa = xr.Dataset({'T': (['depth'], np.squeeze(woadict['T'])),
+                          'S': (['depth'], np.squeeze(woadict['S']))},
+                         coords={'depth': (['depth'], woadict['depth'])})
     return woa
 
 
