@@ -601,7 +601,7 @@ def PlotCoherence(y0, y1, dt=1, nsmooth=5, multitaper=False, scale=1):
 
 
 def BandPassButter(input, freqs, dt=1, order=1,
-                   num_discard='auto', returnba=False):
+                   num_discard='auto', axis=-1, returnba=False):
 
     b, a = signal.butter(N=order,
                          Wn=np.sort(freqs)*dt/(1/2),
@@ -610,7 +610,8 @@ def BandPassButter(input, freqs, dt=1, order=1,
     if returnba:
         return b, a
     else:
-        return GappyFilter(input.copy(), b, a, num_discard=num_discard)
+        return np.apply_along_axis(GappyFilter, axis, input,
+                               b, a, num_discard=num_discard)
 
 
 def ImpulseResponse(b, a, eps=1e-2):
@@ -665,7 +666,7 @@ def EstimateImpulseResponseLength(b, a, eps=1e-2):
     return approx_impulse_len
 
 
-def GappyFilter(input, b, a, num_discard=None):
+def oldGappyFilter(input, b, a, num_discard=None):
 
     if input.ndim == 1:
         input = np.reshape(input, (len(input), 1))
@@ -692,6 +693,32 @@ def GappyFilter(input, b, a, num_discard=None):
             except ValueError:
                 # segment is not long enough for filtfilt
                 pass
+
+    return out.squeeze()
+
+
+def GappyFilter(input, b, a, num_discard=None):
+
+    out = np.empty(input.shape) * np.nan
+
+    if num_discard == 'auto':
+        num_discard = EstimateImpulseResponseLength(b, a, eps=1e-2)
+
+    segstart, segend = FindSegments(input)
+
+    for index, start in np.ndenumerate(segstart):
+        stop = segend[index]
+        try:
+            out[start:stop] = signal.filtfilt(b, a,
+                                              input[start:stop],
+                                              axis=0, method='gust',
+                                              irlen=num_discard)
+            if num_discard is not None:
+                out[start:start+num_discard] = np.nan
+                out[stop-num_discard:stop] = np.nan
+        except ValueError:
+            # segment is not long enough for filtfilt
+            pass
 
     return out.squeeze()
 
