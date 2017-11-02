@@ -2,6 +2,7 @@ import numpy as np
 import scipy.signal as signal
 import scipy.fftpack as fftpack
 import matplotlib.pyplot as plt
+import xarray as xr
 
 
 def FindLargestSegment(input):
@@ -601,7 +602,8 @@ def PlotCoherence(y0, y1, dt=1, nsmooth=5, multitaper=False, scale=1):
 
 
 def BandPassButter(input, freqs, dt=1, order=1,
-                   num_discard='auto', axis=-1, returnba=False):
+                   num_discard='auto', axis=-1, dim=None,
+                   returnba=False):
 
     b, a = signal.butter(N=order,
                          Wn=np.sort(freqs)*dt/(1/2),
@@ -610,8 +612,23 @@ def BandPassButter(input, freqs, dt=1, order=1,
     if returnba:
         return b, a
     else:
-        return np.apply_along_axis(GappyFilter, axis, input,
-                               b, a, num_discard=num_discard)
+        if type(input) is xr.core.dataarray.DataArray:
+            if dim is None:
+                raise ValueError('Specify dim along which to band-pass')
+
+            if len(dim) == 1:
+                dim = dim[0]
+
+            x = input.copy()
+            x.values = np.apply_along_axis(GappyFilter,
+                                           input.get_axis_num(dim),
+                                           input.values,
+                                           b, a,
+                                           num_discard=num_discard)
+            return x
+        else:
+            return np.apply_along_axis(GappyFilter, axis, input,
+                                  b, a, num_discard=num_discard)
 
 
 def ImpulseResponse(b, a, eps=1e-2):
