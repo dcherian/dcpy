@@ -97,7 +97,7 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
 
     var = np.array(var, ndmin=2)
 
-    if type(ax) is not list():
+    if type(ax) is not list:
         ax = [ax]
 
     if var.shape[1] > var.shape[0]:
