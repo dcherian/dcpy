@@ -67,7 +67,7 @@ def calc95(input, kind='twosided'):
     return interval
 
 
-def smooth(x, window_len=11, window='hanning', axis=-1):
+def smooth(x, window_len=11, window='hanning', axis=-1, preserve_nan=True):
     """smooth the data using a window with requested size.
 
     This method is based on the convolution of a scaled window
@@ -127,8 +127,10 @@ def smooth(x, window_len=11, window='hanning', axis=-1):
         new_wnd[:, 0] = wnd
         wnd = np.reshape(new_wnd, new_size)
 
-    y = convolve(x, wnd, boundary=None, normalize_kernel=True,
-                 preserve_nan=True, nan_treatment='interpolate')
+    y = convolve(x, wnd, boundary='fill', normalize_kernel=True,
+                 fill_value=np.nan,
+                 preserve_nan=preserve_nan, nan_treatment='interpolate')
+
     return y
 
 
