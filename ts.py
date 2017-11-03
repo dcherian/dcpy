@@ -616,15 +616,32 @@ def BandPassButter(input, freqs, dt=1, order=1,
             if dim is None:
                 raise ValueError('Specify dim along which to band-pass')
 
-            if len(dim) == 1:
+            if type(dim) is list:
                 dim = dim[0]
 
             x = input.copy()
-            x.values = np.apply_along_axis(GappyFilter,
-                                           input.get_axis_num(dim),
-                                           input.values,
+            old_dims = x.dims
+            idim = input.get_axis_num(dim)
+            stackdims = x.dims[:idim] + x.dims[idim+1:]
+
+            # xr.testing.assert_equal(x,
+            #                         x.stack(newdim=stackdims)
+            #                          .unstack('newdim')
+            #                          .transpose(*list(x.dims)))
+            if input.ndim > 2:
+                # reshape to 2D array
+                # 'dim' is now first index
+                x = x.stack(newdim=stackdims)
+
+            x.values = np.apply_along_axis(GappyFilter, 0,
+                                           x.values,
                                            b, a,
                                            num_discard=num_discard)
+
+            if input.ndim > 2:
+                # unstack back to original shape and ordering
+                x = x.unstack('newdim').transpose(*list(old_dims))
+
             return x
         else:
             return np.apply_along_axis(GappyFilter, axis, input,
