@@ -67,7 +67,7 @@ def calc95(input, kind='twosided'):
     return interval
 
 
-def smooth(x, window_len=11, window='hanning'):
+def smooth(x, window_len=11, window='hanning', axis=-1):
     """smooth the data using a window with requested size.
 
     This method is based on the convolution of a scaled window
@@ -103,10 +103,7 @@ def smooth(x, window_len=11, window='hanning'):
     import numpy as np
     from astropy.convolution import convolve
 
-    if x.ndim != 1:
-        raise ValueError("smooth only accepts 1 dimension arrays.")
-
-    if x.size < window_len:
+    if x.shape[axis] < window_len:
         raise ValueError("Input vector needs to be bigger than window size.")
 
     if window_len < 3:
@@ -116,14 +113,21 @@ def smooth(x, window_len=11, window='hanning'):
     if np.mod(window_len, 2) < 1e-4:
         window_len = window_len+1
 
-    wlb2 = np.int(np.ceil(window_len/2))
-
     if window == 'flat':  # moving average
-        w = np.ones(window_len, 'd')
+        wnd = np.ones(window_len, 'd')
     else:
-        w = eval('np.'+window+'(window_len)')
+        wnd = eval('np.'+window+'(window_len)')
 
-    y = convolve(x, w, boundary=None, normalize_kernel=True,
+    if x.ndim > 1:
+        new_size = np.int32(np.ones((x.ndim, )))
+        new_size[axis] = window_len
+        new_wnd = np.zeros(new_size)
+        new_wnd = np.reshape(new_wnd, (window_len,
+                                       np.int32(new_size.prod()/window_len)))
+        new_wnd[:, 0] = wnd
+        wnd = np.reshape(new_wnd, new_size)
+
+    y = convolve(x, wnd, boundary=None, normalize_kernel=True,
                  preserve_nan=True, nan_treatment='interpolate')
     return y
 
