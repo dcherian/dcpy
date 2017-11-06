@@ -97,15 +97,20 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
             plt.gcf().set_size_inches(8.5, 8.5/1.617)
 
     var = np.array(var, ndmin=2)
+    if var.shape[axis] == 1:
+        var = var.transpose()
+        if var.shape[-1] == 1:
+            axis = -1
+
+    if axis == 0:
+        var = var.transpose()
+        axis = -1
 
     if type(ax) is not list:
         ax = [ax]
 
-    if var.shape[1] > var.shape[0]:
-        var = var.T
-
     hdl = []
-    for zz in range(var.shape[-1]):
+    for zz in range(var.shape[1]):
         if not iscomplex:
             S, f, conf = SpectralDensity(var[:, zz]/(scale)**(zz+1), dt,
                                          nsmooth, SubsetLength,
@@ -632,6 +637,10 @@ def BandPassButter(input, freqs, dt=1, order=1,
                 # reshape to 2D array
                 # 'dim' is now first index
                 x = x.stack(newdim=stackdims)
+
+            newdims = x.dims
+            if newdims[0] != dim:
+                x = x.transpose()
 
             x.values = np.apply_along_axis(GappyFilter, 0,
                                            x.values,
