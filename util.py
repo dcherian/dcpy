@@ -42,6 +42,13 @@ def find_approx(vec, value):
     return ind
 
 
+def dt64_to_datenum(dt64):
+    import matplotlib.dates as mdt
+    import datetime as pdt
+
+    return mdt.date2num(dt64.astype('M8[s]').astype(pdt.datetime))
+
+
 def datenum2datetime(matlab_datenum):
     '''
     Converts matlab datenum to matplotlib datetime.
