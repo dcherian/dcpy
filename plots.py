@@ -80,3 +80,8 @@ def symyaxis():
 
     ylim = plt.gca().get_ylim()
     plt.gca().set_ylim(np.array([-1,1]) * np.max(np.abs(ylim)))
+
+
+def robust_lim(data, lotile=2, hitile=98, axis=-1):
+    return [np.nanpercentile(data, lotile, axis=axis).squeeze(),
+       np.nanpercentile(data, hitile, axis=axis).squeeze()]
