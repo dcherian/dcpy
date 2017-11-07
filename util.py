@@ -56,7 +56,7 @@ def datenum2datetime(matlab_datenum):
     from matplotlib.dates import num2date
     import numpy as np
 
-    python_datetime = num2date(matlab_datenum-367)
+    python_datetime = num2date(matlab_datenum-366)
 
     return np.asarray(python_datetime)
 
