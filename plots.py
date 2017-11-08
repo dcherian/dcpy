@@ -2,6 +2,33 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
+def offset_line_plot(da, x, y, ax=None, offset=1):
+    assert(da[y].ndim == 1)
+
+    axnum = da.get_axis_num(y)
+
+    if axnum == 0:
+        off = np.arange(da.shape[axnum])[:, np.newaxis]
+    else:
+        off = np.arange(da.shape[axnum])[np.newaxis, :]
+
+    off *= offset
+
+    # remove mean and add offset
+    daoffset = ((da.groupby(y)
+                 - da.groupby(y).mean())
+                + off)
+
+    if axnum == 0:
+        daoffset = daoffset.transpose()
+
+    if ax is None:
+        ax = plt.gca()
+
+    ax.plot(daoffset[x], daoffset.values)
+    plt.legend([str(yy) for yy in da[y].values])
+
+
 def FillRectangle(x, y=None, ax=None, color='k', alpha=0.05,
                   zorder=-1, **kwargs):
     if ax is None:
