@@ -5,6 +5,45 @@ import matplotlib.pyplot as plt
 import xarray as xr
 
 
+def xfilter(x, flen=None, kind='hann', dim='time', decimate=False):
+    ''' flen and x.dim should have same units!'''
+
+    from dcpy.util import smooth
+
+    if type(x) is not xr.core.dataarray.DataArray:
+        raise ValueError("xfilter only works on DataArrays!")
+
+    if flen is None or kind is None:
+        return x
+
+    # determine Δdim
+    dt = np.diff(x[dim][0:2].values)
+
+    if dt.dtype == 'timedelta64[ns]':
+        dt = dt.astype('timedelta64[s]').astype('float32')
+
+    if kind == 'mean':
+        N = np.int(np.floor(flen/dt))
+        a = x.rolling(time=N, center=True, min_periods=1).mean()
+        if decimate:
+            seldict = dict()
+            seldict[dim] = slice(N-1, len(a['time'])-N+1, N)
+            a = a.isel(seldict)
+
+    elif kind == 'bandpass':
+        flen = np.array(flen.copy())
+        if len(flen) == 1:
+            raise ValueError("Bandpass filtering requires two frequencies!")
+
+        a = BandPassButter(x.copy(), 1/flen, dt, dim=dim)
+
+    else:
+        a = x.copy()
+        a.values = smooth(x.values, flen/dt, axis=x.get_axis_num(dim))
+
+    return a
+
+
 def FindLargestSegment(input):
 
     start, stop = FindSegments(input)
