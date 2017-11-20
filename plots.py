@@ -1,8 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-
-def offset_line_plot(da, x, y, ax=None, offset=1):
+def offset_line_plot(da, x, y, ax=None, offset=1, remove_mean=True, **kwargs):
     assert(da[y].ndim == 1)
 
     axnum = da.get_axis_num(y)
@@ -15,9 +14,12 @@ def offset_line_plot(da, x, y, ax=None, offset=1):
     off *= offset
 
     # remove mean and add offset
-    daoffset = ((da.groupby(y)
-                 - da.groupby(y).mean())
-                + off)
+    if remove_mean:
+        daoffset = (da.groupby(y) - da.groupby(y).mean())
+    else:
+        daoffset = da
+
+    daoffset = daoffset + off
 
     if axnum == 0:
         daoffset = daoffset.transpose()
@@ -25,8 +27,8 @@ def offset_line_plot(da, x, y, ax=None, offset=1):
     if ax is None:
         ax = plt.gca()
 
-    ax.plot(daoffset[x], daoffset.values)
-    plt.legend([str(yy) for yy in da[y].values])
+    ax.plot(daoffset[x], daoffset.values, **kwargs)
+    ax.legend([str(yy) for yy in da[y].values])
 
 
 def FillRectangle(x, y=None, ax=None, color='k', alpha=0.05,
