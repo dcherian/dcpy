@@ -116,6 +116,9 @@ def smooth(x, window_len=11, window='hanning', axis=-1, preserve_nan=True):
     if window_len < 3:
         return x
 
+    if window is 'hann':
+        window = 'hanning'
+
     window_len = np.int(np.ceil(window_len))
     if np.mod(window_len, 2) < 1e-4:
         window_len = window_len+1

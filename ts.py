@@ -39,7 +39,7 @@ def xfilter(x, flen=None, kind='hann', dim='time', decimate=False):
 
     else:
         a = x.copy()
-        a.values = smooth(x.values, flen/dt, axis=x.get_axis_num(dim))
+        a.values = smooth(x.values, flen/dt, window=kind, axis=x.get_axis_num(dim))
 
     return a
 
