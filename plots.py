@@ -1,7 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-def offset_line_plot(da, x, y, ax=None, offset=1, remove_mean=True, **kwargs):
+def offset_line_plot(da, x, y, ax=None, offset=1, remove_mean=True,
+                     legend=True, robust=False, **kwargs):
+
     assert(da[y].ndim == 1)
 
     axnum = da.get_axis_num(y)
@@ -27,8 +29,15 @@ def offset_line_plot(da, x, y, ax=None, offset=1, remove_mean=True, **kwargs):
     if ax is None:
         ax = plt.gca()
 
-    ax.plot(daoffset[x], daoffset.values, **kwargs)
-    ax.legend([str(yy) for yy in da[y].values])
+    hdl = ax.plot(daoffset[x], daoffset.values, **kwargs)
+
+    if robust:
+        ax.set_ylim(robust_lim(daoffset.values.ravel()))
+
+    if legend:
+        ax.legend([str(yy) for yy in da[y].values])
+
+    return hdl
 
 
 def FillRectangle(x, y=None, ax=None, color='k', alpha=0.05,
