@@ -19,7 +19,7 @@ def xfilter(x, flen=None, kind='hann', dim='time', decimate=False):
     # determine Δdim
     dt = np.diff(x[dim][0:2].values)
 
-    if dt.dtype == 'timedelta64[ns]':
+    if np.issubdtype(dt.dtype, np.timedelta64):
         dt = dt.astype('timedelta64[s]').astype('float32')
 
     if kind == 'mean':
