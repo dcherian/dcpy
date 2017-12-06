@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-def offset_line_plot(da, x, y, ax=None, offset=1, remove_mean=True,
+def offset_line_plot(da, x, y, ax=None, offset=0, remove_mean=False,
                      legend=True, robust=False, **kwargs):
 
     assert(da[y].ndim == 1)
