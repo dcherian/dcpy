@@ -898,7 +898,10 @@ def FillGaps(y, x=None, maxlen=None):
     return yfill
 
 
-def Spectrogram(var, window, shift, time=None, **kwargs):
+def Spectrogram(var, window, shift, time=None, dim=None, **kwargs):
+
+    if time is None and dim is not None and isinstance(var, xr.DataArray):
+        time = var[dim]
 
     spec = []
     window = np.int(window)
@@ -909,16 +912,19 @@ def Spectrogram(var, window, shift, time=None, **kwargs):
             break
 
         S, f, _ = SpectralDensity(var[ii:ii+window], **kwargs)
+
         spec.append(S)
 
     spec = np.stack(spec)
 
     if time is None:
-        time = np.arange(0, len(var), shift)
+        time = np.arange(0, ii, shift)
     else:
-        time = time.copy()[::shift]
+        time = time.copy()[:ii:shift]
 
-    return f, spec, time[:spec.shape[0]]
+    spec = xr.DataArray(spec, dims=['time', 'freq'], coords=[time, f], name='PSD')
+
+    return spec
 
 
 def PlotSpectrogram(time, spec, ax=None):
