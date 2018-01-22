@@ -851,8 +851,30 @@ def HighPassAndPlot(input, CutoffFreq, titlestr=None):
     return filtered
 
 
+def apply_along_dim_1d(invar, dim, func, args=(), **kwargs):
+
+    x = invar.copy()
+    idim = invar.get_axis_num(dim)
+    stackdims = x.dims[:idim] + x.dims[idim+1:]
+
+    if invar.ndim > 2:
+        # reshape to 2D
+        # 'dim' is now first index
+        x = x.stack(newdim=stackdims)
+
+    x.values = np.apply_along_axis(func, 0, x.values,
+                                   args, **kwargs)
+
+    if invar.ndim > 2:
+        # unstack back to original shape and ordering
+        x = x.unstack('newdim').transpose(*list(invar.dims))
+
+    return x
+
+
 def FillGaps(y, x=None, maxlen=None):
-    ''' Use linear interpolation to fill gaps < maxlen
+    ''' TODO: use pandas.fillna
+        Use linear interpolation to fill gaps < maxlen
         Input:
             y : value vector with gaps
             x : [optional] x (time) vector
