@@ -130,7 +130,7 @@ def FindGaps(var):
 def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
                  SubsetLength=None, breakpts=[], multitaper=False,
                  preserve_area=False, scale=1, linearx=False,
-                 twoside=True, **kwargs):
+                 axis=-1, twoside=True, **kwargs):
 
     iscomplex = not np.all(np.isreal(var))
     if not iscomplex:
@@ -149,11 +149,16 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
             ax.append(plt.gca())
             plt.gcf().set_size_inches(8.5, 8.5/1.617)
 
-    var = np.array(var, ndmin=2)
-    if var.shape[axis] == 1:
-        var = var.transpose()
-        if var.shape[-1] == 1:
+    if var.ndim == 1:
+        var = np.array(var, ndmin=2)
+        if var.shape[0] == 1:
+            var = var.transpose()
             axis = -1
+
+    # if var.shape[axis] == 1:
+    #     var = var.transpose()
+    #     if var.shape[-1] == 1:
+    #         axis = -1
 
     if axis == 0:
         var = var.transpose()
@@ -177,7 +182,7 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
             hdl.append(ax[0].plot(f, S, **kwargs)[0])
             if len(conf) > 2:
                 ax[0].fill_between(f, conf[:, 0], conf[:, 1],
-                                color=hdl[-1].get_color(), alpha=0.3)
+                                   color=hdl[-1].get_color(), alpha=0.3)
 
         else:
             cw, ccw, f, conf_cw, conf_ccw = \
