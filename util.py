@@ -144,17 +144,16 @@ def smooth(x, window_len=11, window='hanning', axis=-1, preserve_nan=True):
     return y
 
 
-def MovingAverage(input, N, decimate=True, min_count=1, **kwargs):
+def MovingAverage(vin, N, dim=None, decimate=True, min_count=1, **kwargs):
     from bottleneck import move_mean
     import numpy as np
 
     N = np.int(np.floor(N))
 
     if N == 1 or N == 0:
-        return input
+        return vin
     else:
-        y = move_mean(input, window=N, min_count=min_count,
-                      **kwargs)
+        y = move_mean(vin, window=N, min_count=min_count, **kwargs)
         if decimate:
             return y[N-1:len(y)-N+1:N]
         else:
@@ -185,6 +184,7 @@ def BinEqualizeHist(coords, bins=10, offset=0.0, label=None):
     compressed = np.where(counts != 0,
                           offset+(1.0-offset)*transformed/span,
                           np.nan)
+    compressed = np.flipud(compressed)
     return xs[:-1], ys[:-1], np.ma.masked_invalid(compressed)
 
 

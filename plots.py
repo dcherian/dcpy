@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+
 def offset_line_plot(da, x, y, ax=None, offset=0, remove_mean=False,
                      legend=True, robust=False, **kwargs):
 
@@ -80,7 +81,7 @@ def liney(var, ax=None, color='gray', linestyle='--', zorder=-1):
     if ax is None:
         ax = plt.gca()
 
-    if not isinstance(ax, list):
+    if not isinstance(ax, list) and not isinstance(ax, np.ndarray):
         ax = [ax]
 
     var = np.array(var, ndmin=1)
@@ -114,6 +115,7 @@ def line45():
     plt.ylim(newlimits)
     plt.plot(plt.xlim(), plt.ylim(), color='gray')
 
+
 def symyaxis():
 
     ylim = plt.gca().get_ylim()
@@ -122,4 +124,4 @@ def symyaxis():
 
 def robust_lim(data, lotile=2, hitile=98, axis=-1):
     return [np.nanpercentile(data, lotile, axis=axis).squeeze(),
-       np.nanpercentile(data, hitile, axis=axis).squeeze()]
+           np.nanpercentile(data, hitile, axis=axis).squeeze()]
