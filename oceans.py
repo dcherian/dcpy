@@ -141,3 +141,28 @@ def TSplot(S, T, P, Pref=0, ax=None):
 
     ax.set_xlabel('S')
     ax.set_ylabel('T')
+
+
+def argo_mld_clim(kind='monthly', fname=None):
+    if fname is None:
+        if kind is 'monthly':
+            fname = '~/datasets/argomld/Argo_mixedlayers_monthlyclim_03192017.nc'
+
+        if kind is 'annual':
+            fname = '~/datasets/argomld/Argo_mixedlayers_all_03192017.nc'
+
+    import xarray as xr
+
+    ds = xr.open_dataset(fname, autoclose=True)
+
+    mld = xr.Dataset()
+    month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+             'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    for da in ds:
+        if da[0:2] == 'ml':
+            mld[da] = xr.DataArray(ds[da].values,
+                                   coords=[('lat', ds['lat']),
+                                           ('lon', ds['lon']),
+                                           ('month', ds['month'])])
+
+    return mld
