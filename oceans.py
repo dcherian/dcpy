@@ -72,7 +72,11 @@ def ReadWoa(lon, lat, time='annual', depth=None, return_xr=False):
 
 
 def GM(lat, N, N0, b=1000, oned=False):
-    import GM81.gm as gm
+    try:
+        import GM81.gm as gm
+    except ImportError:
+        raise ImportError('Please install the GM81 package.')
+
     import seawater as sw
     import numpy as np
 
