@@ -48,6 +48,11 @@ def dt64_to_datenum(dt64):
 
     return mdt.date2num(dt64.astype('M8[s]').astype(pdt.datetime))
 
+def mdatenum2dt64(dnum):
+    import numpy as np
+
+    return ((-86400 + dnum*86400).astype('timedelta64[s]')
+       + np.datetime64('0001-01-01'))
 
 def datenum2datetime(matlab_datenum):
     '''
