@@ -741,6 +741,13 @@ def ImpulseResponse(b, a, eps=1e-2):
     plt.show()
 
 
+def LowPassButter(input, freq, order=1):
+
+    b, a = signal.butter(order, freq/(1/2), btype='low')
+
+    return GappyFilter(input, b, a, 10)
+
+
 def HighPassButter(input, freq, order=1):
 
     b, a = signal.butter(order, freq/(1/2), btype='high')
