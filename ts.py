@@ -5,10 +5,11 @@ import matplotlib.pyplot as plt
 import xarray as xr
 
 
-def xfilter(x, flen=None, kind='hann', dim='time', decimate=False):
+def xfilter(x, flen=None, kind='hann', dim='time',
+            decimate=False, min_values=None, **kwargs):
     ''' flen and x.dim should have same units!'''
 
-    from dcpy.util import smooth
+    from .util import smooth
 
     if type(x) is not xr.core.dataarray.DataArray:
         raise ValueError("xfilter only works on DataArrays!")
@@ -24,11 +25,23 @@ def xfilter(x, flen=None, kind='hann', dim='time', decimate=False):
 
     if kind == 'mean':
         N = np.int(np.floor(flen/dt))
-        a = x.rolling(time=N, center=True, min_periods=1).mean()
+
+        if N == 0:
+            raise ValueError('xfilter: filter length not long enough!')
+
+        if min_values is None:
+            min_periods = 1
+        elif min_values < 1:
+            min_periods = np.int(np.ceil(min_values * N))
+        else:
+            min_periods = min_values
+
+        a = x.rolling(time=N, center=True, min_periods=min_periods).mean()
+
         if decimate:
             seldict = dict()
             seldict[dim] = slice(N-1, len(a['time'])-N+1, N)
-            a = a.isel(seldict)
+            a = a.isel(**seldict)
 
     elif kind == 'bandpass':
         flen = np.array(flen.copy())
@@ -39,7 +52,8 @@ def xfilter(x, flen=None, kind='hann', dim='time', decimate=False):
 
     else:
         a = x.copy()
-        a.values = smooth(x.values, flen/dt, window=kind, axis=x.get_axis_num(dim))
+        a.values = smooth(x.values, flen/dt, window=kind,
+                          axis=x.get_axis_num(dim), **kwargs)
 
     return a
 
