@@ -138,15 +138,18 @@ def GM(lat, N, N0, b=1000, oned=False):
     return (omg, K_omg, P_omg, k, K_k_1d, P_k_1d)
 
 
-def TSplot(S, T, P, Pref=0, ax=None):
+def TSplot(S, T, P, Pref=0, ax=None, rho_levels=None, **kwargs):
 
-    colormap = cmo.cm.matter
+    # colormap = cmo.cm.matter
 
     if ax is None:
         plt.figure()
         ax = plt.gca()
 
-    ax.plot(S, T, '.', color='teal')
+    color = kwargs.pop('color', 'teal')
+    marker = kwargs.pop('marker', '.')
+
+    ax.plot(S, T, ls='None', marker=marker, color=color, **kwargs)
     # ax.scatter(S, T, s=4*120, c=P,
     #            alpha=0.5, linewidth=0.15, edgecolor='gray',
     #            cmap=colormap, zorder=-10)
@@ -159,9 +162,15 @@ def TSplot(S, T, P, Pref=0, ax=None):
 
     ρ = sw.pden(Smat, Tmat, Pref) - 1000
 
+    if rho_levels is not None:
+        rho_levels = np.asarray(rho_levels)
+        if np.all(rho_levels > 1000):
+            rho_levels -= 1000
+
     cs = ax.contour(Smat, Tmat, ρ, colors='gray',
-                    linestyles='dashed')
-    ax.clabel(cs, fmt='%.1f')
+                    levels=rho_levels, linestyles='dashed')
+    clabels = ax.clabel(cs, fmt='%.1f')
+    [txt.set_backgroundcolor([0.95, 0.95, 0.95, 0.7]) for txt in clabels]
 
     ax.set_xlabel('S')
     ax.set_ylabel('T')
