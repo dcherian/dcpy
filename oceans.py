@@ -138,7 +138,8 @@ def GM(lat, N, N0, b=1000, oned=False):
     return (omg, K_omg, P_omg, k, K_k_1d, P_k_1d)
 
 
-def TSplot(S, T, P, Pref=0, ax=None, rho_levels=None, **kwargs):
+def TSplot(S, T, P, Pref=0, ax=None, rho_levels=None,
+           label_spines=True, **kwargs):
 
     # colormap = cmo.cm.matter
 
@@ -148,6 +149,7 @@ def TSplot(S, T, P, Pref=0, ax=None, rho_levels=None, **kwargs):
 
     color = kwargs.pop('color', 'teal')
     marker = kwargs.pop('marker', '.')
+    fontsize = kwargs.pop('fontsize', 9)
 
     ax.plot(S, T, ls='None', marker=marker, color=color, **kwargs)
     # ax.scatter(S, T, s=4*120, c=P,
@@ -168,12 +170,50 @@ def TSplot(S, T, P, Pref=0, ax=None, rho_levels=None, **kwargs):
             rho_levels -= 1000
 
     cs = ax.contour(Smat, Tmat, ρ, colors='gray',
-                    levels=rho_levels, linestyles='dashed')
-    clabels = ax.clabel(cs, fmt='%.1f')
-    [txt.set_backgroundcolor([0.95, 0.95, 0.95, 0.7]) for txt in clabels]
+                    levels=rho_levels, linestyles='solid')
+
+    if label_spines:
+        # needed to do some labelling setup
+        clabels = ax.clabel(cs, fmt='%.1f', inline=False)
+
+        [txt.set_visible(False) for txt in clabels]
+
+        for idx, _ in enumerate(cs.levels):
+            # This is the rightmost point on each calculated contour
+            x, y = cs.allsegs[idx][0][0, :]
+            # This is a very helpful function!
+            cs.add_label_near(x, y, inline=False, inline_spacing=0)
+
+        xlim = ax.get_xlim()
+
+        def edit_text(t):
+            if abs(t.get_position()[0] - xlim[1])/xlim[1] < 1e-6:
+                # right spine lables
+                t.set_verticalalignment('center')
+            else:
+                # top spine labels need to be aligned to the bottom
+                t.set_verticalalignment('bottom')
+
+            t.set_clip_on(False)
+            t.set_horizontalalignment('left')
+            t.set_size(fontsize)
+            t.set_text(' ' + t.get_text())
+
+        [edit_text(t) for t in cs.labelTexts]
+        ax.spines['right'].set_visible(True)
+        ax.spines['top'].set_visible(True)
+
+    else:
+        clabels = ax.clabel(cs, fmt='%.1f', inline=True, inline_spacing=10)
+        [txt.set_backgroundcolor([0.95, 0.95, 0.95, 0.75]) for txt in clabels]
+
+    ax.text(0, 0.995, ' $σ_' + str(Pref) + '$', transform=ax.transAxes,
+            va='top', fontsize=fontsize+2, color='gray')
 
     ax.set_xlabel('S')
     ax.set_ylabel('T')
+
+    return cs
 
 
 def argo_mld_clim(kind='monthly', fname=None):
