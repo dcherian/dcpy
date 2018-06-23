@@ -4,7 +4,27 @@ import cmocean as cmo
 import numpy as np
 
 
-def inertial(lat):
+def dataset_center_pacific(da, name=None):
+    ''' Takes an input DataArray and rolls the longitude
+        so that all 3 basins are covered. Longitude goes from 20 to 380. '''
+
+    if name is None:
+        name = 'longitude' if 'longitude' in da.coords else 'lon'
+
+    # roll so that pacific is in the middle
+    # and we have coverage of all 3 basins
+
+    da = da.roll(**{name: -1 * da[name].searchsorted(20)})
+
+    coord = da[name].values
+    coord[coord < 20] += 360
+
+    da[name].values = coord
+
+    return da
+
+
+def coriolis(lat):
     π = np.pi
     return 2*(2*π/86400) * np.sin(lat * π/180)
 
