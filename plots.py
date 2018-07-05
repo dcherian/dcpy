@@ -67,7 +67,7 @@ def linex(var, ax=None, color='gray', linestyle='--', zorder=-1, **kwargs):
     if ax is None:
         ax = plt.gca()
 
-    if not isinstance(ax, list):
+    if not hasattr(ax, '__iter__'):
         ax = [ax]
 
     var = np.array(var, ndmin=1)
@@ -82,7 +82,7 @@ def liney(var, ax=None, color='gray', linestyle='--', zorder=-1, **kwargs):
     if ax is None:
         ax = plt.gca()
 
-    if not isinstance(ax, list) and not isinstance(ax, np.ndarray):
+    if not hasattr(ax, '__iter__'):
         ax = [ax]
 
     var = np.array(var, ndmin=1)
