@@ -148,6 +148,11 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
             ax.append(plt.gca())
             ax.append(plt.gca())
             plt.gcf().set_size_inches(8.5, 8.5/1.617)
+    else:
+        if twoside is False and not hasattr(ax, '__iter__'):
+            ax = [ax, ax]
+        else:
+            assert(len(ax) == 2)
 
     if var.ndim == 1:
         var = np.array(var, ndmin=2)
@@ -187,8 +192,10 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
         else:
             cw, ccw, f, conf_cw, conf_ccw = \
                     RotaryPSD(var[:, zz]/(scale)**(zz+1), dt,
+                              nsmooth=nsmooth,
                               multitaper=multitaper)
             hdl.append(ax[0].plot(f, cw, **kwargs)[0])
+
             if conf_cw != []:
                 ax[0].fill_between(f, conf_cw[:, 0], conf_cw[:, 1],
                                    color=hdl[-1].get_color(), alpha=0.3)
@@ -205,7 +212,10 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
 
         aa.set_xlabel('Freq')
 
-    ax[0].set_ylabel('PSD')
+    if preserve_area:
+        ax[0].set_ylabel('Freq x PSD')
+    else:
+        ax[0].set_ylabel('PSD')
 
     if not twoside:
         if iscomplex:
@@ -602,7 +612,7 @@ def RotaryPSD(y, dt=1, nsmooth=5, multitaper=False):
 
     Gxx = dt/N * X * np.conjugate(X)
     Gyy = dt/N * Y * np.conjugate(Y)
-    Qxy = dt/N * (np.real(X)*np.imag(Y) - np.imag(X)*np.real(Y))
+    Qxy = -dt/N * (np.real(X)*np.imag(Y) - np.imag(X)*np.real(Y))
 
     if multitaper:
         Gxx = np.mean(Gxx[0:len(freq)], axis=1)
