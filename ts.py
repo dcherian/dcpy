@@ -130,7 +130,8 @@ def FindGaps(var):
 def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
                  SubsetLength=None, breakpts=[], multitaper=False,
                  preserve_area=False, scale=1, linearx=False,
-                 axis=-1, twoside=True, **kwargs):
+                 axis=-1, twoside=True, decimate=True,
+                 period_axis=True, **kwargs):
 
     iscomplex = not np.all(np.isreal(var))
     if not iscomplex:
@@ -145,14 +146,17 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
             ax[0].set_title('CW (anti-cyclonic)')
             ax[1].set_title('CCW (cyclonic)')
         else:
-            ax.append(plt.gca())
-            ax.append(plt.gca())
+            f, aa = plt.subplots()
+            ax.append(aa)
+            ax.append(aa)
             plt.gcf().set_size_inches(8.5, 8.5/1.617)
     else:
         if twoside is False and not hasattr(ax, '__iter__'):
             ax = [ax, ax]
-        else:
+        elif iscomplex and twoside is True:
             assert(len(ax) == 2)
+            ax[0].set_title('CW (anti-cyclonic)')
+            ax[1].set_title('CCW (cyclonic)')
 
     if var.ndim == 1:
         var = np.array(var, ndmin=2)
@@ -169,7 +173,7 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
         var = var.transpose()
         axis = -1
 
-    if type(ax) is not list:
+    if not hasattr(ax, '__iter__'):
         ax = [ax]
 
     hdl = []
@@ -178,7 +182,8 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
             S, f, conf = SpectralDensity(var[:, zz]/(scale)**(zz+1), dt,
                                          nsmooth, SubsetLength,
                                          breakpts=breakpts,
-                                         multitaper=multitaper)
+                                         multitaper=multitaper,
+                                         decimate=decimate)
 
             if preserve_area:
                 S = S*f
@@ -194,6 +199,13 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
                     RotaryPSD(var[:, zz]/(scale)**(zz+1), dt,
                               nsmooth=nsmooth,
                               multitaper=multitaper)
+
+            if preserve_area:
+                cw = cw*f
+                conf_cw = conf_cw*f[:, np.newaxis]
+                ccw = ccw*f
+                conf_ccw = conf_ccw*f[:, np.newaxis]
+
             hdl.append(ax[0].plot(f, cw, **kwargs)[0])
 
             if conf_cw != []:
@@ -214,6 +226,7 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
 
     if preserve_area:
         ax[0].set_ylabel('Freq x PSD')
+        ax[0].set_yscale('linear')
     else:
         ax[0].set_ylabel('PSD')
 
@@ -227,8 +240,28 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
         if not ax[0].xaxis_inverted():
             ax[0].invert_xaxis()
 
+        if preserve_area:
+            ax[1].set_yscale('linear')
         ax[1].set_yticklabels([])
         plt.tight_layout()
+
+    #def sync_func(other_ax):
+    #    ax2.set_xlim(1/np.asarray(other_ax.get_xlim()))
+
+    # ax2 = ax.twiny()
+    # ax.set_autoscale_on(False)
+    # ax2.set_autoscale_on(False)
+
+    # ax2.spines['top'].set_visible(True)
+    # ax2.spines['right'].set_visible(True)
+    # ax2.set_xscale(ax.get_xscale())
+    # ax2.set_xlabel('period')
+    # ax2.set_xlim(1/np.asarray(ax.get_xlim()))
+
+    # ax.callbacks.connect('xlim_changed', sync_func)
+
+    # ax.grid(True)
+    # ax2.grid(True)
 
     return hdl, ax
 
@@ -339,7 +372,8 @@ def ConfChi2(alpha, dof):
 
 
 def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
-                    multitaper=False, fillgaps=False, maxlen=None, breakpts=[]):
+                    multitaper=False, fillgaps=False, maxlen=None,
+                    breakpts=[], decimate=True):
     """ Calculates spectral density for longest valid segment
         Direct translation of Tom's spectrum_band_avg.
         Always applies a Hann window if not multitaper.
@@ -358,7 +392,8 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
 
         Returns:
             S : estimated spectral density
-            f : frequency bands
+            f : frequency bands (1/period)
+                [sin(2π/10) will have a peak at 1/10]
          conf : 95% confidence interval for 2*nsmooth dof
     """
     import dcpy.util
@@ -450,9 +485,9 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
             i0 = i1
             i1 = breakpts[idx]
             S.append(dcpy.util.MovingAverage(
-                YY_raw[i0:i1], smth, decimate=True))
+                YY_raw[i0:i1], smth, decimate=decimate))
             f.append(dcpy.util.MovingAverage(
-                freq[i0:i1], smth, decimate=True))
+                freq[i0:i1], smth, decimate=decimate))
 
             confint = ConfChi2(0.05, 2*smth)
             conf.append(np.array([confint[0]*S[idx],
@@ -562,7 +597,7 @@ def MultiTaperCoherence(y0, y1, dt=1, tbp=5, ntapers=None):
     return f, cohe, phase, siglevel
 
 
-def RotaryPSD(y, dt=1, nsmooth=5, multitaper=False):
+def RotaryPSD(y, dt=1, nsmooth=5, multitaper=False, decimate=False):
 
     """
     Inputs
@@ -620,10 +655,10 @@ def RotaryPSD(y, dt=1, nsmooth=5, multitaper=False):
         Qxy = np.mean(Qxy[0:len(freq)], axis=1)
 
     else:
-        Gxx = MovingAverage(Gxx, nsmooth, decimate=True)
-        Gyy = MovingAverage(Gyy, nsmooth, decimate=True)
-        Qxy = MovingAverage(Qxy, nsmooth, decimate=True)
-        freq = MovingAverage(freq, nsmooth, decimate=True)
+        Gxx = MovingAverage(Gxx, nsmooth, decimate=decimate)
+        Gyy = MovingAverage(Gyy, nsmooth, decimate=decimate)
+        Qxy = MovingAverage(Qxy, nsmooth, decimate=decimate)
+        freq = MovingAverage(freq, nsmooth, decimate=decimate)
 
     cw = 0.5 * (Gxx + Gyy - 2*Qxy)[freq > 0]
     ccw = 0.5 * (Gxx + Gyy + 2*Qxy)[freq > 0]
