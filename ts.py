@@ -1,8 +1,10 @@
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 import numpy as np
 import scipy.signal as signal
 import scipy.fftpack as fftpack
-import matplotlib.pyplot as plt
 import xarray as xr
+import sciviscolor as svc
 
 
 def xfilter(x, flen=None, kind='hann', dim='time',
@@ -11,7 +13,7 @@ def xfilter(x, flen=None, kind='hann', dim='time',
 
     from .util import smooth
 
-    if type(x) is not xr.core.dataarray.DataArray:
+    if not isinstance(x, xr.DataArray):
         raise ValueError("xfilter only works on DataArrays!")
 
     if flen is None or kind is None:
@@ -27,7 +29,8 @@ def xfilter(x, flen=None, kind='hann', dim='time',
         N = np.int(np.floor(flen/dt))
 
         if N == 0:
-            raise ValueError('xfilter: filter length not long enough!')
+            print('xfilter: filter length not long enough!')
+            return x
 
         if min_values is None:
             min_periods = 1
@@ -308,9 +311,10 @@ def CenteredFFT(input, dt=1.0):
     else:
         m = np.arange(-(N-1)/2, (N-1)/2+1)
 
-    input -= input.mean()
+    input = signal.detrend(input.copy())
 
     freq = m/(N*dt)
+
     X = fftpack.fft(input)
     X = fftpack.fftshift(X)
 
