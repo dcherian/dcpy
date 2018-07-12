@@ -1015,9 +1015,143 @@ def Spectrogram(var, window, shift, time=None, dim=None, **kwargs):
 
 def PlotSpectrogram(time, spec, ax=None):
 
-    if ax is None:
-        ax = plt.gca()
 
-    plt.contourf(time, f, np.log10(spec.T))
-    plt.gca().set_yscale('log')
-    plt.colorbar()
+def wavelet(var, dt=1):
+    import wavelets
+
+    wave, period, scale, coi = wavelets.wavelet(var-np.nanmean(var),
+                                                dt=dt,
+                                                pad=1)
+
+    if isinstance(var, xr.DataArray):
+        if var.ndim > 1:
+            raise ValueError('Only 1-D data supported!')
+
+        dim = var.dims[0]
+
+    wave = xr.DataArray(wave, dims=['period', dim],
+                        coords={'period': period,
+                                dim: var[dim]})
+    coi = xr.DataArray(coi, dims=[dim], coords={dim: var[dim]})
+    scale = xr.DataArray(scale, dims=['period'], coords={'period': period})
+
+    w = xr.Dataset()
+    w['coi'] = coi
+    w['scale'] = scale
+    w['wave'] = wave
+    w['power'] = np.abs(w.wave)**2
+
+    cmat, pmat = xr.broadcast(w.coi, w.period)
+    w = w.where(pmat < cmat)
+    w = w.dropna(dim='period', how='all')
+
+    w.attrs['long_name'] = 'Wavelet power'
+
+    return w
+
+
+def plot_scalogram(da, dt=1, ax=None, **kwargs):
+
+    w = wavelet(da, dt)
+
+    if ax is None:
+        f, ax = plt.subplots()
+
+    robust = kwargs.pop('robust', True)
+    cmap = kwargs.pop('cmap', svc.cm.blue_orange_div)
+    levels = kwargs.pop('levels', 20)
+
+    (np.log10(w.power)
+     .plot.contourf(yscale='log', yincrease=False, ax=ax, cmap=cmap,
+                    robust=robust, center=False, levels=levels, **kwargs))
+
+    (np.log10(w.power)
+     .plot.contour(yscale='log', yincrease=False, ax=ax,
+                   colors='k', robust=robust, center=False,
+                   linestyles='-', linewidths=1,
+                   levels=np.nanpercentile(np.log10(w.power), [90, 95]),
+                   **kwargs))
+
+
+def plot_detailed_scalogram(da, dt=1, **kwargs):
+
+    with plt.style.context('ggplot'):
+        f, ax = plt.subplots(2, 1, sharex=True, constrained_layout=True)
+
+        plot_scalogram(da, dt=dt, ax=ax[0])
+
+        da.plot(ax=ax[1])
+
+        ax[0].set_xlabel('')
+
+    return ax
+
+
+def matlab_wavelet(da, dt=1, beta=2.0, gamma=3.0, eng=None, kind='matlab'):
+
+    import matlab.engine
+
+    if eng is None:
+        print('Starting MATLAB...')
+        eng = matlab.engine.start_matlab()
+        eng.addpath(eng.genpath('~/tools/'))
+
+    if isinstance(da, xr.DataArray):
+        if da.ndim > 1:
+            raise ValueError('Only 1-D data supported!')
+
+        dim = da.dims[0]
+        nparray = da.values
+
+    elif isinstance(da, np.ndarray):
+        nparray = da
+
+    marray = eng.transpose(matlab.double(list(nparray)))
+
+    if kind == 'jlab':
+        fs = eng.morsespace(float(gamma), float(beta), float(len(da)))
+
+        wa = np.asarray(eng.wavetrans(marray, [gamma, beta, eng.squeeze(fs)]))
+
+        period = dt*2*np.pi/np.asarray(fs).squeeze()
+
+        coi = None
+
+    elif kind == 'matlab':
+        wa, f, coi = eng.cwt(marray, 1.0,
+                             'WaveletParameters', matlab.double([gamma, beta]),
+                             nargout=3)
+        period = dt*2*np.pi/np.asarray(f).squeeze()
+
+        coi = np.asarray(coi).squeeze()
+        wa = np.asarray(wa).squeeze().T
+
+    if isinstance(da, xr.DataArray):
+        power = xr.DataArray(np.abs(wa)**2, dims=[dim, 'period'],
+                             coords={dim: da[dim],
+                                     'period': period})
+
+        w = xr.Dataset()
+        w['period'] = xr.DataArray(period, dims=['period'],
+                                   coords={'period': period})
+        w['wave'] = xr.DataArray(wa, dims=[dim, 'period'],
+                                 coords={dim: da[dim],
+                                         'period': period})
+        w['power'] = power
+
+        if coi is not None:
+            w['coi'] = xr.DataArray(coi, dims=[dim], coords={dim: da[dim]})
+
+            cmat, pmat = xr.broadcast(w.coi, w.period)
+            w = w.where(pmat < cmat)
+            w = w.dropna(dim='period', how='all')
+
+        w.attrs['long_name'] = 'Wavelet power'
+
+    else:
+        w = np.abs(wa)
+
+    return w
+
+
+# def complex_demodulate(da, central_freq, filter_width):
