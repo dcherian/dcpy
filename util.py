@@ -48,20 +48,23 @@ def dt64_to_datenum(dt64):
 
     return mdt.date2num(dt64.astype('M8[s]').astype(pdt.datetime))
 
+
 def mdatenum2dt64(dnum):
     import numpy as np
 
     return ((-86400 + dnum*86400).astype('timedelta64[s]')
        + np.datetime64('0001-01-01'))
 
+
 def datenum2datetime(matlab_datenum):
     '''
     Converts matlab datenum to matplotlib datetime.
     '''
-    from matplotlib.dates import num2date
     import numpy as np
 
-    python_datetime = num2date(matlab_datenum-366)
+    python_datetime = ((-86400 + matlab_datenum * 86400).astype('timedelta64[s]')
+                       + np.datetime64('0000-01-01')).astype('datetime64[ns]')
+    # python_datetime = num2date(matlab_datenum-366)
 
     return np.asarray(python_datetime)
 
