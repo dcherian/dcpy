@@ -883,22 +883,30 @@ def GappyFilter(input, b, a, num_discard=None):
     return out.squeeze()
 
 
-def HighPassAndPlot(input, CutoffFreq, titlestr=None):
+def HighPassAndPlot(input, CutoffFreq, titlestr=None, **kwargs):
 
     start, stop = FindLargestSegment(input)
     filtered = HighPassButter(input, CutoffFreq)
 
-    f, InputSpec = SpectralDensity(input, 10)
-    plt.loglog(f, InputSpec, label='input data')
+    ax = []
+    plt.figure()
+    ax.append(plt.subplot(4, 1, 1))
+    PlotSpectrum(input, ax=ax[0], **kwargs)
+    PlotSpectrum(filtered, ax=ax[0], **kwargs)
+    ax[0].legend(['input', 'filtered'])
+    ax[0].axvline(CutoffFreq, color='gray', zorder=-20)
+    ax[0].set_title(titlestr)
 
-    f, FiltSpec = SpectralDensity(filtered, 10)
-    plt.loglog(f, FiltSpec, label='high pass')
+    ax.append(plt.subplot(4, 1, 2))
+    ax[1].plot(input)
 
-    plt.axvline(CutoffFreq, color='gray', zorder=-20)
-    plt.ylabel('Spectral density')
-    plt.xlabel('Frequency')
-    plt.title(titlestr)
-    plt.legend()
+    ax.append(plt.subplot(4, 1, 3, sharex=ax[1]))
+    ax[2].plot(filtered)
+
+    period = np.int(np.round(1/CutoffFreq))
+    ax.append(plt.subplot(4, 1, 4, sharex=ax[1]))
+    PlotSpectrogram(input, nfft=5*period, shift=2*period)
+    ax[3].liney(CutoffFreq)
 
     return filtered
 
