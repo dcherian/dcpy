@@ -984,36 +984,103 @@ def FillGaps(y, x=None, maxlen=None):
     return yfill
 
 
-def Spectrogram(var, window, shift, time=None, dim=None, **kwargs):
+def Spectrogram(var, nfft, shift, time=None, dim=None, **kwargs):
 
     if time is None and dim is not None and isinstance(var, xr.DataArray):
         time = var[dim]
+    elif time is None and isinstance(var, xr.DataArray):
+        dim = var[var.dims[0]]
 
-    spec = []
-    window = np.int(window)
+    iscomplex = np.any(np.iscomplex(var))
+
+    if iscomplex:
+        spec_cw = []
+        spec_ccw = []
+    else:
+        spec = []
+
+    nfft = np.int(nfft)
     shift = np.int(shift)
+    start = np.int(np.floor(nfft/2))
+    nb2 = np.int(np.floor(nfft/2))
 
-    for ii in np.arange(0, len(var), shift):
-        if ii > (len(var)-window):
+    for ii in np.arange(start, len(var), shift):
+        if ii+nb2 > len(var):
             break
 
-        S, f, _ = SpectralDensity(var[ii:ii+window], **kwargs)
-
-        spec.append(S)
-
-    spec = np.stack(spec)
+        if iscomplex:
+            cw, ccw, f, _, _ = RotaryPSD(var[ii-nb2:ii+nb2], **kwargs)
+            spec_cw.append(cw)
+            spec_ccw.append(ccw)
+        else:
+            S, f, _ = SpectralDensity(var[ii-nb2:ii+nb2], **kwargs)
+            spec.append(S)
 
     if time is None:
-        time = np.arange(0, ii, shift)
+        time = np.arange(start, ii, shift)
     else:
-        time = time.copy()[:ii:shift]
+        time = time.copy()[np.arange(start, ii, shift)]
 
-    spec = xr.DataArray(spec, dims=['time', 'freq'], coords=[time, f], name='PSD')
+    if iscomplex:
+        spec = xr.Dataset()
+        spec['cw'] = xr.DataArray(np.stack(spec_cw),
+                                  dims=['time', 'freq'],
+                                  coords=[time, f],
+                                  name='CW PSD')
+
+        spec['ccw'] = xr.DataArray(np.stack(spec_ccw),
+                                   dims=['time', 'freq'],
+                                   coords=[time, f],
+                                   name='CCW PSD')
+
+    else:
+        spec = xr.DataArray(np.stack(spec), dims=['time', 'freq'],
+                            coords=[time, f],
+                            name='PSD')
 
     return spec
 
 
-def PlotSpectrogram(time, spec, ax=None):
+def PlotSpectrogram(da, nfft, shift, multitaper=False, ax=None, **kwargs):
+
+    iscomplex = np.any(np.iscomplex(da))
+
+    if ax is None:
+        if iscomplex:
+            f, ax = plt.subplots(3, 1, sharex=True, constrained_layout=True)
+        else:
+            f, ax = plt.subplots(2, 1, sharex=True, constrained_layout=True)
+
+    spec = Spectrogram(da, nfft, shift, dim=da.dims[0],
+                       decimate=False, multitaper=multitaper,
+                       **kwargs)
+
+    plot_kwargs = dict(x=da.dims[0], yscale='log',
+                       cmap=svc.cm.blue_orange_div, robust=True)
+    mtitle = ' [mutitaper]' if multitaper else ' [freq. smoothed]'
+
+    if iscomplex:
+        np.real(da).plot.line(x=da.dims[0], ax=ax[0])
+        np.imag(da).plot.line(x=da.dims[0], ax=ax[0])
+        ax[0].legend(('real', 'imag'))
+
+        hdl = (spec.cw*spec.freq).plot.contourf(ax=ax[1], levels=25,
+                                                **plot_kwargs)
+
+        ax[1].set_title('Variance-preserving CW spectrogram' + mtitle)
+        (spec.ccw*spec.freq).plot.contourf(ax=ax[2], levels=hdl.levels,
+                                           **plot_kwargs)
+        ax[2].set_title('Variance-preserving CCW spectrogram' + mtitle)
+
+    else:
+        da.plot.line(x=da.dims[0], ax=ax[0])
+
+        (spec*spec.freq).plot.contourf(ax=ax[1], levels=25, **plot_kwargs)
+        ax[1].set_title('Variance-preserving spectrogram' + mtitle)
+
+    [aa.set_xlabel('') for aa in ax[:-1]]
+
+    return ax
 
 
 def wavelet(var, dt=1):
