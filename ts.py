@@ -428,7 +428,7 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
             if zz+SubsetLength > s1:
                 continue
 
-            var = input[zz:zz+SubsetLength].copy()
+            var = input[zz:zz+SubsetLength-1].copy()
 
             if np.any(np.isnan(var)):
                 raise ValueError('Subset has NaNs!')
@@ -490,8 +490,9 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
             i1 = breakpts[idx]
             S.append(dcpy.util.MovingAverage(
                 YY_raw[i0:i1], smth, decimate=decimate))
-            f.append(dcpy.util.MovingAverage(
-                freq[i0:i1], smth, decimate=decimate))
+            if decimate is True:
+                f.append(dcpy.util.MovingAverage(
+                    freq[i0:i1], smth, decimate=decimate))
 
             confint = ConfChi2(0.05, 2*smth)
             conf.append(np.array([confint[0]*S[idx],
@@ -601,7 +602,7 @@ def MultiTaperCoherence(y0, y1, dt=1, tbp=5, ntapers=None):
     return f, cohe, phase, siglevel
 
 
-def RotaryPSD(y, dt=1, nsmooth=5, multitaper=False, decimate=False):
+def RotaryPSD(y, dt=1, nsmooth=5, multitaper=False, decimate=True):
 
     """
     Inputs
@@ -662,7 +663,8 @@ def RotaryPSD(y, dt=1, nsmooth=5, multitaper=False, decimate=False):
         Gxx = MovingAverage(Gxx, nsmooth, decimate=decimate)
         Gyy = MovingAverage(Gyy, nsmooth, decimate=decimate)
         Qxy = MovingAverage(Qxy, nsmooth, decimate=decimate)
-        freq = MovingAverage(freq, nsmooth, decimate=decimate)
+        if decimate is True:
+            freq = MovingAverage(freq, nsmooth, decimate=True)
 
     cw = 0.5 * (Gxx + Gyy - 2*Qxy)[freq > 0]
     ccw = 0.5 * (Gxx + Gyy + 2*Qxy)[freq > 0]
@@ -676,7 +678,8 @@ def RotaryPSD(y, dt=1, nsmooth=5, multitaper=False, decimate=False):
         conf_cw = confint * cw[:, np.newaxis]
         conf_ccw = confint * ccw[:, np.newaxis]
 
-    return cw, ccw, freq, conf_cw, conf_ccw
+    return (np.real(cw), np.real(ccw), freq,
+            np.real(conf_cw), np.real(conf_ccw))
 
 
 def PlotCoherence(y0, y1, dt=1, nsmooth=5, multitaper=False, scale=1):
