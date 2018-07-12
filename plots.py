@@ -62,7 +62,8 @@ def FillRectangle(x, y=None, ax=None, color='k', alpha=0.05,
                 linewidth=None, **kwargs)
 
 
-def linex(var, ax=None, color='gray', linestyle='--', zorder=-1, **kwargs):
+def linex(var, ax=None, label=None, color='gray', linestyle='--', zorder=-1,
+          **kwargs):
 
     if ax is None:
         ax = plt.gca()
@@ -70,14 +71,21 @@ def linex(var, ax=None, color='gray', linestyle='--', zorder=-1, **kwargs):
     if not hasattr(ax, '__iter__'):
         ax = [ax]
 
+    if label is not None and not hasattr(label, '__iter__'):
+        label = [label]
+
     var = np.array(var, ndmin=1)
-    for vv in var:
+    for idx, vv in enumerate(var):
         for aa in ax:
             aa.axvline(vv, color=color, linestyle=linestyle,
                        zorder=zorder, **kwargs)
+            if label is not None:
+                aa.text(vv, 1, ' '+label[idx], ha='center', va='bottom',
+                        transform=aa.get_xaxis_transform('grid'))
 
 
-def liney(var, ax=None, color='gray', linestyle='--', zorder=-1, **kwargs):
+def liney(var, ax=None, label=None, color='gray', linestyle='--', zorder=-1,
+          **kwargs):
 
     if ax is None:
         ax = plt.gca()
@@ -85,11 +93,17 @@ def liney(var, ax=None, color='gray', linestyle='--', zorder=-1, **kwargs):
     if not hasattr(ax, '__iter__'):
         ax = [ax]
 
+    if label is not None and not hasattr(label, '__iter__'):
+        label = [label]
+
     var = np.array(var, ndmin=1)
-    for vv in var:
+    for idx, vv in enumerate(var):
         for aa in ax:
             aa.axhline(vv, color=color, linestyle=linestyle,
                        zorder=zorder, **kwargs)
+            if label is not None:
+                aa.text(1, vv, ' '+label[idx], ha='left', va='center',
+                        transform=aa.get_yaxis_transform('grid'))
 
 
 def hist(var, log=False, bins=100, alpha=0.5, normed=True,
