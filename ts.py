@@ -140,26 +140,32 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
     if not iscomplex:
         twoside = False  # meaningless for real data
 
+    if isinstance(var, xr.DataArray):
+        name = ' ' + xr.plot.utils.label_from_attrs(var)
+    else:
+        name = ' '
+
     if ax is None:
         ax = []
         if iscomplex and twoside is True:
-            plt.figure(figsize=(8.5, 8.5/2.2))
-            ax.append(plt.subplot(121))
-            ax.append(plt.subplot(122))
-            ax[0].set_title('CW (anti-cyclonic)')
-            ax[1].set_title('CCW (cyclonic)')
+            f, ax = plt.subplots(1, 2, figsize=(8.5, 8.5/2.2),
+                                 constrained_layout=True)
+            ax[0].set_title('CW (anti-cyclonic)' + name)
+            ax[1].set_title('CCW (cyclonic)' + name)
         else:
-            f, aa = plt.subplots()
+            f, aa = plt.subplots(constrained_layout=True)
+            aa.set_title(name)
             ax.append(aa)
             ax.append(aa)
             plt.gcf().set_size_inches(8.5, 8.5/1.617)
     else:
         if twoside is False and not hasattr(ax, '__iter__'):
+            ax.set_title(name)
             ax = [ax, ax]
         elif iscomplex and twoside is True:
             assert(len(ax) == 2)
-            ax[0].set_title('CW (anti-cyclonic)')
-            ax[1].set_title('CCW (cyclonic)')
+            ax[0].set_title('CW (anti-cyclonic)' + name)
+            ax[1].set_title('CCW (cyclonic)' + name)
 
     if var.ndim == 1:
         var = np.array(var, ndmin=2)
@@ -233,6 +239,8 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
     else:
         ax[0].set_ylabel('PSD')
 
+    [aa.autoscale(enable=True, tight=True) for aa in ax]
+
     if not twoside:
         if iscomplex:
             ax[0].legend(['CW', 'CCW'])
@@ -246,7 +254,6 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
         if preserve_area:
             ax[1].set_yscale('linear')
         ax[1].set_yticklabels([])
-        plt.tight_layout()
 
     #def sync_func(other_ax):
     #    ax2.set_xlim(1/np.asarray(other_ax.get_xlim()))
