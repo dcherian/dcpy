@@ -217,12 +217,12 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
 
             hdl.append(ax[0].plot(f, cw, **kwargs)[0])
 
-            if conf_cw != []:
+            if len(conf_cw):
                 ax[0].fill_between(f, conf_cw[:, 0], conf_cw[:, 1],
                                    color=hdl[-1].get_color(), alpha=0.3)
 
             hdl.append(ax[1].plot(f, ccw, **kwargs)[0])
-            if conf_ccw != []:
+            if len(conf_ccw) > 0:
                 ax[1].fill_between(f, conf_ccw[:, 0], conf_ccw[:, 1],
                                    color=hdl[-1].get_color(), alpha=0.3)
 
