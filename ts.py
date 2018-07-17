@@ -497,8 +497,7 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
             i1 = breakpts[idx]
             S.append(dcpy.util.MovingAverage(
                 YY_raw[i0:i1], smth, decimate=decimate))
-            if decimate is True:
-                f.append(dcpy.util.MovingAverage(
+            f.append(dcpy.util.MovingAverage(
                     freq[i0:i1], smth, decimate=decimate))
 
             confint = ConfChi2(0.05, 2*smth)
