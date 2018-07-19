@@ -819,7 +819,7 @@ def LowPassButter(input, freq, order=1):
 
     b, a = signal.butter(order, freq/(1/2), btype='low')
 
-    return GappyFilter(input, b, a, 10)
+    return GappyFilter(input, b, a)
 
 
 def HighPassButter(input, freq, order=1):
@@ -874,12 +874,12 @@ def oldGappyFilter(input, b, a, num_discard=None):
     return out.squeeze()
 
 
-def GappyFilter(input, b, a, num_discard=None):
+def GappyFilter(input, b, a, num_discard='auto'):
 
     out = np.empty(input.shape) * np.nan
 
     if num_discard == 'auto':
-        num_discard = EstimateImpulseResponseLength(b, a, eps=1e-2)
+        num_discard = EstimateImpulseResponseLength(b, a)
 
     segstart, segend = FindSegments(input)
 
