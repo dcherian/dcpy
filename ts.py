@@ -6,6 +6,20 @@ import scipy.fftpack as fftpack
 import xarray as xr
 import sciviscolor as svc
 
+from .plots import linex
+
+
+def _process_time(time, cycles_per='s'):
+
+    time = time.copy()
+    dt = np.nanmedian(np.diff(time.values)/np.timedelta64(1, cycles_per))
+
+    time = np.cumsum(time.copy()
+                     .diff(dim=time.dims[0])
+                     / np.timedelta64(1, cycles_per))
+
+    return dt, time
+
 
 def xfilter(x, flen=None, kind='hann', dim='time',
             decimate=False, min_values=None, **kwargs):
@@ -134,7 +148,8 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
                  SubsetLength=None, breakpts=[], multitaper=False,
                  preserve_area=False, scale=1, linearx=False,
                  axis=-1, twoside=True, decimate=True,
-                 period_axis=True, **kwargs):
+                 mark_freqs=[], cycles_per='D', period_axis=True,
+                 **kwargs):
 
     iscomplex = not np.all(np.isreal(var))
     if not iscomplex:
@@ -149,6 +164,7 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
         ax = []
         if iscomplex and twoside is True:
             f, ax = plt.subplots(1, 2, figsize=(8.5, 8.5/2.2),
+                                 sharey=True,
                                  constrained_layout=True)
             ax[0].set_title('CW (anti-cyclonic)' + name)
             ax[1].set_title('CCW (cyclonic)' + name)
@@ -166,6 +182,13 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
             assert(len(ax) == 2)
             ax[0].set_title('CW (anti-cyclonic)' + name)
             ax[1].set_title('CCW (cyclonic)' + name)
+
+    processed_time = False
+    if isinstance(var, xr.DataArray) and var.ndim == 1:
+        maybe_time = var[var.dims[0]]
+        if np.issubdtype(maybe_time, np.datetime64):
+            dt, t = _process_time(maybe_time, cycles_per)
+            processed_time = True
 
     if var.ndim == 1:
         var = np.array(var, ndmin=2)
@@ -231,7 +254,11 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
         if not linearx:
             aa.set_xscale('log')
 
-        aa.set_xlabel('Freq')
+        if not processed_time:
+            aa.set_xlabel('Frequency')
+        else:
+            aa.set_xlabel('Frequency '
+                          + '[cp' + cycles_per.lower() + ']')
 
     if preserve_area:
         ax[0].set_ylabel('Freq x PSD')
@@ -253,25 +280,9 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
 
         if preserve_area:
             ax[1].set_yscale('linear')
-        ax[1].set_yticklabels([])
 
-    #def sync_func(other_ax):
-    #    ax2.set_xlim(1/np.asarray(other_ax.get_xlim()))
-
-    # ax2 = ax.twiny()
-    # ax.set_autoscale_on(False)
-    # ax2.set_autoscale_on(False)
-
-    # ax2.spines['top'].set_visible(True)
-    # ax2.spines['right'].set_visible(True)
-    # ax2.set_xscale(ax.get_xscale())
-    # ax2.set_xlabel('period')
-    # ax2.set_xlim(1/np.asarray(ax.get_xlim()))
-
-    # ax.callbacks.connect('xlim_changed', sync_func)
-
-    # ax.grid(True)
-    # ax2.grid(True)
+    if mark_freqs:
+        linex(mark_freqs, ax=ax)
 
     return hdl, ax
 
