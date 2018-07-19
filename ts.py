@@ -1246,4 +1246,110 @@ def matlab_wavelet(da, dt=1, beta=2.0, gamma=3.0, eng=None, kind='matlab'):
     return w
 
 
-# def complex_demodulate(da, central_freq, filter_width):
+def blackman(y, half_width):
+    """
+    Simple Blackman filter.
+
+    The end effects are handled by calculating the weighted
+    average of however many points are available, rather than
+    by zero-padding.
+    """
+    nf = half_width * 2 + 1
+    x = np.linspace(-1, 1, nf, endpoint=True)
+    x = x[1:-1]   # chop off the useless endpoints with zero weight
+    w = 0.42 + 0.5 * np.cos(x * np.pi) + 0.08 * np.cos(x * 2 * np.pi)
+    ytop = np.convolve(y, w, mode='same')
+    ybot = np.convolve(np.ones_like(y), w, mode='same')
+
+    return ytop / ybot
+
+
+def complex_demodulate(ts, central_period, t=None, dim=None,
+                       dt=1, hw=4, cycles_per='D', debug=False,
+                       filt='butter'):
+
+    if isinstance(ts, xr.DataArray):
+        if dim is None:
+            dim = ts.dims[0]
+
+        t = ts[dim]
+
+    if np.issubdtype(t.dtype, np.datetime64):
+        dt, t = _process_time(t, cycles_per=cycles_per)
+
+    if dim is None:
+        dim = 'dim_0'
+
+    iscomplex = ts.dtype.kind == 'c'  # complex input
+    harmonic = np.exp(-1j * 2*np.pi/np.abs(central_period) * t)
+    harmonic_ccw = harmonic.conj()
+    product = harmonic * ts
+
+    lfreq = np.abs(dt/2/hw/central_period)
+
+    if filt is 'blackman':
+        amp = blackman(product, int(round(hw * abs(central_period)/dt)))
+    elif filt is 'butter':
+        amp = (LowPassButter(product.real, lfreq, order=1)
+               + 1j * LowPassButter(product.imag, lfreq, order=1))
+
+    if not iscomplex:
+        recon = (amp * harmonic_ccw * 2).real
+    else:
+        product_ccw = harmonic_ccw * ts
+        if filt is 'blackman':
+            ampcw = blackman(product_ccw,
+                             int(round(hw * abs(central_period)/dt)))
+        elif filt is 'butter':
+            ampcw = (LowPassButter(product_ccw.real, lfreq, order=1)
+                     + 1j * LowPassButter(product_ccw.imag, lfreq, order=1))
+
+        recon = amp * harmonic_ccw + ampcw * harmonic
+
+    dm = xr.Dataset()
+    dm['ccw'] = xr.DataArray(amp, dims=[dim])
+    if iscomplex:
+        dm['cw'] = xr.DataArray(ampcw, dims=[dim])
+    dm['recon'] = xr.DataArray(recon, dims=[dim])
+    dm['amp'] = xr.DataArray(np.abs(recon), dims=[dim])
+    dm['pha'] = xr.DataArray(np.angle(recon, deg=True), dims=[dim])
+    if isinstance(ts, xr.DataArray):
+        dm['signal'] = ts
+    else:
+        dm['signal'] = xr.DataArray(ts, dims=[dim])
+
+    if debug:
+        f, ax = plt.subplots(2, 2, sharey=True, constrained_layout=True)
+        kwargs = dict(multitaper=True)
+        if iscomplex:
+            PlotSpectrum(dm['signal'], dt=dt, ax=ax[0, :], **kwargs)
+            PlotSpectrum(dm['signal'], dt=dt, ax=ax[1, :],
+                         color='lightgray', **kwargs)
+            PlotSpectrum(dm['recon'].dropna(dim=dim),
+                         dt=dt, twoside=True, ax=ax[0, :], **kwargs)
+        else:
+            PlotSpectrum(dm['signal'], dt=dt, ax=ax[0, 0], **kwargs)
+            PlotSpectrum(dm['signal'], dt=dt, ax=ax[0, 1], **kwargs)
+            PlotSpectrum(dm['recon'].dropna(dim=dim),
+                         dt=dt, twoside=True, ax=ax[0, 0], **kwargs)
+            PlotSpectrum(dm['recon'].dropna(dim=dim),
+                         dt=dt, twoside=True, ax=ax[0, 1], **kwargs)
+
+        PlotSpectrum(product, dt=dt, ax=ax[1, :], **kwargs)
+        if iscomplex:
+            PlotSpectrum(product_ccw, dt=dt, ax=ax[1, :], **kwargs)
+
+        linex([1/central_period, lfreq], ax=ax.ravel())
+
+        ax[0, 0].legend(['signal', 'demodulated', 'central_period',
+                         'low-pass'])
+        ax[1, 0].legend(['signal', 'product_cw', 'product_ccw',
+                         'central_period', 'low-pass', ])
+
+        # diff = dm.signal-dm.recon
+        # f, ax = plt.subplots()
+        # ax.plot(dm.signal.real)
+        # ax.plot(dm.recon.real)
+        # ax.plot(diff.real)
+
+    return dm
