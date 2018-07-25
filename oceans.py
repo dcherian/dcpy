@@ -2,6 +2,8 @@ import seawater as sw
 import matplotlib.pyplot as plt
 import cmocean as cmo
 import numpy as np
+import pandas as pd
+import xarray as xr
 
 
 def dataset_center_pacific(da, name=None):
@@ -239,3 +241,76 @@ def argo_mld_clim(kind='monthly', fname=None):
                                            ('month', ds['month'])])
 
     return mld
+
+
+def read_trmm():
+    def preprocess(ds):
+        ds['time'] = pd.to_datetime(ds.attrs['BeginDate']
+                                    + ' '
+                                    + ds.attrs['BeginTime'])
+        ds = ds.expand_dims('time')
+
+        return ds
+
+    trmm = (xr.open_mfdataset('../datasets/trmm/3B42_Daily.*.nc4.nc4',
+                              preprocess=preprocess,
+                              concat_dim='time',
+                              autoclose=True))
+
+    return trmm
+
+
+def read_aquarius(dirname='/home/deepak/datasets/aquarius/oisss/'):
+
+    import cftime
+
+    def preprocess(ds):
+        t = (np.datetime64(cftime.num2date(ds.time[0],
+                                           'days since 2010-12-31',
+                                           calendar='julian'))
+             + np.timedelta64(3, 'D'))
+
+        dsnew = ds.squeeze().drop('time')
+        dsnew['time'] = xr.DataArray([t], dims=['time'])
+        dsnew['sss'] = dsnew.sss.expand_dims('time')
+
+        return dsnew
+
+    aq = xr.open_mfdataset(dirname + '*.nc', preprocess=preprocess,
+                           decode_times=False, autoclose=True)
+
+    return aq
+
+
+def read_aquarius_l3(dirname='/home/deepak/datasets/aquarius/L3/combined/'):
+
+    def preprocess(ds):
+
+        dsnew = ds.copy()
+        dsnew['latitude'] = xr.DataArray(np.linspace(90, -90, 180),
+                                         dims=['phony_dim_0'])
+        dsnew['longitude'] = xr.DataArray(np.linspace(-180, 180, 360),
+                                          dims=['phony_dim_1'])
+        dsnew = (dsnew.rename({'l3m_data': 'sss',
+                               'phony_dim_0': 'latitude',
+                               'phony_dim_1': 'longitude'})
+                 .set_coords(['latitude', 'longitude'])
+                 .drop('palette'))
+
+        dsnew['time'] = (pd.to_datetime(dsnew.attrs['time_coverage_start'])
+                         + np.timedelta64(3, 'D') + np.timedelta64(12, 'h'))
+        dsnew = dsnew.expand_dims('time').set_coords('time')
+
+        return dsnew
+
+    aq = xr.open_mfdataset(dirname+'/*.nc',
+                           autoclose=True,
+                           preprocess=preprocess)
+
+    aq['latitude'].attrs['units'] = 'degrees_east'
+    aq['longitude'].attrs['units'] = 'degrees_north'
+    aq.sss.attrs['long_name'] = 'Sea Surface Salinity'
+
+    aq = aq.sortby('latitude')
+
+    return aq
