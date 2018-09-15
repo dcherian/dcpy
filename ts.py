@@ -1,4 +1,3 @@
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.signal as signal
@@ -421,6 +420,9 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
     import dcpy.util
     import numpy as np
     import mtspec
+
+    if len(input) == 0:
+        raise ValueError('0 length input!')
 
     if fillgaps:
         input = FillGaps(input, maxlen=maxlen)
@@ -1265,7 +1267,7 @@ def blackman(y, half_width):
 
 
 def complex_demodulate(ts, central_period, t=None, dim=None,
-                       dt=1, hw=4, cycles_per='D', debug=False,
+                       dt=1, bw=0.1, cycles_per='D', debug=False,
                        filt='butter'):
 
     if isinstance(ts, xr.DataArray):
@@ -1285,10 +1287,11 @@ def complex_demodulate(ts, central_period, t=None, dim=None,
     harmonic_ccw = harmonic.conj()
     product = harmonic * ts
 
-    lfreq = np.abs(dt/2/hw/central_period)
+    lfreq = np.abs(bw*dt/central_period)
+    # print(str(lfreq) + 'cp' + cycles_per.lower())
 
     if filt is 'blackman':
-        amp = blackman(product, int(round(hw * abs(central_period)/dt)))
+        amp = blackman(product, int(round(bw * abs(central_period)/dt)))
     elif filt is 'butter':
         amp = (LowPassButter(product.real, lfreq, order=1)
                + 1j * LowPassButter(product.imag, lfreq, order=1))
@@ -1299,7 +1302,7 @@ def complex_demodulate(ts, central_period, t=None, dim=None,
         product_ccw = harmonic_ccw * ts
         if filt is 'blackman':
             ampcw = blackman(product_ccw,
-                             int(round(hw * abs(central_period)/dt)))
+                             int(round(bw * abs(central_period)/dt)))
         elif filt is 'butter':
             ampcw = (LowPassButter(product_ccw.real, lfreq, order=1)
                      + 1j * LowPassButter(product_ccw.imag, lfreq, order=1))
