@@ -1,8 +1,11 @@
-import seawater as sw
-import matplotlib.pyplot as plt
 import cmocean as cmo
 import numpy as np
 import pandas as pd
+import scipy as sp
+import seawater as sw
+
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 import xarray as xr
 
 
@@ -140,23 +143,66 @@ def GM(lat, N, N0, b=1000, oned=False):
     return (omg, K_omg, P_omg, k, K_k_1d, P_k_1d)
 
 
-def TSplot(S, T, P, Pref=0, ax=None, rho_levels=None,
-           label_spines=True, **kwargs):
+def TSplot(S, T, P, Pref=0, ax=None, rho_levels=[],
+           labels=True, label_spines=True,
+           plot_distrib=True, Sbins=30, Tbins=30, **kwargs):
 
     # colormap = cmo.cm.matter
 
-    if ax is None:
-        plt.figure()
-        ax = plt.gca()
+    defaults = {'edgecolor': 'gray',
+                'linewidth': 0.15,
+                'alpha': 0.5}
 
+    size = kwargs.pop('size', 32)
     color = kwargs.pop('color', 'teal')
-    marker = kwargs.pop('marker', '.')
+    # marker = kwargs.pop('marker', '.')
     fontsize = kwargs.pop('fontsize', 9)
+    defaults.update(kwargs)
 
-    ax.plot(S, T, ls='None', marker=marker, color=color, **kwargs)
-    # ax.scatter(S, T, s=4*120, c=P,
-    #            alpha=0.5, linewidth=0.15, edgecolor='gray',
-    #            cmap=colormap, zorder=-10)
+    labels = False if rho_levels is None else labels
+
+    def flatten_data(data):
+        if isinstance(data, xr.DataArray):
+            d = data.values.ravel()
+        elif isinstance(data, np.ndarray):
+            d = data.ravel()
+        else:
+            return data
+
+        return d[~np.isnan(d)]
+
+    axes = dict()
+
+    if ax is None:
+        f = plt.figure(constrained_layout=True)
+        if plot_distrib:
+            gs = mpl.gridspec.GridSpec(3, 3, figure=f)
+
+            axes['ts'] = f.add_subplot(gs[1:, :-1])
+            axes['s'] = f.add_subplot(gs[0, :-1], sharex=axes['ts'])
+            axes['t'] = f.add_subplot(gs[1:, -1], sharey=axes['ts'])
+            ax = axes['ts']
+        else:
+            ax = plt.gca()
+    elif isinstance(ax, dict):
+        axes = ax
+        ax = axes['ts']
+
+    axes['ts'] = ax
+
+    salt = flatten_data(S)
+    temp = flatten_data(T)
+
+    #     ts = ax.plot(S, T, ls='None', marker=marker, color=color, **kwargs)
+    ts = ax.scatter(salt, temp, s=flatten_data(size), c=flatten_data(color),
+                    **defaults)
+    # ts = ax.hexbin(flatten_data(S), flatten_data(T), **defaults)
+
+    # defaults.pop('alpha')
+    # ts = ax.scatter(flatten_data(S), flatten_data(T),
+    #                 s=flatten_data(size), c=[[0, 0, 0, 0]],
+    #                 **defaults)
+
     Slim = ax.get_xlim()
     Tlim = ax.get_ylim()
 
@@ -170,44 +216,73 @@ def TSplot(S, T, P, Pref=0, ax=None, rho_levels=None,
         rho_levels = np.asarray(rho_levels)
         if np.all(rho_levels > 1000):
             rho_levels -= 1000
+        if not (rho_levels.size > 0):
+            rho_levels = 7
 
-    cs = ax.contour(Smat, Tmat, ρ, colors='gray',
-                    levels=rho_levels, linestyles='solid')
+        cs = ax.contour(Smat, Tmat, ρ, colors='gray',
+                        levels=rho_levels, linestyles='solid',
+                        zorder=-1)
 
-    if label_spines:
-        # needed to do some labelling setup
-        clabels = ax.clabel(cs, fmt='%.1f', inline=False)
-
-        [txt.set_visible(False) for txt in clabels]
-
-        for idx, _ in enumerate(cs.levels):
-            # This is the rightmost point on each calculated contour
-            x, y = cs.allsegs[idx][0][0, :]
-            # This is a very helpful function!
-            cs.add_label_near(x, y, inline=False, inline_spacing=0)
-
-        xlim = ax.get_xlim()
-
-        def edit_text(t):
-            if abs(t.get_position()[0] - xlim[1])/xlim[1] < 1e-6:
-                # right spine lables
-                t.set_verticalalignment('center')
-            else:
-                # top spine labels need to be aligned to the bottom
-                t.set_verticalalignment('bottom')
-
-            t.set_clip_on(False)
-            t.set_horizontalalignment('left')
-            t.set_size(fontsize)
-            t.set_text(' ' + t.get_text())
-
-        [edit_text(t) for t in cs.labelTexts]
-        ax.spines['right'].set_visible(True)
-        ax.spines['top'].set_visible(True)
-
+        ax.set_xlim([Smat.min(), Smat.max()])
+        ax.set_ylim([Tmat.min(), Tmat.max()])
     else:
-        clabels = ax.clabel(cs, fmt='%.1f', inline=True, inline_spacing=10)
-        [txt.set_backgroundcolor([0.95, 0.95, 0.95, 0.75]) for txt in clabels]
+        cs = None
+
+    if plot_distrib:
+        hist_args = dict(color=color, density=True, histtype='step')
+        Thist = axes['t'].hist(temp, orientation='horizontal',
+                               bins=Tbins, **hist_args)
+        axes['t'].set_xticklabels([])
+        axes['t'].set_xticks([])
+        axes['t'].spines['bottom'].set_visible(False)
+
+        Shist = axes['s'].hist(salt, bins=Sbins, **hist_args)
+        axes['s'].set_yticks([])
+        axes['s'].set_yticklabels([])
+        axes['s'].spines['left'].set_visible(False)
+    else:
+        Thist = None
+        Shist = None
+
+    if labels:
+        if label_spines:
+            # needed to do some labelling setup
+            clabels = ax.clabel(cs, fmt='%.1f', inline=False)
+
+            [txt.set_visible(False) for txt in clabels]
+
+            for idx, _ in enumerate(cs.levels):
+                if not cs.allsegs[idx]:
+                    continue
+
+                # This is the rightmost point on each calculated contour
+                x, y = cs.allsegs[idx][0][0, :]
+                # This is a very helpful function!
+                cs.add_label_near(x, y, inline=False, inline_spacing=0)
+
+            xlim = ax.get_xlim()
+
+            def edit_text(t):
+                if abs(t.get_position()[0] - xlim[1])/xlim[1] < 1e-6:
+                    # right spine lables
+                    t.set_verticalalignment('center')
+                else:
+                    # top spine labels need to be aligned to the bottom
+                    t.set_verticalalignment('bottom')
+
+                t.set_clip_on(False)
+                t.set_horizontalalignment('left')
+                t.set_size(fontsize)
+                t.set_text(' ' + t.get_text())
+
+            [edit_text(t) for t in cs.labelTexts]
+
+        else:
+            clabels = ax.clabel(cs, fmt='%.1f', inline=True, inline_spacing=10)
+            [txt.set_backgroundcolor([0.95, 0.95, 0.95, 0.75]) for txt in clabels]
+
+    ax.spines['right'].set_visible(True)
+    ax.spines['top'].set_visible(True)
 
     ax.text(0, 0.995, ' $σ_' + str(Pref) + '$', transform=ax.transAxes,
             va='top', fontsize=fontsize+2, color='gray')
@@ -215,7 +290,7 @@ def TSplot(S, T, P, Pref=0, ax=None, rho_levels=None,
     ax.set_xlabel('S')
     ax.set_ylabel('T')
 
-    return cs
+    return cs, ts, axes, Thist, Shist
 
 
 def argo_mld_clim(kind='monthly', fname=None):
