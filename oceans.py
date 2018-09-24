@@ -389,3 +389,34 @@ def read_aquarius_l3(dirname='/home/deepak/datasets/aquarius/L3/combined/'):
     aq = aq.sortby('latitude')
 
     return aq
+
+
+def read_argo_clim(dirname='/home/deepak/datasets/argoclim/'):
+
+    chunks = {'LATITUDE': 10, 'LONGITUDE': 10}
+
+    argoT = xr.open_dataset(dirname+'RG_ArgoClim_Temperature_2016.nc',
+                            decode_times=False, chunks=chunks)
+    argoS = xr.open_dataset(dirname+'RG_ArgoClim_Salinity_2016.nc',
+                            decode_times=False, chunks=chunks)
+
+    argoS['S'] = argoS.ARGO_SALINITY_ANOMALY + argoS.ARGO_SALINITY_MEAN
+    argoT['T'] = argoT.ARGO_TEMPERATURE_ANOMALY + argoT.ARGO_TEMPERATURE_MEAN
+
+    argo = (xr.merge([argoT, argoS]))
+
+    argo = (argo.rename({'LATITUDE': 'lat',
+                         'LONGITUDE': 'lon',
+                         'PRESSURE': 'pres',
+                         'TIME': 'time',
+                         'ARGO_TEMPERATURE_MEAN': 'Tmean',
+                         'ARGO_TEMPERATURE_ANOMALY': 'Tanom',
+                         'ARGO_SALINITY_MEAN': 'Smean',
+                         'ARGO_SALINITY_ANOMALY': 'Sanom'}))
+
+    _, ref_date = xr.coding.times._unpack_netcdf_time_units(argo.time.units)
+
+    argo.time.values = (pd.Timestamp(ref_date)
+                        + pd.to_timedelta(30 * argo.time, unit='D'))
+
+    return argo
