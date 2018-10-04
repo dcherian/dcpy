@@ -420,3 +420,73 @@ def read_argo_clim(dirname='/home/deepak/datasets/argoclim/'):
                         + pd.to_timedelta(30 * argo.time, unit='D'))
 
     return argo
+
+
+def calc_wind_power_input(tau, mld, f0, time_dim='time'):
+    """
+    Solve the Pollard & Millard (1970) slab mixed layer model spectrally
+    following Alford (2003).
+
+    Parameters
+    ----------
+
+    tau : complex, xarray.DataArray
+        1D complex wind stress time series [N/m²].
+        Time co-ordinate must be named "time".
+    mld : float
+        mixed layer depth [m].
+    f0 : float
+        inertial frequency [cycles per seconds].
+    time_dim: optional
+        Name of time dimension in tau.
+
+    Returns
+    -------
+    windinput : float, xarray.DataArray
+        Time series of near-inertial power input in W/m².
+
+    References
+    ----------
+    Alford, M.H., 2003. Improved global maps and 54-year history of wind-work
+        on ocean inertial motions. Geophys. Res. Lett. 30.
+
+    Pollard, R.T., Millard, R.C., 1970. Comparison between observed and
+        simulated wind-generated inertial oscillations.
+        Deep Sea Res. Oceanogr. Abstr. 17, 813–821.
+    """
+
+    import xrft
+
+    T = tau / 1025
+    That = xrft.dft(tau, dim=[time_dim], shift=False)
+    σ = That['freq_' + time_dim]
+    σc = f0 / 2
+
+    # damping
+    r = 0.15 * f0 * (1 - np.exp(-0.5 * (σ / σc)**2))
+    r.name = 'damping'
+
+    # transfer functions
+    R = 1 / mld * (r - 1j * (f0 + σ)) / (r**2 + (f0 + σ)**2)
+    RE = 1 / mld * (r - 1j * f0) / (r**2 + f0**2)
+    RI = R - RE
+
+    # plt.plot(σ / f0, np.real(R), 'k')
+    # plt.plot(σ / f0, np.real(RE), 'r')
+    # plt.plot(σ / f0, np.real(RI), 'g')
+    # plt.gca().set_yscale('log')
+    # plt.gca().set_xlim([-3, 1.5])
+    # plt.gca().axvline(-1)
+
+    ZI = tau.copy(data=np.fft.ifft(That * RI,
+                                   axis=That.get_axis_num('freq_' + time_dim)))
+    # ZE = tau.copy(data=np.fft.ifft(That * RE,
+    #                                axis=That.get_axis_num('freq_' + time_dim)))
+    # Z = tau.copy(data=np.fft.ifft(That * R,
+    #                               axis=That.get_axis_num('freq_' + time_dim)))
+
+    windinput = np.real(1025 * ZI * np.conj(T))
+    windinput.attrs['long_name'] = 'Wind power input $Π$'
+    windinput.attrs['units'] = 'W/m$^2$'
+
+    return windinput
