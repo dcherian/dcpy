@@ -1,9 +1,10 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import scipy.signal as signal
 import scipy.fftpack as fftpack
-import xarray as xr
+import scipy.signal as signal
 import sciviscolor as svc
+
+import xarray as xr
 
 from .plots import linex
 
