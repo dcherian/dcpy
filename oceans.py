@@ -30,7 +30,7 @@ def dataset_center_pacific(da, name=None):
 
 def coriolis(lat):
     π = np.pi
-    return 2*(2*π/86400) * np.sin(lat * π/180)
+    return 2 * (2 * π / 86400) * np.sin(lat * π / 180)
 
 
 def ReadWoa(lon, lat, time='annual', depth=None, return_xr=False):
@@ -68,12 +68,12 @@ def ReadWoa(lon, lat, time='annual', depth=None, return_xr=False):
 
         avg = np.concatenate((
             np.reshape(variable[:, :, latind, lonind], shape),
-            np.reshape(variable[:, :, latind, lonind+1], shape),
-            np.reshape(variable[:, :, latind+1, lonind], shape),
-            np.reshape(variable[:, :, latind+1, lonind+1], shape)),
-                             axis=len(shape)-1)
+            np.reshape(variable[:, :, latind, lonind + 1], shape),
+            np.reshape(variable[:, :, latind + 1, lonind], shape),
+            np.reshape(variable[:, :, latind + 1, lonind + 1], shape)),
+            axis=len(shape) - 1)
         avg[avg > 50] = np.nan
-        return np.nanmean(avg, axis=len(shape)-1)
+        return np.nanmean(avg, axis=len(shape) - 1)
 
     woa['T'] = ConcatAndAverage(woaT['t_an'], lonind, latind)
     woa['S'] = ConcatAndAverage(woaS['s_an'], lonind, latind)
@@ -108,10 +108,10 @@ def GM(lat, N, N0, b=1000, oned=False):
     f = sw.f(lat=12)
 
     # frequency
-    omg = np.logspace(np.log10(1.01*f), np.log10(N), 401)
+    omg = np.logspace(np.log10(1.01 * f), np.log10(N), 401)
 
     # horizontal wavenumber
-    k = 2*np.pi*np.logspace(-6, -2, 401)
+    k = 2 * np.pi * np.logspace(-6, -2, 401)
 
     # mode number
     j = np.arange(1, 100)
@@ -262,7 +262,7 @@ def TSplot(S, T, P, Pref=0, ax=None, rho_levels=[],
             xlim = ax.get_xlim()
 
             def edit_text(t):
-                if abs(t.get_position()[0] - xlim[1])/xlim[1] < 1e-6:
+                if abs(t.get_position()[0] - xlim[1]) / xlim[1] < 1e-6:
                     # right spine lables
                     t.set_verticalalignment('center')
                 else:
@@ -278,13 +278,14 @@ def TSplot(S, T, P, Pref=0, ax=None, rho_levels=[],
 
         else:
             clabels = ax.clabel(cs, fmt='%.1f', inline=True, inline_spacing=10)
-            [txt.set_backgroundcolor([0.95, 0.95, 0.95, 0.75]) for txt in clabels]
+            [txt.set_backgroundcolor([0.95, 0.95, 0.95, 0.75])
+             for txt in clabels]
 
     ax.spines['right'].set_visible(True)
     ax.spines['top'].set_visible(True)
 
     ax.text(0, 0.995, ' $σ_' + str(Pref) + '$', transform=ax.transAxes,
-            va='top', fontsize=fontsize+2, color='gray')
+            va='top', fontsize=fontsize + 2, color='gray')
 
     ax.set_xlabel('S')
     ax.set_ylabel('T')
@@ -377,7 +378,7 @@ def read_aquarius_l3(dirname='/home/deepak/datasets/aquarius/L3/combined/'):
 
         return dsnew
 
-    aq = xr.open_mfdataset(dirname+'/*.nc',
+    aq = xr.open_mfdataset(dirname + '/*.nc',
                            autoclose=True,
                            preprocess=preprocess)
 
@@ -394,9 +395,9 @@ def read_argo_clim(dirname='/home/deepak/datasets/argoclim/'):
 
     chunks = {'LATITUDE': 10, 'LONGITUDE': 10}
 
-    argoT = xr.open_dataset(dirname+'RG_ArgoClim_Temperature_2016.nc',
+    argoT = xr.open_dataset(dirname + 'RG_ArgoClim_Temperature_2016.nc',
                             decode_times=False, chunks=chunks)
-    argoS = xr.open_dataset(dirname+'RG_ArgoClim_Salinity_2016.nc',
+    argoS = xr.open_dataset(dirname + 'RG_ArgoClim_Salinity_2016.nc',
                             decode_times=False, chunks=chunks)
 
     argoS['S'] = argoS.ARGO_SALINITY_ANOMALY + argoS.ARGO_SALINITY_MEAN

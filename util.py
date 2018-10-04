@@ -14,9 +14,9 @@ def ExtractSeason(time, var, season):
     dates = datenum2datetime(time)
     months = [d.month for d in dates]
 
-    seasonMonths = {'SW':  [5, 6, 7, 8],
+    seasonMonths = {'SW': [5, 6, 7, 8],
                     'SW→NE': [9, 10],
-                    'NE':  [11, 12, 1, 2],
+                    'NE': [11, 12, 1, 2],
                     'NE→SW': [3, 4],
                     'Jan': [1],
                     'Feb': [2],
@@ -52,8 +52,8 @@ def dt64_to_datenum(dt64):
 def mdatenum2dt64(dnum):
     import numpy as np
 
-    return ((-86400 + dnum*86400).astype('timedelta64[s]')
-       + np.datetime64('0001-01-01'))
+    return ((-86400 + dnum * 86400).astype('timedelta64[s]')
+            + np.datetime64('0001-01-01'))
 
 
 def datenum2datetime(matlab_datenum):
@@ -74,10 +74,10 @@ def calc95(input, kind='twosided'):
     import numpy as np
     input = np.sort(input)
     if kind is 'twosided':
-        interval = input[[np.int(np.floor(0.025*len(input))),
-                          np.int(np.ceil(0.975*len(input)))]]
+        interval = input[[np.int(np.floor(0.025 * len(input))),
+                          np.int(np.ceil(0.975 * len(input)))]]
     else:
-        interval = input[np.int(np.ceil(0.95*len(input)))]
+        interval = input[np.int(np.ceil(0.95 * len(input)))]
 
     return interval
 
@@ -129,19 +129,19 @@ def smooth(x, window_len=11, window='hanning', axis=-1, preserve_nan=True):
 
     window_len = np.int(np.ceil(window_len))
     if np.mod(window_len, 2) < 1e-4:
-        window_len = window_len+1
+        window_len = window_len + 1
 
     if window == 'flat':  # moving average
         wnd = np.ones(window_len, 'd')
     else:
-        wnd = eval('np.'+window+'(window_len)')
+        wnd = eval('np.' + window + '(window_len)')
 
     if x.ndim > 1:
         new_size = np.int32(np.ones((x.ndim, )))
         new_size[axis] = window_len
         new_wnd = np.zeros(new_size)
         new_wnd = np.reshape(new_wnd, (window_len,
-                                       np.int32(new_size.prod()/window_len)))
+                                       np.int32(new_size.prod() / window_len)))
         new_wnd[:, 0] = wnd
         wnd = np.reshape(new_wnd, new_size)
 
@@ -163,7 +163,7 @@ def MovingAverage(vin, N, dim=None, decimate=True, min_count=1, **kwargs):
     else:
         y = move_mean(vin, window=N, min_count=min_count, **kwargs)
         if decimate:
-            return y[N-1:len(y)-N+1:N]
+            return y[N - 1:len(y) - N + 1:N]
         else:
             return y
 
@@ -179,7 +179,7 @@ def BinEqualizeHist(coords, bins=10, offset=0.0, label=None):
     import numpy as np
 
     def eq_hist(d, m):
-        return equalize_hist(1*d, nbins=100000, mask=m)
+        return equalize_hist(1 * d, nbins=100000, mask=m)
 
     x = coords[0]
     y = coords[1]
@@ -190,7 +190,7 @@ def BinEqualizeHist(coords, bins=10, offset=0.0, label=None):
     transformed = eq_hist(counts, counts != 0)
     span = transformed.max() - transformed.min()
     compressed = np.where(counts != 0,
-                          offset+(1.0-offset)*transformed/span,
+                          offset + (1.0 - offset) * transformed / span,
                           np.nan)
     compressed = np.flipud(compressed)
     return xs[:-1], ys[:-1], np.ma.masked_invalid(compressed)

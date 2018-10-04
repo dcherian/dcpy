@@ -13,9 +13,9 @@ def fit(curve, x, y, weights=None, doplot=False, **kwargs):
         if curve == 'tanh':
             def func(x, y0, X, x0, y1):
                 import numpy as np
-                return y1 + y0*np.tanh((x-x0)/X)
+                return y1 + y0 * np.tanh((x - x0) / X)
 
-        popt, _ = curve_fit(func, x, y, sigma=1/weights,
+        popt, _ = curve_fit(func, x, y, sigma=1 / weights,
                             check_finite=False, **kwargs)
 
     if doplot:

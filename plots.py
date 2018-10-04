@@ -55,7 +55,7 @@ def FillRectangle(x, y=None, ax=None, color='k', alpha=0.05,
     for aa in ax:
         if y is None:
             yl = aa.get_ylim()
-            y = [yl[1], yl[1], yl[0],  yl[0]]
+            y = [yl[1], yl[1], yl[0], yl[0]]
 
         aa.fill([x[0], x[1], x[1], x[0]], y,
                 color=color, alpha=alpha, zorder=zorder,
@@ -80,7 +80,7 @@ def linex(var, ax=None, label=None, color='gray', linestyle='--', zorder=-1,
             aa.axvline(vv, color=color, linestyle=linestyle,
                        zorder=zorder, **kwargs)
             if label is not None:
-                aa.text(vv, 1, ' '+label[idx], ha='center', va='bottom',
+                aa.text(vv, 1, ' ' + label[idx], ha='center', va='bottom',
                         transform=aa.get_xaxis_transform('grid'))
 
 
@@ -102,7 +102,7 @@ def liney(var, ax=None, label=None, color='gray', linestyle='--', zorder=-1,
             aa.axhline(vv, color=color, linestyle=linestyle,
                        zorder=zorder, **kwargs)
             if label is not None:
-                aa.text(1, vv, ' '+label[idx], ha='left', va='center',
+                aa.text(1, vv, ' ' + label[idx], ha='left', va='center',
                         transform=aa.get_yaxis_transform('grid'))
 
 
@@ -143,15 +143,15 @@ def symyaxis():
 
 def robust_lim(data, lotile=2, hitile=98, axis=-1):
     return [np.nanpercentile(data, lotile, axis=axis).squeeze(),
-       np.nanpercentile(data, hitile, axis=axis).squeeze()]
+            np.nanpercentile(data, hitile, axis=axis).squeeze()]
 
 
 def align_yaxis(ax1, v1, ax2, v2):
     """adjust ax2 ylimit so that v2 in ax2 is aligned to v1 in ax1"""
     _, y1 = ax1.transData.transform((0, v1))
     _, y2 = ax2.transData.transform((0, v2))
-    adjust_yaxis(ax2, (y1-y2)/2, v2)
-    adjust_yaxis(ax1, (y2-y1)/2, v1)
+    adjust_yaxis(ax2, (y1 - y2) / 2, v2)
+    adjust_yaxis(ax1, (y2 - y1) / 2, v1)
 
 
 def adjust_yaxis(ax, ydif, v):
@@ -162,11 +162,11 @@ def adjust_yaxis(ax, ydif, v):
     miny, maxy = miny - v, maxy - v
     if -miny > maxy or (-miny == maxy and dy > 0):
         nminy = miny
-        nmaxy = miny*(maxy+dy)/(miny+dy)
+        nmaxy = miny * (maxy + dy) / (miny + dy)
     else:
         nmaxy = maxy
-        nminy = maxy*(miny+dy)/(maxy+dy)
-    ax.set_ylim(nminy+v, nmaxy+v)
+        nminy = maxy * (miny + dy) / (maxy + dy)
+    ax.set_ylim(nminy + v, nmaxy + v)
 
 
 def annotate_end(hdl, label):
@@ -177,7 +177,7 @@ def annotate_end(hdl, label):
     color = hdl.get_color()
 
     point = ax.plot(x[-1], y[-1], 'o', ms=4, color=color, clip_on=False)
-    text = ax.text('2014-12-31', y[-1], '  '+label, ha='left',
+    text = ax.text('2014-12-31', y[-1], '  ' + label, ha='left',
                    clip_on=False, color=color)
 
     return point, text
