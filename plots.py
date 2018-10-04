@@ -167,3 +167,17 @@ def adjust_yaxis(ax, ydif, v):
         nmaxy = maxy
         nminy = maxy*(miny+dy)/(maxy+dy)
     ax.set_ylim(nminy+v, nmaxy+v)
+
+
+def annotate_end(hdl, label):
+    ax = hdl.axes
+
+    y = hdl.get_ydata()
+    x = hdl.get_xdata()
+    color = hdl.get_color()
+
+    point = ax.plot(x[-1], y[-1], 'o', ms=4, color=color, clip_on=False)
+    text = ax.text('2014-12-31', y[-1], '  '+label, ha='left',
+                   clip_on=False, color=color)
+
+    return point, text
