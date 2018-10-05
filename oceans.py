@@ -449,7 +449,8 @@ def read_argo_clim(dirname='/home/deepak/datasets/argoclim/'):
     return argo
 
 
-def calc_wind_power_input(tau, mld, f0, time_dim='time'):
+def calc_wind_power_input(tau, mld, f0, time_dim='time',
+                          r0_factor=0.15, critical_freq_factor=0.5):
     """
     Solve the Pollard & Millard (1970) slab mixed layer model spectrally
     following Alford (2003).
@@ -463,14 +464,24 @@ def calc_wind_power_input(tau, mld, f0, time_dim='time'):
     mld : float
         mixed layer depth [m].
     f0 : float
-        inertial frequency [cycles per seconds].
-    time_dim: optional
+        inertial frequency, 2Ωsinφ [rad/s].
+    time_dim : optional
         Name of time dimension in tau.
+    r0_factor : optional, default
+        Non-dimensional factor for maximum damping calculated as
+            r0 = r0_factor * f0
+        Default is 0.15 (Alford, 2003)
+    critical_freq_factor : optional, default
+        Non-dimensional factor for damping decay scale in frequency
+            σc = critical_freq_factor * f0
+        Default is 0.5
 
     Returns
     -------
     windinput : float, xarray.DataArray
-        Time series of near-inertial power input in W/m².
+        Time series of near-inertial power input [W/m²].
+    ZI : complex, xarray.DataArray
+        Time series of inertial currents [m/s]
 
     References
     ----------
@@ -485,17 +496,17 @@ def calc_wind_power_input(tau, mld, f0, time_dim='time'):
     import xrft
 
     T = tau / 1025
-    That = xrft.dft(tau, dim=[time_dim], shift=False)
-    σ = That['freq_' + time_dim]
-    σc = f0 / 2
+    That = xrft.dft(T, dim=[time_dim], shift=False)
+    σ = That['freq_' + time_dim] * 2 * np.pi
+    σc = f0 * critical_freq_factor
 
     # damping
-    r = 0.15 * f0 * (1 - np.exp(-0.5 * (σ / σc)**2))
+    r = r0_factor * f0 * (1 - np.exp(-0.5 * (σ / σc)**2))
     r.name = 'damping'
 
     # transfer functions
-    R = 1 / mld * (r - 1j * (f0 + σ)) / (r**2 + (f0 + σ)**2)
-    RE = 1 / mld * (r - 1j * f0) / (r**2 + f0**2)
+    R = (r - 1j * (f0 + σ)) / (r**2 + (f0 + σ)**2)
+    RE = (r - 1j * f0) / (r**2 + f0**2)
     RI = R - RE
 
     # plt.plot(σ / f0, np.real(R), 'k')
@@ -505,15 +516,17 @@ def calc_wind_power_input(tau, mld, f0, time_dim='time'):
     # plt.gca().set_xlim([-3, 1.5])
     # plt.gca().axvline(-1)
 
-    ZI = tau.copy(data=np.fft.ifft(That * RI,
-                                   axis=That.get_axis_num('freq_' + time_dim)))
-    # ZE = tau.copy(data=np.fft.ifft(That * RE,
-    #                                axis=That.get_axis_num('freq_' + time_dim)))
-    # Z = tau.copy(data=np.fft.ifft(That * R,
-    #                               axis=That.get_axis_num('freq_' + time_dim)))
+    axis = That.get_axis_num('freq_' + time_dim)
+
+    ZI = (tau.copy(data=np.fft.ifft(That * RI, axis=axis)) / mld)
+    # ZE = tau.copy(data=np.fft.ifft(That * RE, axis=axis))
+    # Z = tau.copy(data=np.fft.ifft(That * R, axis=axis))
 
     windinput = np.real(1025 * ZI * np.conj(T))
     windinput.attrs['long_name'] = 'Wind power input $Π$'
     windinput.attrs['units'] = 'W/m$^2$'
 
-    return windinput
+    ZI.attrs['long_name'] = 'Predicted inertial currents'
+    ZI.attrs['units'] = 'm/s'
+
+    return windinput, ZI
