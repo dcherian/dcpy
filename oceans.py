@@ -1,8 +1,8 @@
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import netCDF4 as nc
 import numpy as np
 import pandas as pd
-import scipy as sp
 import seawater as sw
 
 import xarray as xr
@@ -43,8 +43,6 @@ def ReadWoa(lon, lat, time='annual', depth=None, return_xr=False):
         Output:
               Returns a dictionary with T, S, depth
     '''
-    import numpy as np
-    import netCDF4 as nc
 
     woa = dict()
 
@@ -100,9 +98,6 @@ def GM(lat, N, N0, b=1000, oned=False):
         import GM81.gm as gm
     except ImportError:
         raise ImportError('Please install the GM81 package.')
-
-    import seawater as sw
-    import numpy as np
 
     # Coriolis frequency
     f = sw.f(lat=12)
@@ -300,8 +295,6 @@ def argo_mld_clim(kind='monthly', fname=None):
 
         if kind is 'annual':
             fname = '~/datasets/argomld/Argo_mixedlayers_all_03192017.nc'
-
-    import xarray as xr
 
     ds = xr.open_dataset(fname, autoclose=True)
 
