@@ -306,14 +306,48 @@ def argo_mld_clim(kind='monthly', fname=None):
     ds = xr.open_dataset(fname, autoclose=True)
 
     mld = xr.Dataset()
-    month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-             'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
     for da in ds:
+        name = ''
         if da[0:2] == 'ml':
             mld[da] = xr.DataArray(ds[da].values,
                                    coords=[('lat', ds['lat']),
                                            ('lon', ds['lon']),
                                            ('month', ds['month'])])
+
+            if 'mean' in da:
+                name = 'Mean'
+
+            if 'median' in da:
+                name = 'Median'
+
+            if 'std' in da:
+                name = 'Std. dev. of'
+
+            if 'max' in da:
+                name = 'Max'
+
+            if 'mld' in da:
+                name += ' mixed layer depth'
+                mld[da].attrs['units'] = 'm'
+
+            if 'mlpd' in da:
+                name = 'Mean potential density using MLD'
+                mld[da].attrs['units'] = 'kg/m^3'
+
+            if 'mlt_' in da:
+                name = 'Mean temperature using MLD'
+                mld[da].attrs['units'] = 'celsius'
+
+            if 'mls_' in da:
+                name = 'Mean salinity using MLD'
+
+            if '_da_' in da:
+                name += ' from density algorithm'
+
+            if '_dt_' in da:
+                name += ' from density threshold algorithm'
+
+            mld[da].attrs['long_name'] = name
 
     return mld
 
