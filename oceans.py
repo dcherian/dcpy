@@ -7,6 +7,19 @@ import seawater as sw
 
 import xarray as xr
 
+from . import plots
+
+
+def _flatten_data(data):
+        if isinstance(data, xr.DataArray):
+            d = data.values.ravel()
+        elif isinstance(data, np.ndarray):
+            d = data.ravel()
+        else:
+            return data
+
+        return d[~np.isnan(d)]
+
 
 def dataset_center_pacific(da, name=None):
     ''' Takes an input DataArray and rolls the longitude
@@ -137,35 +150,65 @@ def GM(lat, N, N0, b=1000, oned=False):
     return (omg, K_omg, P_omg, k, K_k_1d, P_k_1d)
 
 
-def TSplot(S, T, P, Pref=0, ax=None, rho_levels=[],
+def TSplot(S, T, Pref=0, ax=None, rho_levels=[],
            labels=True, label_spines=True,
-           plot_distrib=True, Sbins=30, Tbins=30, **kwargs):
+           plot_distrib=True, Sbins=30, Tbins=30,
+           plot_kwargs={}, hexbin=True, **kwargs):
+    '''
+    T-S plot. The default is to scatter, but hex-binning is also an option.
+
+    Parameters
+    ----------
+    S, T : float32
+        Salinity, temperature.
+    Pref : float32, optional
+        Reference pressure level.
+    ax : optional
+        Axes to plot to.
+    rho_levels : optional
+        Density contour levels.
+    labels : bool, optional
+        Label density contours?
+    label_spines : bool, optional
+        Fancy spine labelling inspired by Arnold Gordon's plots.
+    plot_distrib : bool, optional
+        Plot marginal distributions of T, S?
+    Sbins, Tbins : int, optional
+        Number of T, S bins for marginal distributions.
+    hexbin : bool, optional
+        hexbin instead of scatter plot?
+    plot_kwargs: dict, optional
+        extra kwargs passed directly to scatter or hexbin
+
+    Returns
+    -------
+    handles: dict,
+        cs : Handle to density ContourSet.
+        ts : Handle to T-S scatter
+        Thist, Shist : handles to marginal distributions
+    axes : list of Axes.
+    '''
 
     # colormap = cmo.cm.matter
 
-    defaults = {'edgecolor': 'gray',
-                'linewidth': 0.15,
+    defaults = {'edgecolors': 'gray',
+                'linewidths': 0.15,
                 'alpha': 0.5}
 
     size = kwargs.pop('size', 32)
-    color = kwargs.pop('color', 'teal')
     # marker = kwargs.pop('marker', '.')
     fontsize = kwargs.pop('fontsize', 9)
     defaults.update(kwargs)
+    if hexbin:
+        color = kwargs.pop('color', None)
+        defaults['alpha'] = 1
+    else:
+        color = kwargs.pop('color', 'teal')
 
     labels = False if rho_levels is None else labels
 
-    def flatten_data(data):
-        if isinstance(data, xr.DataArray):
-            d = data.values.ravel()
-        elif isinstance(data, np.ndarray):
-            d = data.ravel()
-        else:
-            return data
-
-        return d[~np.isnan(d)]
-
     axes = dict()
+    handles = dict()
 
     if ax is None:
         f = plt.figure(constrained_layout=True)
@@ -184,13 +227,33 @@ def TSplot(S, T, P, Pref=0, ax=None, rho_levels=[],
 
     axes['ts'] = ax
 
-    salt = flatten_data(S)
-    temp = flatten_data(T)
+    if (isinstance(S, xr.DataArray) and isinstance(T, xr.DataArray)):
+        S, T = xr.broadcast(S, T)
 
-    #     ts = ax.plot(S, T, ls='None', marker=marker, color=color, **kwargs)
-    ts = ax.scatter(salt, temp, s=flatten_data(size), c=flatten_data(color),
-                    **defaults)
-    # ts = ax.hexbin(flatten_data(S), flatten_data(T), **defaults)
+    nanmask = np.logical_or(np.isnan(S.values), np.isnan(T.values))
+    salt = _flatten_data(S.values[~nanmask])
+    temp = _flatten_data(T.values[~nanmask])
+
+    # _prctile = 2
+    # outlierT = np.percentile(temp, [_prctile, 100 - _prctile])
+    # outlierS = np.percentile(salt, [_prctile, 100 - _prctile])
+
+    # outliermask = np.logical_or(
+    #     np.logical_or(salt > outlierS[1], salt < outlierS[0]),
+    #     np.logical_or(temp > outlierT[1], temp < outlierT[0]))
+
+    if hexbin:
+        plot_kwargs.setdefault('cmap', mpl.cm.Blues)
+        plot_kwargs.setdefault('mincnt', 1)
+        plot_kwargs.setdefault('C', color)
+
+        handles['ts'] = ax.hexbin(salt, temp, **defaults, **plot_kwargs)
+        # ax.plot(salt[outliermask], temp[outliermask], '.', 'gray')
+
+    else:
+        handles['ts'] = ax.scatter(salt, temp, s=_flatten_data(size),
+                                   c=_flatten_data(color), **defaults,
+                                   **plot_kwargs)
 
     # defaults.pop('alpha')
     # ts = ax.scatter(flatten_data(S), flatten_data(T),
@@ -200,8 +263,8 @@ def TSplot(S, T, P, Pref=0, ax=None, rho_levels=[],
     Slim = ax.get_xlim()
     Tlim = ax.get_ylim()
 
-    Tvec = np.arange(Tlim[0], Tlim[1], 0.1)
-    Svec = np.arange(Slim[0], Slim[1], 0.1)
+    Tvec = np.linspace(Tlim[0], Tlim[1], 40)
+    Svec = np.linspace(Slim[0], Slim[1], 40)
     [Smat, Tmat] = np.meshgrid(Svec, Tvec)
 
     ρ = sw.pden(Smat, Tmat, Pref) - 1000
@@ -213,79 +276,48 @@ def TSplot(S, T, P, Pref=0, ax=None, rho_levels=[],
         if not (rho_levels.size > 0):
             rho_levels = 7
 
-        cs = ax.contour(Smat, Tmat, ρ, colors='gray',
-                        levels=rho_levels, linestyles='solid',
-                        zorder=-1)
+        handles['rho_contours'] = ax.contour(Smat, Tmat, ρ, colors='gray',
+                                             levels=rho_levels,
+                                             linestyles='solid',
+                                             zorder=-1)
 
         ax.set_xlim([Smat.min(), Smat.max()])
         ax.set_ylim([Tmat.min(), Tmat.max()])
-    else:
-        cs = None
 
     if plot_distrib:
         hist_args = dict(color=color, density=True, histtype='step')
-        Thist = axes['t'].hist(temp, orientation='horizontal',
-                               bins=Tbins, **hist_args)
+        handles['Thist'] = axes['t'].hist(temp, orientation='horizontal',
+                                          bins=Tbins, **hist_args)
         axes['t'].set_xticklabels([])
         axes['t'].set_xticks([])
         axes['t'].spines['bottom'].set_visible(False)
 
-        Shist = axes['s'].hist(salt, bins=Sbins, **hist_args)
+        handles['Shist'] = axes['s'].hist(salt, bins=Sbins, **hist_args)
         axes['s'].set_yticks([])
         axes['s'].set_yticklabels([])
         axes['s'].spines['left'].set_visible(False)
-    else:
-        Thist = None
-        Shist = None
 
     if labels:
         if label_spines:
-            # needed to do some labelling setup
-            clabels = ax.clabel(cs, fmt='%.1f', inline=False)
-
-            [txt.set_visible(False) for txt in clabels]
-
-            for idx, _ in enumerate(cs.levels):
-                if not cs.allsegs[idx]:
-                    continue
-
-                # This is the rightmost point on each calculated contour
-                x, y = cs.allsegs[idx][0][0, :]
-                # This is a very helpful function!
-                cs.add_label_near(x, y, inline=False, inline_spacing=0)
-
-            xlim = ax.get_xlim()
-
-            def edit_text(t):
-                if abs(t.get_position()[0] - xlim[1]) / xlim[1] < 1e-6:
-                    # right spine lables
-                    t.set_verticalalignment('center')
-                else:
-                    # top spine labels need to be aligned to the bottom
-                    t.set_verticalalignment('bottom')
-
-                t.set_clip_on(False)
-                t.set_horizontalalignment('left')
-                t.set_size(fontsize)
-                t.set_text(' ' + t.get_text())
-
-            [edit_text(t) for t in cs.labelTexts]
-
+            plots.contour_label_spines(handles['rho_contours'],
+                                       fmt='%.1f',
+                                       fontsize=fontsize)
         else:
-            clabels = ax.clabel(cs, fmt='%.1f', inline=True, inline_spacing=10)
+            clabels = ax.clabel(handles['cs'], fmt='%.1f', inline=True,
+                                inline_spacing=10)
             [txt.set_backgroundcolor([0.95, 0.95, 0.95, 0.75])
              for txt in clabels]
 
     ax.spines['right'].set_visible(True)
     ax.spines['top'].set_visible(True)
 
-    ax.text(0, 0.995, ' $σ_' + str(Pref) + '$', transform=ax.transAxes,
-            va='top', fontsize=fontsize + 2, color='gray')
+    ax.text(0, 1.005, ' $σ_' + str(Pref) + '$', transform=ax.transAxes,
+            va='bottom', fontsize=fontsize + 2, color='gray')
 
     ax.set_xlabel('S')
     ax.set_ylabel('T')
 
-    return cs, ts, axes, Thist, Shist
+    return handles, axes
 
 
 def argo_mld_clim(kind='monthly', fname=None):

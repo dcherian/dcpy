@@ -181,3 +181,52 @@ def annotate_end(hdl, label):
                    clip_on=False, color=color)
 
     return point, text
+
+
+def contour_label_spines(cs, **kwargs):
+    '''
+    Fancy spine labelling of contours.
+
+    Parameters
+    ----------
+    cs: ContourSet
+
+    kwargs: dict, optional
+        Passed on to Axes.clabel()
+
+    Returns
+    -------
+
+    None
+    '''
+
+    def _edit_text_labels(t, ax):
+        xlim = ax.get_xlim()
+
+        if abs(t.get_position()[0] - xlim[1]) / xlim[1] < 1e-6:
+            # right spine lables
+            t.set_verticalalignment('center')
+        else:
+            # top spine labels need to be aligned to the bottom
+            t.set_verticalalignment('bottom')
+
+        t.set_clip_on(False)
+        t.set_horizontalalignment('left')
+        t.set_size(kwargs.pop('fontsize', 9))
+        t.set_text(' ' + t.get_text())
+
+    # need to set these up first
+    clabels = cs.ax.clabel(cs, inline=False, **kwargs)
+
+    [txt.set_visible(False) for txt in clabels]
+
+    for idx, _ in enumerate(cs.levels):
+        if not cs.allsegs[idx]:
+            continue
+
+        # This is the rightmost point on each calculated contour
+        x, y = cs.allsegs[idx][0][0, :]
+        # This is a very helpful function!
+        cs.add_label_near(x, y, inline=False, inline_spacing=0)
+
+    [_edit_text_labels(t, cs.ax) for t in cs.labelTexts]
