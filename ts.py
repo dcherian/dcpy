@@ -145,7 +145,7 @@ def FindGaps(var):
 
 
 def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
-                 SubsetLength=None, breakpts=[], multitaper=False,
+                 SubsetLength=None, breakpts=[], multitaper=True,
                  preserve_area=False, scale=1, linearx=False,
                  axis=-1, twoside=True, decimate=True,
                  mark_freqs=[], cycles_per='D', period_axis=True,
