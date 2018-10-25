@@ -737,7 +737,7 @@ def PlotCoherence(y0, y1, dt=1, nsmooth=5, multitaper=False, scale=1):
 
 def BandPassButter(input, freqs, dt=1, order=1,
                    num_discard='auto', axis=-1, dim=None,
-                   returnba=False):
+                   returnba=False, debug=False):
 
     b, a = signal.butter(N=order,
                          Wn=np.sort(freqs) * dt / (1 / 2),
@@ -747,8 +747,10 @@ def BandPassButter(input, freqs, dt=1, order=1,
         return b, a
     else:
         if type(input) is xr.core.dataarray.DataArray:
-            if dim is None:
+            if len(input.dims) > 1 and dim is None:
                 raise ValueError('Specify dim along which to band-pass')
+            else:
+                dim = input.dims[0]
 
             if type(dim) is list:
                 dim = dim[0]
@@ -778,12 +780,20 @@ def BandPassButter(input, freqs, dt=1, order=1,
 
             if input.ndim > 2:
                 # unstack back to original shape and ordering
-                x = x.unstack('newdim').transpose(*list(old_dims))
+                bp = x.unstack('newdim').transpose(*list(old_dims))
+            else:
+                bp = x
 
-            return x
         else:
-            return np.apply_along_axis(GappyFilter, axis, input,
-                                       b, a, num_discard=num_discard)
+            bp = np.apply_along_axis(GappyFilter, axis, input,
+                                     b, a, num_discard=num_discard)
+
+        if debug is True:
+            PlotSpectrum(input)
+            PlotSpectrum(bp, ax=plt.gca())
+            linex(freqs)
+
+        return bp
 
 
 def ImpulseResponse(b, a, eps=1e-2):
