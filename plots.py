@@ -180,7 +180,7 @@ def annotate_end(hdl, label, **kwargs):
     defaults.update(**kwargs)
 
     point = ax.plot(x[-1], y[-1], 'o', ms=4, color=color, clip_on=False)
-    text = ax.text('2014-12-31', y[-1], '  ' + label, **defaults)
+    text = ax.text(x[-1], y[-1], '  ' + label, **defaults)
 
     return point, text
 
