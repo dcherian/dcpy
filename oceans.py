@@ -150,10 +150,11 @@ def GM(lat, N, N0, b=1000, oned=False):
     return (omg, K_omg, P_omg, k, K_k_1d, P_k_1d)
 
 
-def TSplot(S, T, Pref=0, ax=None, rho_levels=[],
+def TSplot(S, T, Pref=0, size=None, color=None,
+           ax=None, rho_levels=[],
            labels=True, label_spines=True,
            plot_distrib=True, Sbins=30, Tbins=30,
-           plot_kwargs={}, hexbin=True, **kwargs):
+           plot_kwargs={}, hexbin=True, fontsize=9):
     '''
     T-S plot. The default is to scatter, but hex-binning is also an option.
 
@@ -163,7 +164,11 @@ def TSplot(S, T, Pref=0, ax=None, rho_levels=[],
         Salinity, temperature.
     Pref : float32, optional
         Reference pressure level.
-    ax : optional
+    size: int, numpy.ndarray, xr.DataArray
+        Passed to scatter.
+    color: string, numpy.ndarray, xr.DataArray
+        Passed as 'c' to scatter and 'C' to hexbin.
+    ax : optional, matplotlib.Axes
         Axes to plot to.
     rho_levels : optional
         Density contour levels.
@@ -171,6 +176,8 @@ def TSplot(S, T, Pref=0, ax=None, rho_levels=[],
         Label density contours?
     label_spines : bool, optional
         Fancy spine labelling inspired by Arnold Gordon's plots.
+    fontsize: int, optional
+        font size for labels
     plot_distrib : bool, optional
         Plot marginal distributions of T, S?
     Sbins, Tbins : int, optional
@@ -178,7 +185,8 @@ def TSplot(S, T, Pref=0, ax=None, rho_levels=[],
     hexbin : bool, optional
         hexbin instead of scatter plot?
     plot_kwargs: dict, optional
-        extra kwargs passed directly to scatter or hexbin
+        extra kwargs passed directly to scatter or hexbin. Cannot contain
+        's', 'c' or 'C'.
 
     Returns
     -------
@@ -191,19 +199,12 @@ def TSplot(S, T, Pref=0, ax=None, rho_levels=[],
 
     # colormap = cmo.cm.matter
 
-    defaults = {'edgecolors': 'gray',
-                'linewidths': 0.15,
-                'alpha': 0.5}
+    if any([kw in plot_kwargs for kw in ['c', 'C', 's']]):
+        raise ValueError('plot_kwargs cannot contain c, C, or s. '
+                         + 'Please specify size or color as appropriate.')
 
-    size = kwargs.pop('size', 32)
-    # marker = kwargs.pop('marker', '.')
-    fontsize = kwargs.pop('fontsize', 9)
-    defaults.update(kwargs)
-    if hexbin:
-        color = kwargs.pop('color', None)
-        defaults['alpha'] = 1
-    else:
-        color = kwargs.pop('color', 'teal')
+    scatter_defaults = {'edgecolors': None,
+                        'alpha': 0.5}
 
     labels = False if rho_levels is None else labels
 
@@ -224,16 +225,22 @@ def TSplot(S, T, Pref=0, ax=None, rho_levels=[],
     elif isinstance(ax, dict):
         axes = ax
         ax = axes['ts']
-
     axes['ts'] = ax
 
-    if (isinstance(S, xr.DataArray) and isinstance(T, xr.DataArray)):
-        S, T = xr.broadcast(S, T)
-
     nanmask = np.logical_or(np.isnan(S.values), np.isnan(T.values))
-    salt = _flatten_data(S.values[~nanmask])
-    temp = _flatten_data(T.values[~nanmask])
+    if size is not None:
+        nanmask = np.logical_or(nanmask, np.isnan(size))
+    if color is not None and not isinstance(color, str):
+        nanmask = np.logical_or(nanmask, np.isnan(color))
 
+    salt = _flatten_data(S.where(~nanmask))
+    temp = _flatten_data(T.where(~nanmask))
+    if size is not None and hasattr(size, 'values'):
+        size = _flatten_data(size.where(~nanmask))
+    if color is not None and hasattr(color, 'values'):
+        color = _flatten_data(color.where(~nanmask))
+
+    # TODO: plot outliers separately with hexbin
     # _prctile = 2
     # outlierT = np.percentile(temp, [_prctile, 100 - _prctile])
     # outlierS = np.percentile(salt, [_prctile, 100 - _prctile])
@@ -245,14 +252,17 @@ def TSplot(S, T, Pref=0, ax=None, rho_levels=[],
     if hexbin:
         plot_kwargs.setdefault('cmap', mpl.cm.Blues)
         plot_kwargs.setdefault('mincnt', 1)
-        plot_kwargs.setdefault('C', color)
+        plot_kwargs['C'] = color
 
-        handles['ts'] = ax.hexbin(salt, temp, **defaults, **plot_kwargs)
+        handles['ts'] = ax.hexbin(salt, temp, **plot_kwargs)
         # ax.plot(salt[outliermask], temp[outliermask], '.', 'gray')
 
     else:
-        handles['ts'] = ax.scatter(salt, temp, s=_flatten_data(size),
-                                   c=_flatten_data(color), **defaults,
+        scatter_defaults.update(plot_kwargs)
+        plot_kwargs = scatter_defaults
+        handles['ts'] = ax.scatter(salt, temp,
+                                   s=size if size is not None else 12,
+                                   c=color if color is not None else 'teal',
                                    **plot_kwargs)
 
     # defaults.pop('alpha')
@@ -308,11 +318,11 @@ def TSplot(S, T, Pref=0, ax=None, rho_levels=[],
             [txt.set_backgroundcolor([0.95, 0.95, 0.95, 0.75])
              for txt in clabels]
 
+        ax.text(0, 1.005, ' $σ_' + str(Pref) + '$', transform=ax.transAxes,
+                va='bottom', fontsize=fontsize + 2, color='gray')
+
     ax.spines['right'].set_visible(True)
     ax.spines['top'].set_visible(True)
-
-    ax.text(0, 1.005, ' $σ_' + str(Pref) + '$', transform=ax.transAxes,
-            va='bottom', fontsize=fontsize + 2, color='gray')
 
     ax.set_xlabel('S')
     ax.set_ylabel('T')
