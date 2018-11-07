@@ -185,13 +185,19 @@ def annotate_end(hdl, label, **kwargs):
     return point, text
 
 
-def contour_label_spines(cs, **kwargs):
+def contour_label_spines(cs, prefix='', rotation=None, **kwargs):
     '''
     Fancy spine labelling of contours.
 
     Parameters
     ----------
     cs: ContourSet
+
+    prefix: string,
+        Prefix string to add to labels
+
+    rotation : float
+        Constant rotation angle for labels
 
     kwargs: dict, optional
         Passed on to Axes.clabel()
@@ -202,7 +208,7 @@ def contour_label_spines(cs, **kwargs):
     None
     '''
 
-    def _edit_text_labels(t, ax):
+    def _edit_text_labels(t, ax, prefix, rotation):
         xlim = ax.get_xlim()
 
         if abs(t.get_position()[0] - xlim[1]) / xlim[1] < 1e-6:
@@ -214,8 +220,8 @@ def contour_label_spines(cs, **kwargs):
 
         t.set_clip_on(False)
         t.set_horizontalalignment('left')
-        t.set_size(kwargs.pop('fontsize', 9))
-        t.set_text(' ' + t.get_text())
+        t.set_text(' ' + prefix + t.get_text())
+        t.set_rotation(rotation)
 
     # need to set these up first
     clabels = cs.ax.clabel(cs, inline=False, **kwargs)
@@ -231,4 +237,6 @@ def contour_label_spines(cs, **kwargs):
         # This is a very helpful function!
         cs.add_label_near(x, y, inline=False, inline_spacing=0)
 
-    [_edit_text_labels(t, cs.ax) for t in cs.labelTexts]
+    [_edit_text_labels(t, cs.ax, prefix, rotation) for t in cs.labelTexts]
+
+    return clabels
