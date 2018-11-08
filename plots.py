@@ -240,3 +240,11 @@ def contour_label_spines(cs, prefix='', rotation=None, **kwargs):
     [_edit_text_labels(t, cs.ax, prefix, rotation) for t in cs.labelTexts]
 
     return clabels
+
+
+def set_axes_color(ax, color, spine='left'):
+    ax.spines[spine].set_visible(True)
+    ax.spines[spine].set_color(color)
+    [tt.set_color(color) for tt in ax.get_yticklabels()]
+    ax.yaxis.label.set_color(color)
+    ax.tick_params('y', colors=color)
