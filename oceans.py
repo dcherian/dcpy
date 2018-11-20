@@ -501,7 +501,7 @@ def calc_wind_power_input(tau, mld, f0, time_dim='time',
         1D complex wind stress time series [N/m²].
         Time co-ordinate must be named "time".
     mld : float
-        mixed layer depth [m].
+        mixed layer depth [m]. Can be time series.
     f0 : float
         inertial frequency, 2Ωsinφ [rad/s].
     time_dim : optional

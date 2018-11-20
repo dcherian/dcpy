@@ -243,6 +243,10 @@ def contour_label_spines(cs, prefix='', rotation=None, **kwargs):
 
 
 def set_axes_color(ax, color, spine='left'):
+    '''
+    Consistently set color of axis ticks, tick labels, axis label and spine.
+    '''
+
     ax.spines[spine].set_visible(True)
     ax.spines[spine].set_color(color)
     [tt.set_color(color) for tt in ax.get_yticklabels()]
