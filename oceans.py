@@ -338,7 +338,7 @@ def argo_mld_clim(kind='monthly', fname=None):
         if kind is 'annual':
             fname = '~/datasets/argomld/Argo_mixedlayers_all_03192017.nc'
 
-    ds = xr.open_dataset(fname, autoclose=True)
+    ds = xr.open_dataset(fname)
 
     mld = xr.Dataset()
     for da in ds:
@@ -398,8 +398,7 @@ def read_trmm():
 
     trmm = (xr.open_mfdataset('../datasets/trmm/3B42_Daily.*.nc4.nc4',
                               preprocess=preprocess,
-                              concat_dim='time',
-                              autoclose=True))
+                              concat_dim='time'))
 
     return trmm
 
@@ -421,7 +420,7 @@ def read_aquarius(dirname='/home/deepak/datasets/aquarius/oisss/'):
         return dsnew
 
     aq = xr.open_mfdataset(dirname + '*.nc', preprocess=preprocess,
-                           decode_times=False, autoclose=True)
+                           decode_times=False)
 
     return aq
 
@@ -447,9 +446,7 @@ def read_aquarius_l3(dirname='/home/deepak/datasets/aquarius/L3/combined/'):
 
         return dsnew
 
-    aq = xr.open_mfdataset(dirname + '/*.nc',
-                           autoclose=True,
-                           preprocess=preprocess)
+    aq = xr.open_mfdataset(dirname + '/*.nc', preprocess=preprocess)
 
     aq['latitude'].attrs['units'] = 'degrees_east'
     aq['longitude'].attrs['units'] = 'degrees_north'
