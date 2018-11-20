@@ -252,3 +252,13 @@ def set_axes_color(ax, color, spine='left'):
     [tt.set_color(color) for tt in ax.get_yticklabels()]
     ax.yaxis.label.set_color(color)
     ax.tick_params('y', colors=color)
+
+
+def label_subplots(ax, x=0.05, y=0.9, prefix='(', suffix=')', **kwargs):
+    ''' Alphabetically label subplots. '''
+
+    labels = 'abcdefghijklmnopqrstuvwxyz'
+
+    for aa, ll in zip(ax, labels[:len(ax)]):
+        aa.text(x=x, y=y, s=prefix+ll+suffix,
+                transform=aa.transAxes, **kwargs)
