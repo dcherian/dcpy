@@ -179,8 +179,14 @@ def annotate_end(hdl, label, **kwargs):
     defaults = {'ha': 'left', 'clip_on': False, 'color': color}
     defaults.update(**kwargs)
 
-    point = ax.plot(x[-1], y[-1], 'o', ms=4, color=color, clip_on=False)
-    text = ax.text(x[-1], y[-1], '  ' + label, **defaults)
+    if x.dtype.kind == 'M':
+        mask = np.isnat(x) | np.isnan(y)
+    else:
+        mask = np.isnan(x) | np.isnan(y)
+
+    point = ax.plot(x[~mask][-1], y[~mask][-1], 'o', ms=4, color=color,
+                    clip_on=False)
+    text = ax.text(x[~mask][-1], y[~mask][-1], '  ' + label, **defaults)
 
     return point, text
 
@@ -258,7 +264,11 @@ def label_subplots(ax, x=0.05, y=0.9, prefix='(', suffix=')', **kwargs):
     ''' Alphabetically label subplots. '''
 
     labels = 'abcdefghijklmnopqrstuvwxyz'
-
+    hdl = []
     for aa, ll in zip(ax, labels[:len(ax)]):
-        aa.text(x=x, y=y, s=prefix+ll+suffix,
-                transform=aa.transAxes, **kwargs)
+        hdl.append(aa.text(x=x, y=y, s=prefix + ll + suffix,
+                           transform=aa.transAxes, **kwargs))
+
+    return hdl
+
+
