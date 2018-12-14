@@ -840,7 +840,7 @@ def HighPassButter(input, freq, order=1):
 
     b, a = signal.butter(order, freq / (1 / 2), btype='high')
 
-    return GappyFilter(input, b, a, 10)
+    return GappyFilter(input, b, a)
 
 
 def EstimateImpulseResponseLength(b, a, eps=1e-2):
