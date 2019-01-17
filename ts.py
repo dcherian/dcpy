@@ -68,6 +68,12 @@ def xfilter(x, flen=None, kind='hann', dim='time',
 
         a = BandPassButter(x.copy(), 1 / flen, dt, dim=dim)
 
+    elif kind == 'lowpass':
+        a = x.copy(data=LowPassButter(x.copy(), 1/(flen / dt)))
+
+    elif kind == 'highpass':
+        a = x.copy(data=HighPassButter(x.copy(), 1/(flen / dt)))
+
     else:
         a = x.copy()
         a.values = smooth(x.values, flen / dt, window=kind,

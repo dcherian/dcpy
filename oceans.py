@@ -603,5 +603,6 @@ def read_oaflux():
 
     oaflux = xr.open_mfdataset('../datasets/oaflux/evapr_oaflux_201*.nc',
                                preprocess=preprocess)
+    del oaflux.time.attrs['units']
 
     return oaflux
