@@ -1,3 +1,5 @@
+import numpy as np
+
 def ExtractSeason(time, var, season):
     ''' Given a season, return data only for the months in that season
     season can be one of SW, NE, SW->NE, NE→SW or any 3 letter
@@ -224,3 +226,11 @@ def print_progress(iteration, total, prefix='', suffix='',
         sys.stdout.write('\n')
 
     sys.stdout.flush()
+
+
+def rms(da, axis='time'):
+    return np.sqrt((np.abs(da)**2).mean(axis))
+
+
+def ms(da, axis='time'):
+    return (np.abs(da)**2).mean(axis)
