@@ -590,3 +590,18 @@ def read_oscar():
              .rename({'latitude': 'lat', 'longitude': 'lon'}))
 
     return oscar
+
+
+def read_oaflux():
+
+    def preprocess(ds):
+        year = ds.encoding['source'][-7:-3]
+        time = pd.date_range(year + '-01-01', year + '-12-31', freq='D')
+        ds['time'].values = time.values
+
+        return ds
+
+    oaflux = xr.open_mfdataset('../datasets/oaflux/evapr_oaflux_201*.nc',
+                               preprocess=preprocess)
+
+    return oaflux
