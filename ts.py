@@ -7,6 +7,7 @@ import sciviscolor as svc
 import xarray as xr
 
 from .plots import linex
+from .util import calc95
 
 
 def _process_time(time, cycles_per='s'):
@@ -147,7 +148,7 @@ def FindGaps(var):
 def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
                  SubsetLength=None, breakpts=[], multitaper=True,
                  preserve_area=False, scale=1, linearx=False,
-                 axis=-1, twoside=True, decimate=True,
+                 axis=-1, twoside=False, decimate=True,
                  mark_freqs=[], cycles_per='D', period_axis=True,
                  **kwargs):
 
@@ -189,6 +190,9 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
         if np.issubdtype(maybe_time, np.datetime64):
             dt, t = _process_time(maybe_time, cycles_per)
             processed_time = True
+
+    if isinstance(var, xr.DataArray):
+        var = var.dropna(var.dims[0])
 
     if var.ndim == 1:
         var = np.array(var, ndmin=2)
@@ -535,7 +539,7 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
     return S[mask], f[mask], conf[mask, :]
 
 
-def Coherence(v1, v2, dt=1, nsmooth=5, **kwargs):
+def Coherence(v1, v2, dt=1, nsmooth=5, decimate=True, **kwargs):
     from dcpy.util import MovingAverage
     from scipy.signal import detrend
 
@@ -554,19 +558,32 @@ def Coherence(v1, v2, dt=1, nsmooth=5, **kwargs):
     y2 = y2[freq > 0]
     freq = freq[freq > 0]
 
-    P12 = MovingAverage(y1 * np.conj(y2), nsmooth)
-    P11 = MovingAverage(y1 * np.conj(y1), nsmooth)
-    P22 = MovingAverage(y2 * np.conj(y2), nsmooth)
+    P12 = MovingAverage(y1 * np.conj(y2), nsmooth, decimate=decimate)
+    P11 = MovingAverage(y1 * np.conj(y1), nsmooth, decimate=decimate)
+    P22 = MovingAverage(y2 * np.conj(y2), nsmooth, decimate=decimate)
 
-    f = MovingAverage(freq, nsmooth)
+    f = MovingAverage(freq, nsmooth, decimate=decimate)
     C = P12 / np.sqrt(P11 * P22)
 
     Cxy = np.abs(C)
-    phase = np.angle(C) * 180 / np.pi
+    phase = np.angle(C, deg=True)
     if nsmooth > 1:
         siglevel = np.sqrt(1 - (0.05)**(1 / (nsmooth - 1)))
     else:
         siglevel = 1
+
+    # C2std = 1.414 * (1 - Cxy**2) / np.abs(Cxy) / np.sqrt(nsmooth)
+
+    # niter = 1000
+    # white = np.random.randn(len(v1), niter)
+    # yw, freq = CenteredFFT(detrend(white, 1) * window[:, np.newaxis], dt, axis=0)
+    # yw = yw[freq > 0, :]
+    # Pw2 = MovingAverage(yw * np.conj(y2[:, np.newaxis]),
+    #                     nsmooth, decimate=decimate)
+    # Pww = MovingAverage(yw * np.conj(yw), nsmooth, decimate=decimate)
+
+    # Cxy_white = np.abs(Pw2 / np.sqrt(Pww * P22[:, np.newaxis]))
+    # siglevel = calc95(Cxy_white.ravel(), 'onesided')
 
     return f, Cxy, phase, siglevel
 
@@ -599,27 +616,27 @@ def MultiTaperCoherence(y0, y1, dt=1, tbp=5, ntapers=None):
                        cohe_ci=False, phase_ci=False)
 
     f = out['freq']
-    cohe = out['cohe']
+    cohe = out['cohe']**2
     phase = out['phase']
 
-    # if ntapers > 1:
-    #     siglevel = np.sqrt(1 - (0.05)**(1/(tbp/2*ntapers-1)))
-    # else:
-    #     siglevel = 1
+    if ntapers > 1:
+        siglevel = (1 - (0.05)**(1/(tbp/2*ntapers-1)))
+    else:
+        siglevel = 1
 
     # monte-carlo significance level agrees with tbp/2*ntapers
     # being (degrees of freedom)/2
-    niters = 1500
-    y1 = np.random.randn(len(y0), niters)
+    # niters = 1500
+    # y1 = np.random.randn(len(y0), niters)
 
-    c = []
-    for ii in range(niters):
-        out = mt_coherence(dt, y0, y1[:, ii], tbp=tbp, kspec=ntapers,
-                           nf=nf, p=0.95, iadapt=1,
-                           freq=True, cohe=True)
-        c.append(out['cohe'])
+    # c = []
+    # for ii in range(niters):
+    #     out = mt_coherence(dt, y0, y1[:, ii], tbp=tbp, kspec=ntapers,
+    #                        nf=nf, p=0.95, iadapt=1,
+    #                        freq=True, cohe=True)
+    #     c.append(out['cohe'])
 
-    siglevel = calc95(np.concatenate(c), 'onesided')
+    # siglevel = calc95(np.concatenate(c), 'onesided')
 
     return f, cohe, phase, siglevel
 
@@ -703,7 +720,8 @@ def RotaryPSD(y, dt=1, nsmooth=5, multitaper=False, decimate=True):
             np.real(conf_cw), np.real(conf_ccw))
 
 
-def PlotCoherence(y0, y1, dt=1, nsmooth=5, multitaper=False, scale=1):
+def PlotCoherence(y0, y1, dt=1, nsmooth=5, multitaper=False, scale=1,
+                  decimate=False):
 
     import dcpy.plots
 
@@ -713,28 +731,28 @@ def PlotCoherence(y0, y1, dt=1, nsmooth=5, multitaper=False, scale=1):
                                                       tbp=nsmooth)
     else:
         f, Cxy, phase, siglevel = Coherence(y0, y1, dt=dt,
-                                            nsmooth=nsmooth)
+                                            nsmooth=nsmooth,
+                                            decimate=decimate)
 
-    plt.figure(figsize=(8, 9))
-    ax1 = plt.subplot(311)
-    PlotSpectrum(y0, ax=ax1, dt=dt, scale=scale,
-                 nsmooth=nsmooth, multitaper=multitaper)
-    PlotSpectrum(y1, ax=ax1, dt=dt, scale=scale,
-                 nsmooth=nsmooth, multitaper=multitaper)
-    ax1.invert_xaxis()
+    fig, ax = plt.subplots(3, 1, sharex=True, constrained_layout=True)
+    fig.set_size_inches((8, 9))
+    PlotSpectrum(y0, ax=ax[0], dt=dt, scale=scale,
+                 nsmooth=nsmooth, multitaper=multitaper, decimate=decimate)
+    PlotSpectrum(y1, ax=ax[0], dt=dt, scale=scale,
+                 nsmooth=nsmooth, multitaper=multitaper, decimate=decimate)
 
-    plt.subplot(312, sharex=ax1)
-    plt.plot(f, Cxy)
-    dcpy.plots.liney(siglevel)
-    plt.title('{0:.2f}'.format(sum(Cxy > siglevel) / len(Cxy) * 100)
-              + '% above 95% significance')
-    plt.ylim([0, 1])
+    ax[1].plot(f, Cxy)
+    dcpy.plots.liney(siglevel, ax=ax[1])
+    ax[1].set_title('{0:.2f}% above 95% significance'
+                    .format(sum(Cxy > siglevel) / len(Cxy) * 100))
+    ax[1].set_ylim([0, 1])
+    ax[1].set_ylabel('Squared Coherence')
 
-    plt.subplot(313, sharex=ax1)
-    plt.plot(f, phase)
-    plt.title('+ve = y0 leads y1')
+    ax[2].plot(f, phase)
+    ax[2].set_ylabel('Coherence phase')
+    ax[2].set_title('+ve = y0 leads y1')
 
-    plt.tight_layout()
+    return ax
 
 
 def BandPassButter(input, freqs, dt=1, order=1,
