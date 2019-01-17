@@ -400,7 +400,7 @@ def read_trmm():
                               preprocess=preprocess,
                               concat_dim='time'))
 
-    return trmm
+    return trmm.transpose()
 
 
 def read_aquarius(dirname='/home/deepak/datasets/aquarius/oisss/'):
@@ -569,3 +569,24 @@ def calc_wind_power_input(tau, mld, f0, time_dim='time',
     ZI.attrs['units'] = 'm/s'
 
     return windinput, ZI
+
+
+def read_tropflux():
+
+    tx = xr.open_mfdataset('/home/deepak/datasets/tropflux/taux_tropflux_1d_*.nc')
+    ty = xr.open_mfdataset('/home/deepak/datasets/tropflux/tauy_tropflux_1d_*.nc')
+
+    tropflux = xr.merge([tx, ty]).rename({'longitude': 'lon', 'latitude': 'lat'})
+    tropflux['tau'] = np.hypot(tropflux.taux, tropflux.tauy)
+
+    return tropflux
+
+
+def read_oscar():
+    oscar = (xr.open_mfdataset(
+             '/home/deepak/work/datasets/oscar/oscar_vel*.nc',
+             drop_variables=['year', 'um', 'vm'])
+             .squeeze()
+             .rename({'latitude': 'lat', 'longitude': 'lon'}))
+
+    return oscar
