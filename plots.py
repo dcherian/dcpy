@@ -260,15 +260,46 @@ def set_axes_color(ax, color, spine='left'):
     ax.tick_params('y', colors=color)
 
 
-def label_subplots(ax, x=0.05, y=0.9, prefix='(', suffix=')', **kwargs):
-    ''' Alphabetically label subplots. '''
+def label_subplots(ax, x=0.05, y=0.9, prefix='(', suffix=')', labels=None,
+                   **kwargs):
+    '''
+    Alphabetically label subplots with prefix + alphabet + suffix + labels
 
-    labels = 'abcdefghijklmnopqrstuvwxyz'
+    Inputs
+    ======
+
+    ax : matplotlib.Axes
+
+    x, y : (optional)
+        position in Axes co-ordintes
+
+    prefix, suffix : str, optional
+        prefix, suffix for alphabet
+
+    labels : list, optional
+        optional list of labels
+    '''
+
+    alphabet = 'abcdefghijklmnopqrstuvwxyz'
+
+    if labels is not None:
+        assert(len(labels) == len(ax))
+    else:
+        labels = [''] * len(ax)
+
     hdl = []
-    for aa, ll in zip(ax, labels[:len(ax)]):
-        hdl.append(aa.text(x=x, y=y, s=prefix + ll + suffix,
+    for aa, bb, ll in zip(ax, alphabet[:len(ax)], labels):
+        hdl.append(aa.text(x=x, y=y, s=prefix + bb + suffix + ' ' + ll,
                            transform=aa.transAxes, **kwargs))
 
     return hdl
 
 
+def contour_overlimit(da, mappable, ax=None, color='w', **kwargs):
+
+    clim = mappable.get_clim()
+
+    ax = plt.gca() if ax is None else ax
+
+    da.where(da <= clim[0]).contour(ax=ax, color=color, **kwargs)
+    da.where(da >= clim[1]).contour(ax=ax, color=color, **kwargs)
