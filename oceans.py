@@ -333,7 +333,7 @@ def TSplot(S, T, Pref=0, size=None, color=None,
 def argo_mld_clim(kind='monthly', fname=None):
     if fname is None:
         if kind is 'monthly':
-            fname = '~/datasets/argomld/Argo_mixedlayers_monthlyclim_03192017.nc'
+            fname = '~/datasets/argomld/Argo_mixedlayers_monthlyclim_03192017.nc'  # noqa
 
         if kind is 'annual':
             fname = '~/datasets/argomld/Argo_mixedlayers_all_03192017.nc'
@@ -573,10 +573,13 @@ def calc_wind_power_input(tau, mld, f0, time_dim='time',
 
 def read_tropflux():
 
-    tx = xr.open_mfdataset('/home/deepak/datasets/tropflux/taux_tropflux_1d_*.nc')
-    ty = xr.open_mfdataset('/home/deepak/datasets/tropflux/tauy_tropflux_1d_*.nc')
+    tx = xr.open_mfdataset(
+            '/home/deepak/datasets/tropflux/taux_tropflux_1d_*.nc')  # noqa
+    ty = xr.open_mfdataset(
+            '/home/deepak/datasets/tropflux/tauy_tropflux_1d_*.nc')  # noqa
 
-    tropflux = xr.merge([tx, ty]).rename({'longitude': 'lon', 'latitude': 'lat'})
+    tropflux = (xr.merge([tx, ty])
+                .rename({'longitude': 'lon', 'latitude': 'lat'}))
     tropflux['tau'] = np.hypot(tropflux.taux, tropflux.tauy)
 
     return tropflux
