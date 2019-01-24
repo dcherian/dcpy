@@ -606,3 +606,21 @@ def read_oaflux():
     del oaflux.time.attrs['units']
 
     return oaflux
+
+
+def read_nio():
+
+    nio = (xr.open_dataset(
+           '~/work/datasets/nio-atlas/'
+           + 'nioa_climatology_seasonal_temp_salt_monsoon_season.nc',
+           decode_times=False)
+           .rename({'TIME': 'time',
+                    'DEPTH': 'depth',
+                    'LATITUDE': 'lat',
+                    'LONGITUDE': 'lon',
+                    'SALT': 'S',
+                    'TEMP': 'T'}))
+
+    nio.time.values = ['NE', 'NESW', 'SW', 'SWNE']
+
+    return nio
