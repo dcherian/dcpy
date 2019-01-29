@@ -303,3 +303,27 @@ def contour_overlimit(da, mappable, ax=None, color='w', **kwargs):
 
     da.where(da <= clim[0]).contour(ax=ax, color=color, **kwargs)
     da.where(da >= clim[1]).contour(ax=ax, color=color, **kwargs)
+
+
+def annotate_heatmap_string(mesh, annot_data, **kwargs):
+    """
+    Add textual labels with the value in each cell.
+
+    (copied from seaborn so that I can pass an array of strings).
+    """
+    from seaborn.utils import relative_luminance
+
+    ax = mesh.axes
+    mesh.update_scalarmappable()
+    height, width = annot_data.shape
+    xpos, ypos = np.meshgrid(np.arange(width) + .5, np.arange(height) + .5)
+
+    for x, y, m, color, ann in zip(xpos.flat, ypos.flat,
+                                   mesh.get_array(), mesh.get_facecolors(),
+                                   annot_data.flat):
+        if m is not np.ma.masked:
+            lum = relative_luminance(color)
+            text_color = ".15" if lum > .408 else "w"
+            text_kwargs = dict(color=text_color, ha="center", va="center")
+            text_kwargs.update(**kwargs)
+            ax.text(x, y, ann.decode('UTF-8'), **text_kwargs)
