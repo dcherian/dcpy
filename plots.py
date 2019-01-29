@@ -1,5 +1,12 @@
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+
+ROBUST_PERCENTILE = 2
+
+OPTIONS = dict()
+OPTIONS['cmap_divergent'] = mpl.cm.RdBu_r
+OPTIONS['cmap_sequential'] = mpl.cm.viridis
 
 
 def offset_line_plot(da, x, y, ax=None, offset=0, remove_mean=False,
@@ -303,6 +310,222 @@ def contour_overlimit(da, mappable, ax=None, color='w', **kwargs):
 
     da.where(da <= clim[0]).contour(ax=ax, color=color, **kwargs)
     da.where(da >= clim[1]).contour(ax=ax, color=color, **kwargs)
+
+
+def _determine_extend(calc_data, vmin, vmax):
+    extend_min = calc_data.min() < vmin
+    extend_max = calc_data.max() > vmax
+    if extend_min and extend_max:
+        extend = 'both'
+    elif extend_min:
+        extend = 'min'
+    elif extend_max:
+        extend = 'max'
+    else:
+        extend = 'neither'
+    return extend
+
+
+def _build_discrete_cmap(cmap, levels, extend, filled):
+    """
+    Build a discrete colormap and normalization of the data.
+    """
+    import matplotlib as mpl
+
+    if not filled:
+        # non-filled contour plots
+        extend = 'max'
+
+    if extend == 'both':
+        ext_n = 2
+    elif extend in ['min', 'max']:
+        ext_n = 1
+    else:
+        ext_n = 0
+
+    n_colors = len(levels) + ext_n - 1
+    pal = _color_palette(cmap, n_colors)
+
+    new_cmap, cnorm = mpl.colors.from_levels_and_colors(
+        levels, pal, extend=extend)
+    # copy the old cmap name, for easier testing
+    new_cmap.name = getattr(cmap, 'name', cmap)
+
+    return new_cmap, cnorm
+
+
+def _color_palette(cmap, n_colors):
+    import matplotlib.pyplot as plt
+    from matplotlib.colors import ListedColormap
+    colors_i = np.linspace(0, 1., n_colors)
+    if isinstance(cmap, (list, tuple)):
+        # we have a list of colors
+        cmap = ListedColormap(cmap, N=n_colors)
+        pal = cmap(colors_i)
+    elif isinstance(cmap, str):
+        # we have some sort of named palette
+        try:
+            # is this a matplotlib cmap?
+            cmap = plt.get_cmap(cmap)
+            pal = cmap(colors_i)
+        except ValueError:
+            # ValueError happens when mpl doesn't like a colormap, try seaborn
+            try:
+                from seaborn.apionly import color_palette
+                pal = color_palette(cmap, n_colors=n_colors)
+            except (ValueError, ImportError):
+                # or maybe we just got a single color as a string
+                cmap = ListedColormap([cmap], N=n_colors)
+                pal = cmap(colors_i)
+    else:
+        # cmap better be a LinearSegmentedColormap (e.g. viridis)
+        pal = cmap(colors_i)
+
+    return pal
+
+
+def is_scalar(value):
+    """Whether to treat a value as a scalar.
+
+    Any non-iterable, string, or 0-D array
+    """
+    return (getattr(value, 'ndim', None) == 0)
+
+
+# _determine_cmap_params is adapted from Seaborn:
+# https://github.com/mwaskom/seaborn/blob/v0.6/seaborn/matrix.py#L158
+# Used under the terms of Seaborn's license, see licenses/SEABORN_LICENSE.
+
+def cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
+                center=None, robust=False, extend=None,
+                levels=None, filled=True, norm=None):
+    """
+    Use some heuristics to set good defaults for colorbar and range.
+
+    Parameters
+    ==========
+    plot_data: Numpy array
+        Doesn't handle xarray objects
+
+    Returns
+    =======
+    cmap_params : dict
+        Use depends on the type of the plotting function
+    """
+    import matplotlib as mpl
+
+    plot_data = np.array(plot_data)
+    calc_data = np.ravel(plot_data[np.isfinite(plot_data)])
+    # Setting center=False prevents a divergent cmap
+    possibly_divergent = center is not False
+
+    # Handle all-NaN input data gracefully
+    if calc_data.size == 0:
+        # Arbitrary default for when all values are NaN
+        calc_data = np.array(0.0)
+
+    # Set center to 0 so math below makes sense but remember its state
+    center_is_none = False
+    if center is None:
+        center = 0
+        center_is_none = True
+
+    # Setting both vmin and vmax prevents a divergent cmap
+    if (vmin is not None) and (vmax is not None):
+        possibly_divergent = False
+
+    # Setting vmin or vmax implies linspaced levels
+    user_minmax = (vmin is not None) or (vmax is not None)
+
+    # vlim might be computed below
+    vlim = None
+
+    # save state; needed later
+    vmin_was_none = vmin is None
+    vmax_was_none = vmax is None
+
+    if vmin is None:
+        if robust:
+            vmin = np.percentile(calc_data, ROBUST_PERCENTILE)
+        else:
+            vmin = calc_data.min()
+    elif possibly_divergent:
+        vlim = abs(vmin - center)
+
+    if vmax is None:
+        if robust:
+            vmax = np.percentile(calc_data, 100 - ROBUST_PERCENTILE)
+        else:
+            vmax = calc_data.max()
+    elif possibly_divergent:
+        vlim = abs(vmax - center)
+
+    if possibly_divergent:
+        # kwargs not specific about divergent or not: infer defaults from data
+        divergent = ((vmin < 0) and (vmax > 0)) or not center_is_none
+    else:
+        divergent = False
+
+    # A divergent map should be symmetric around the center value
+    if divergent:
+        if vlim is None:
+            vlim = max(abs(vmin - center), abs(vmax - center))
+        vmin, vmax = -vlim, vlim
+
+    # Now add in the centering value and set the limits
+    vmin += center
+    vmax += center
+
+    # now check norm and harmonize with vmin, vmax
+    if norm is not None:
+        if norm.vmin is None:
+            norm.vmin = vmin
+        else:
+            if not vmin_was_none and vmin != norm.vmin:
+                raise ValueError('Cannot supply vmin and a norm'
+                                 + ' with a different vmin.')
+            vmin = norm.vmin
+
+        if norm.vmax is None:
+            norm.vmax = vmax
+        else:
+            if not vmax_was_none and vmax != norm.vmax:
+                raise ValueError('Cannot supply vmax and a norm'
+                                 + ' with a different vmax.')
+            vmax = norm.vmax
+
+    # if BoundaryNorm, then set levels
+    if isinstance(norm, mpl.colors.BoundaryNorm):
+        levels = norm.boundaries
+
+    # Choose default colormaps if not provided
+    if cmap is None:
+        if divergent:
+            cmap = OPTIONS['cmap_divergent']
+        else:
+            cmap = OPTIONS['cmap_sequential']
+
+    # Handle discrete levels
+    if levels is not None and norm is None:
+        if is_scalar(levels):
+            if user_minmax:
+                levels = np.linspace(vmin, vmax, levels)
+            elif levels == 1:
+                levels = np.asarray([(vmin + vmax) / 2])
+            else:
+                # N in MaxNLocator refers to bins, not ticks
+                ticker = mpl.ticker.MaxNLocator(levels - 1)
+                levels = ticker.tick_values(vmin, vmax)
+        vmin, vmax = levels[0], levels[-1]
+
+    if extend is None:
+        extend = _determine_extend(calc_data, vmin, vmax)
+
+    if levels is not None or isinstance(norm, mpl.colors.BoundaryNorm):
+        cmap, newnorm = _build_discrete_cmap(cmap, levels, extend, filled)
+        norm = newnorm if norm is None else norm
+
+    return dict(vmin=vmin, vmax=vmax, cmap=cmap, norm=norm)
 
 
 def annotate_heatmap_string(mesh, annot_data, **kwargs):
