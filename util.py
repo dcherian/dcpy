@@ -234,3 +234,50 @@ def rms(da, axis='time'):
 
 def ms(da, axis='time'):
     return (np.abs(da)**2).mean(axis)
+
+
+def calc_iso_surface(data, value, zs, interp_order=3, power_parameter=0.5):
+    """
+    Estimate location of isosurface along 3rd dimension.
+
+    Parameters
+    ==========
+
+    data: ndarray
+        3d array
+
+    value: float
+        Isosurface value to search for
+
+    zs : 1D array,
+        Co-ordinate for axis along which we are searching
+
+    interp_order: int, optional
+        Max polynomial order.
+
+    power_parameter: float, optional
+
+    References
+    ==========
+    1. https://stackoverflow.com/questions/13627104/using-numpy-scipy-to-calculate-iso-surface-from-3d-array
+    """
+
+    if interp_order < 1:
+        interp_order = 1
+
+    dist = (data - value)**2
+    arg = np.argsort(dist, axis=2)
+    dist.sort(axis=2)
+    w_total = 0.
+    z = np.zeros(data.shape[:2], dtype=float)
+    for i in range(int(interp_order)):
+        zi = np.take(zs, arg[:, :, i])
+        valuei = dist[:, :, i]
+        wi = 1 / valuei
+        np.clip(wi, 0, 1.e6, out=wi)  # avoiding overflows
+        w_total += wi**power_parameter
+        z += zi * wi**power_parameter
+
+    z /= w_total
+
+    return z
