@@ -552,3 +552,52 @@ def annotate_heatmap_string(mesh, annot_data, **kwargs):
             text_kwargs = dict(color=text_color, ha="center", va="center")
             text_kwargs.update(**kwargs)
             ax.text(x, y, ann.decode('UTF-8'), **text_kwargs)
+
+
+def fill_step(da, dim=None, ax=None, **kwargs):
+
+    if ax is None:
+        ax = plt.gca()
+
+    if dim is None:
+        dim = da.dims[0]
+
+    coord = da[dim]
+
+    dc = coord.diff(dim).mean()
+    icoord = np.linspace(-dc + coord.min(), dc + coord.max(),
+                         coord.size * 50)
+
+    # build step like array
+    dai = (da.interp({dim: icoord}, method='nearest')
+           .bfill(dim).ffill(dim))
+
+    alpha = kwargs.pop('alpha', 0.3)
+    color = kwargs.pop('color', None)
+
+    line_kwargs = {'lw': 1.2}
+    line_kwargs.update(**kwargs)
+
+    hfill = ax.fill_between(icoord, dai, zorder=kwargs.pop('zorder', None),
+                            color=color, alpha=alpha, linewidths=0)
+    hline = dai.plot.line(x=dim, color=color, **line_kwargs)[0]
+
+    return [hfill, hline]
+
+
+def colorbar(mappable, ax=None, **kwargs):
+    from mpl_toolkits.axes_grid1 import make_axes_locatable
+    import matplotlib as mpl
+
+    if ax is None:
+        ax = plt.gca()
+
+    divider = make_axes_locatable(ax)
+    orientation = kwargs.pop('orientation', 'vertical')
+    if orientation == 'vertical':
+        loc = 'right'
+    elif orientation == 'horizontal':
+        loc = 'bottom'
+
+    cax = divider.append_axes(loc, '5%', pad='3%', axes_class=mpl.pyplot.Axes)
+    ax.get_figure().colorbar(mappable, cax=cax, orientation=orientation)
