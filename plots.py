@@ -129,7 +129,7 @@ def hist(var, log=False, bins=100, alpha=0.5, normed=True,
         linex(calc95(var))
 
 
-def line45(ax=None):
+def line45(ax=None, **kwargs):
 
     if ax is None:
         ax = plt.gca()
@@ -139,7 +139,9 @@ def line45(ax=None):
     ax.set_aspect(1)
     ax.set_xlim(newlimits)
     ax.set_ylim(newlimits)
-    ax.plot(ax.get_xlim(), ax.get_ylim(), color='gray')
+
+    kwargs.setdefault('color', 'gray')
+    ax.plot(ax.get_xlim(), ax.get_ylim(), **kwargs)
 
 
 def symyaxis():
