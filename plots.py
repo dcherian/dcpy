@@ -328,7 +328,7 @@ def _determine_extend(calc_data, vmin, vmax):
     return extend
 
 
-def _build_discrete_cmap(cmap, levels, extend, filled):
+def build_discrete_cmap(cmap, levels, extend, filled):
     """
     Build a discrete colormap and normalization of the data.
     """
@@ -500,13 +500,6 @@ def cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
     if isinstance(norm, mpl.colors.BoundaryNorm):
         levels = norm.boundaries
 
-    # Choose default colormaps if not provided
-    if cmap is None:
-        if divergent:
-            cmap = OPTIONS['cmap_divergent']
-        else:
-            cmap = OPTIONS['cmap_sequential']
-
     # Handle discrete levels
     if levels is not None and norm is None:
         if is_scalar(levels):
@@ -524,7 +517,7 @@ def cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
         extend = _determine_extend(calc_data, vmin, vmax)
 
     if levels is not None or isinstance(norm, mpl.colors.BoundaryNorm):
-        cmap, newnorm = _build_discrete_cmap(cmap, levels, extend, filled)
+        cmap, newnorm = build_discrete_cmap(cmap, levels, extend, filled)
         norm = newnorm if norm is None else norm
 
     return dict(vmin=vmin, vmax=vmax, cmap=cmap, norm=norm)
