@@ -403,6 +403,22 @@ def read_trmm():
     return trmm.transpose()
 
 
+def read_imerg():
+    def preprocess(ds):
+        ds['time'] = pd.to_datetime(ds.attrs['BeginDate']
+                                    + ' '
+                                    + ds.attrs['BeginTime'])
+        ds = ds.expand_dims('time')
+
+        return ds
+
+    imerg = (xr.open_mfdataset('../datasets/imerg/3B-DAY-E*.nc4.nc4',
+                               preprocess=preprocess,
+                               concat_dim='time'))
+
+    return imerg.transpose()
+
+
 def read_aquarius(dirname='/home/deepak/datasets/aquarius/oisss/'):
 
     import cftime
@@ -585,12 +601,13 @@ def read_tropflux():
     return tropflux
 
 
-def read_oscar():
+def read_oscar(dirname='/home/deepak/work/datasets/oscar/'):
     oscar = (xr.open_mfdataset(
-             '/home/deepak/work/datasets/oscar/oscar_vel*.nc',
+             dirname + '/oscar_vel*.nc',
              drop_variables=['year', 'um', 'vm'])
              .squeeze()
-             .rename({'latitude': 'lat', 'longitude': 'lon'}))
+             .rename({'latitude': 'lat', 'longitude': 'lon'})
+             .sortby('lat'))
 
     return oscar
 

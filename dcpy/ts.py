@@ -483,7 +483,10 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
                 # variance correction
                 window /= np.sqrt(np.sum(window**2) / N)
 
-                Y, freq = CenteredFFT(var * window, dt)
+                try:
+                    Y, freq = CenteredFFT(var * window, dt)
+                except ValueError:
+                    Y, freq = CenteredFFT(var * np.atleast_2d(window).T, dt)
                 Y = Y[freq > 0]
                 freq = freq[freq > 0]
                 confint = ConfChi2(0.05, 1)

@@ -141,7 +141,7 @@ def line45(ax=None, **kwargs):
     ax.set_ylim(newlimits)
 
     kwargs.setdefault('color', 'gray')
-    ax.plot(ax.get_xlim(), ax.get_ylim(), **kwargs)
+    ax.plot([0, 1], [0, 1], transform=ax.transAxes, **kwargs)
 
 
 def symyaxis():
