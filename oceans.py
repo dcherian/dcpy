@@ -627,3 +627,70 @@ def read_nio():
     nio.time.values = ['NE', 'NESW', 'SW', 'SWNE']
 
     return nio
+
+
+def sdif(T):
+    ''' Fickian diffusivity of salt in seawater.
+    Input
+    -----
+    T : float,
+        Temperature
+
+    Returns
+    -------
+    diffusivity
+
+    References
+    ----------
+    Numerical data and functional relationships in Science and Technology'
+    Oceanography v.3. pg 257 -- from Caldwall 1973 and 1974
+    '''
+
+    # from mixingsoftware/seawater/sw_sdif.m
+
+    return 1e-11 * (62.5 + 3.63 * T)
+
+
+def tcond(S, T, P):
+
+    ak0 = 0.565403020 + T * (1.6999346e-3 - T * 5.910632e-6)
+    f = 0.0690 - 8e-5 * T - 2.0e-7 * P - 1.0e-4 * S
+    tcond = ak0 * (1 + f)
+
+    return tcond
+
+
+def tdif(S, T, P):
+
+    return tcond(S, T, P) / sw.eos80.cp(S, T, P) / sw.eos80.dens(S, T, P)
+
+
+def visc(S, T, P):
+    '''
+    SW_VISC   kinematic viscosity
+    ===========================================================================
+    SW_VISC  $Revision: 0.0 $  $Date: 1998/01/19 $
+             Copyright (C) Ayal Anis 1998.
+
+    USAGE:  visc = sw_visc(S,T,P)
+
+    DESCRIPTION:
+     Calculates kinematic viscosity of sea-water.
+     based on Dan Kelley's fit to Knauss's TABLE II-8
+
+    INPUT:  (all must have same dimensions)
+    S  = salinity    [psu      (PSS-78) ]
+    T  = temperature [degree C (IPTS-68)]
+    P  = pressure    [db]
+        (P may have dims 1x1, mx1, 1xn or mxn for S(mxn) )
+
+    OUTPUT:
+    visc = kinematic viscosity of sea-water [m^2/s]
+
+    visc(40.,40.,1000.)=8.200167608E-7
+    '''
+
+    visc = (1e-4 * (17.91 - 0.5381 * T + 0.00694 * T**2 + 0.02305 * S)
+            / sw.dens(S, T, P))
+
+    return visc
