@@ -403,6 +403,22 @@ def read_trmm():
     return trmm.transpose()
 
 
+def read_imerg():
+    def preprocess(ds):
+        ds['time'] = pd.to_datetime(ds.attrs['BeginDate']
+                                    + ' '
+                                    + ds.attrs['BeginTime'])
+        ds = ds.expand_dims('time')
+
+        return ds
+
+    imerg = (xr.open_mfdataset('../datasets/imerg/3B-DAY-E*.nc4.nc4',
+                               preprocess=preprocess,
+                               concat_dim='time'))
+
+    return imerg.transpose()
+
+
 def read_aquarius(dirname='/home/deepak/datasets/aquarius/oisss/'):
 
     import cftime
