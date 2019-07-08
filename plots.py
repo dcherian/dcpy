@@ -1,6 +1,9 @@
+import cartopy
+import cartopy.crs as ccrs
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+import xarray as xr
 
 ROBUST_PERCENTILE = 2
 
@@ -141,7 +144,7 @@ def line45(ax=None, **kwargs):
     ax.set_ylim(newlimits)
 
     kwargs.setdefault('color', 'gray')
-    ax.plot(ax.get_xlim(), ax.get_ylim(), **kwargs)
+    ax.plot([0, 1], [0, 1], transform=ax.transAxes, **kwargs)
 
 
 def symyaxis():
@@ -633,3 +636,135 @@ def rain_colormap():
         n_colors=21, as_cmap=True))
 
     return cmap
+
+
+def trim_map(ax, xlim, ylim):
+
+    import matplotlib.path as mpath
+
+    rect = mpath.Path([[xlim[0], ylim[0]],
+                       [xlim[1], ylim[0]],
+                       [xlim[1], ylim[1]],
+                       [xlim[0], ylim[1]],
+                       [xlim[0], ylim[0]],
+                       ]).interpolated(20)
+
+    proj_to_data = ccrs.PlateCarree()._as_mpl_transform(ax) - ax.transData
+    rect_in_target = proj_to_data.transform_path(rect)
+
+    ax.set_boundary(rect_in_target)
+
+    # Notice the ugly hack to stop any further clipping - this is
+    # the same problem as #363.
+    ax.set_extent([xlim[0], xlim[1], ylim[0] - 2, ylim[1]],
+                  crs=ccrs.PlateCarree())
+
+
+# subset.plot(cmap=mpl.cm.Greys)
+# from https://rnovitsky.blogspot.com/2010/04/using-hillshade-image-as-intensity.html?m=1
+def hillshade(data, scale=10.0, azdeg=165.0, altdeg=45.0):
+    ''' convert data to hillshade based on matplotlib.colors.LightSource class.
+    input:
+         data - a 2-d array of data
+         scale - scaling value of the data. higher number = lower gradient
+         azdeg - where the light comes from: 0 south ; 90 east ; 180 north ;
+                      270 west
+         altdeg - where the light comes from: 0 horison ; 90 zenith
+    output: a 2-d array of normalized hilshade
+    '''
+    # convert alt, az to radians
+    az = azdeg * np.pi/180.0
+    alt = altdeg * np.pi/180.0
+    # gradient in x and y directions
+    dx, dy = np.gradient(data / float(scale))
+    slope = 0.5*np.pi - np.arctan(np.hypot(dx, dy))
+    aspect = np.arctan2(dx, dy)
+    intensity = (np.sin(alt)*np.sin(slope)
+                 + np.cos(alt)*np.cos(slope)*np.cos(-az - aspect - 0.5*np.pi))
+    intensity = (intensity - intensity.min())/(intensity.max() - intensity.min())
+    return intensity
+
+
+def set_shade(a, intensity=None, cmap=mpl.cm.jet,
+              scale=10.0, azdeg=165.0, altdeg=45.0):
+    ''' sets shading for data array based on intensity layer
+    or the data's value itself.
+    inputs:
+    a - a 2-d array or masked array
+    intensity - a 2-d array of same size as a (no chack on that)
+                    representing the intensity layer. if none is given
+                    the data itself is used after getting the hillshade values
+                    see hillshade for more details.
+    cmap - a colormap (e.g matplotlib.colors.LinearSegmentedColormap
+              instance)
+    scale,azdeg,altdeg - parameters for hilshade function see there for
+              more details
+    output:
+    rgb - an rgb set of the Pegtop soft light composition of the data and
+           intensity can be used as input for imshow()
+    based on ImageMagick's Pegtop_light:
+    http://www.imagemagick.org/Usage/compose/#pegtoplight'''
+
+    if intensity is None:
+        # hilshading the data
+        intensity = hillshade(a,scale=10.0,azdeg=165.0,altdeg=45.0)
+    else:
+      # or normalize the intensity
+        intensity = (intensity - intensity.min())/(intensity.max() - intensity.min())
+
+    # get rgb of normalized data based on cmap
+    rgb = cmap((a-a.min())/float(a.max()-a.min()))[:,:,:3]
+    # form an rgb eqvivalent of intensity
+    d = intensity.repeat(3).reshape(rgb.shape)
+    # simulate illumination based on pegtop algorithm.
+    rgb = 2*d*rgb+(rgb**2)*(1-2*d)
+
+    return rgb
+
+
+def get_shade_field(ds, method='matplotlib', altdeg=45, azdeg=20, vert_exag=25):
+
+    '''
+    Good parameters might be azdeg=315, altdeg=45, vert_exag=45
+    '''
+
+    if method == 'matplotlib':
+        ls = mpl.colors.LightSource(azdeg=azdeg, altdeg=altdeg)
+        rgba = ls.shade(ds.values,
+                        cmap=mpl.cm.Greys,
+                        vert_exag=vert_exag)
+
+    else:
+        rgba = set_shade(ds.values, cmap=mpl.cm.Greys_r, azdeg=azdeg)
+
+    return xr.DataArray(rgba,
+                        dims=list(ds.dims) + ['rgb'],
+                        coords=ds.coords)
+
+
+def rgb2gray(rgb):
+    gray = (rgb[:, :, :3]
+            .dot(xr.DataArray([0.2989, 0.5870, 0.1140], dims=['rgb'])))
+    # gray = 1 - gray
+
+    # gray.values[gray.values < 0] = 0
+    black = xr.ones_like(rgb) * 0.7
+    black[:, :, 3] = gray
+
+    return black
+
+
+def plot_shaded_topo(shade, ax=None, mask=None):
+    if ax is None:
+        ax = plt.gca()
+
+    # from https://alastaira.wordpress.com/2011/07/20/creating-hill-shaded-tile-overlays/
+    # shade = plots.get_shade_field(regridded.topo)
+    gray = rgb2gray(shade)
+    if mask is not None:
+        gray = gray.where(mask)
+        gray.values[np.isnan(gray.values)] = 0
+
+    gray.plot.imshow(ax=ax, x='x', y='y',
+                     transform=ccrs.PlateCarree(),
+                     add_labels=False, zorder=-1)
