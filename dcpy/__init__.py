@@ -1,1 +1,1 @@
-from . import oceans, plots, ts, util
+from . import oceans, plots, ts, util, eos
