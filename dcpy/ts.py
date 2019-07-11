@@ -2,7 +2,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.fftpack as fftpack
 import scipy.signal as signal
-import sciviscolor as svc
 
 import xarray as xr
 
@@ -155,8 +154,37 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
                  SubsetLength=None, breakpts=[], multitaper=True,
                  preserve_area=False, scale=1, linearx=False,
                  axis=-1, twoside=False, decimate=True,
-                 mark_freqs=[], cycles_per='D', period_axis=True,
-                 **kwargs):
+                 mark_freqs=[], cycles_per='D', **kwargs):
+    '''
+    Parameters
+    ----------
+
+    var: xr.DataArray, numpy.ndarray
+    ax: matplotlib.Axes
+    dt: spacing
+    nsmooth: int
+        number of points to smooth over using running average (see decima)
+    SubsetLength: int,
+        Split up time-series into segments of this length and then average
+    multitaper: bool
+        Calculate multitaper spectrum [requires mtspec]
+    preserve_area: bool
+        Plot area or variance preserving form (plots PSD x frequency)
+    scale: float32
+        scale plotted spectra by this amount
+    linearx: bool
+        Use linear freq scale
+    axis: int
+        Axis along which to calculate spectrum
+    decimate: bool
+        Decimate after using running average fopr smoothing
+    mark_freqs: list
+        Draw vertical lines at frequencies
+    twoside: bool
+        If provided with complex time series, plot either twosided spectra.
+    cycles_per: str
+        Convert datetime spacing to cycles_per_units.
+    '''
 
     iscomplex = not np.all(np.isreal(var))
     if not iscomplex:
