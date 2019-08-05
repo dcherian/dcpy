@@ -499,7 +499,7 @@ def read_argo_clim(dirname='/home/deepak/datasets/argoclim/'):
     _, ref_date = xr.coding.times._unpack_netcdf_time_units(argo.time.units)
 
     argo.time.values = (pd.Timestamp(ref_date)
-                        + pd.to_timedelta(30 * argo.time, unit='D'))
+                        + pd.to_timedelta(30 * argo.time.values, unit='D'))
 
     return argo
 
