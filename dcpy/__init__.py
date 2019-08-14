@@ -1,1 +1,1 @@
-from . import oceans, plots, ts, util, eos
+from . import oceans, plots, ts, util, eos, facetgrid
