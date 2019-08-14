@@ -399,6 +399,7 @@ def read_trmm():
     trmm = (xr.open_mfdataset('../datasets/trmm/3B42_Daily.*.nc4.nc4',
                               preprocess=preprocess,
                               concat_dim='time'))
+    trmm.attrs['units'] = 'mm/day'
 
     return trmm.transpose()
 
@@ -573,11 +574,15 @@ def calc_wind_power_input(tau, mld, f0, time_dim='time',
 
     axis = That.get_axis_num('freq_' + time_dim)
 
-    ZI = (tau.copy(data=np.fft.ifft(That * RI, axis=axis)) / mld)
+    ZI = tau.copy(data=np.fft.ifft(That * RI, axis=axis)) / mld
     # ZE = tau.copy(data=np.fft.ifft(That * RE, axis=axis))
-    # Z = tau.copy(data=np.fft.ifft(That * R, axis=axis))
+    Z = tau.copy(data=np.fft.ifft(That * R, axis=axis)) / mld
 
-    windinput = np.real(1025 * ZI * np.conj(T))
+    # windinput_approx = np.real(1025 * ZI * np.conj(T))
+    # windinput_approx.attrs['long_name'] = 'Wind power input $Π$'
+    # windinput_approx.attrs['units'] = 'W/m$^2$'
+
+    windinput = np.real(1025 * Z * np.conj(T))
     windinput.attrs['long_name'] = 'Wind power input $Π$'
     windinput.attrs['units'] = 'W/m$^2$'
 
@@ -610,6 +615,21 @@ def read_oscar(dirname='/home/deepak/work/datasets/oscar/'):
              .sortby('lat'))
 
     return oscar
+
+
+def read_mimoc():
+
+    mimoc = xr.open_mfdataset('/home/deepak/datasets/mimoc/MIMOC_ML_*.nc',
+                              concat_dim='month')
+    mimoc['LATITUDE'] = mimoc.LATITUDE.isel(month=1)
+    mimoc['LONGITUDE'] = mimoc.LONGITUDE.isel(month=1)
+    mimoc = (mimoc.swap_dims({'LAT': 'LATITUDE', 'LONG': 'LONGITUDE'})
+             .rename({'LATITUDE': 'lat',
+                      'LONGITUDE': 'lon'}))
+    mimoc['month'] = pd.date_range('2014-01-01', '2014-12-31', freq='SM')[::2]
+    mimoc = mimoc.rename({'month': 'time'})
+
+    return mimoc
 
 
 def read_oaflux():

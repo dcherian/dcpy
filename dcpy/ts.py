@@ -312,7 +312,6 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
         if iscomplex:
             ax[0].legend(['CW', 'CCW'])
 
-        hdl = hdl[0]
         ax = ax[0]
     else:
         if not ax[0].xaxis_inverted():
