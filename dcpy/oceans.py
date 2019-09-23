@@ -387,16 +387,14 @@ def argo_mld_clim(kind='monthly', fname=None):
     return mld
 
 
-def read_trmm():
+def read_trmm(dirname='../datasets/trmm/3B42_Daily.*.nc4.nc4'):
     def preprocess(ds):
         ds['time'] = pd.to_datetime(ds.attrs['BeginDate']
                                     + ' '
                                     + ds.attrs['BeginTime'])
-        ds = ds.expand_dims('time')
-
         return ds
 
-    trmm = (xr.open_mfdataset('../datasets/trmm/3B42_Daily.*.nc4.nc4',
+    trmm = (xr.open_mfdataset(dirname,
                               preprocess=preprocess,
                               concat_dim='time'))
     trmm.attrs['units'] = 'mm/day'
