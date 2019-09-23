@@ -3,6 +3,7 @@ import cartopy.crs as ccrs
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+import seaborn as sns
 import xarray as xr
 
 ROBUST_PERCENTILE = 2
@@ -10,6 +11,11 @@ ROBUST_PERCENTILE = 2
 OPTIONS = dict()
 OPTIONS['cmap_divergent'] = mpl.cm.RdBu_r
 OPTIONS['cmap_sequential'] = mpl.cm.viridis
+
+# Joshua Stevens Sargassum colormap
+white_blue_orange_red =  sns.blend_palette(
+    colors=["w", "#5ABCE1", "#FFA500", "#ED2E00"], n_colors=20, as_cmap=True
+)
 
 
 def offset_line_plot(da, x, y, ax=None, offset=0, remove_mean=False,
@@ -613,27 +619,31 @@ def pow10Formatter(x, pos):
         return r'$10^{{{}}}$'.format(b)
 
 
-def rain_colormap():
+def rain_colormap(subset=slice(None,None)):
 
     import seaborn as sns
 
-    cmap = (sns.blend_palette(
-        [[0.988235, 0.988235, 0.992157],
-         [0.811765, 0.831373, 0.886275],
-         [0.627451, 0.678431, 0.788235],
-         [0.521569, 0.615686, 0.729412],
-         [0.584314, 0.698039, 0.749020],
-         [0.690196, 0.803922, 0.772549],
-         [0.847059, 0.905882, 0.796078],
-         [1.000000, 0.980392, 0.756863],
-         [0.996078, 0.839216, 0.447059],
-         [0.996078, 0.670588, 0.286275],
-         [0.992157, 0.501961, 0.219608],
-         [0.968627, 0.270588, 0.152941],
-         [0.835294, 0.070588, 0.125490],
-         [0.674510, 0.000000, 0.149020],
-         [0.509804, 0.000000, 0.149020]],
-        n_colors=21, as_cmap=True))
+    cmap = sns.blend_palette(
+        [
+            [0.988235, 0.988235, 0.992157],
+            [0.811765, 0.831373, 0.886275],
+            [0.627451, 0.678431, 0.788235],
+            [0.521569, 0.615686, 0.729412],
+            [0.584314, 0.698039, 0.749020],
+            [0.690196, 0.803922, 0.772549],
+            [0.847059, 0.905882, 0.796078],
+            [1.000000, 0.980392, 0.756863],
+            [0.996078, 0.839216, 0.447059],
+            [0.996078, 0.670588, 0.286275],
+            [0.992157, 0.501961, 0.219608],
+            [0.968627, 0.270588, 0.152941],
+            [0.835294, 0.070588, 0.125490],
+            [0.674510, 0.000000, 0.149020],
+            [0.509804, 0.000000, 0.149020],
+        ][subset],
+        n_colors=21,
+        as_cmap=True,
+    )
 
     return cmap
 
