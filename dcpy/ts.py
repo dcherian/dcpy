@@ -9,21 +9,20 @@ from .plots import linex
 from .util import calc95
 
 
-def _process_time(time, cycles_per='s'):
+def _process_time(time, cycles_per="s"):
 
     time = time.copy()
     dt = np.nanmedian(np.diff(time.values) / np.timedelta64(1, cycles_per))
 
-    time = np.cumsum(time.copy()
-                     .diff(dim=time.dims[0])
-                     / np.timedelta64(1, cycles_per))
+    time = np.cumsum(time.copy().diff(dim=time.dims[0]) / np.timedelta64(1, cycles_per))
 
     return dt, time
 
 
-def xfilter(x, flen=None, kind='hann', dim='time',
-            decimate=False, min_values=None, **kwargs):
-    ''' flen and x.dim should have same units!'''
+def xfilter(
+    x, flen=None, kind="hann", dim="time", decimate=False, min_values=None, **kwargs
+):
+    """ flen and x.dim should have same units!"""
 
     from .util import smooth
 
@@ -37,13 +36,13 @@ def xfilter(x, flen=None, kind='hann', dim='time',
     dt = np.diff(x[dim][0:2].values)
 
     if np.issubdtype(dt.dtype, np.timedelta64):
-        dt = dt.astype('timedelta64[s]').astype('float32')
+        dt = dt.astype("timedelta64[s]").astype("float32")
 
-    if kind == 'mean':
+    if kind == "mean":
         N = np.int(np.floor(flen / dt))
 
         if N == 0:
-            print('xfilter: filter length not long enough!')
+            print("xfilter: filter length not long enough!")
             return x
 
         if min_values is None:
@@ -57,26 +56,27 @@ def xfilter(x, flen=None, kind='hann', dim='time',
 
         if decimate:
             seldict = dict()
-            seldict[dim] = slice(N - 1, len(a['time']) - N + 1, N)
+            seldict[dim] = slice(N - 1, len(a["time"]) - N + 1, N)
             a = a.isel(**seldict)
 
-    elif kind == 'bandpass':
+    elif kind == "bandpass":
         flen = np.array(flen.copy())
         if len(flen) == 1:
             raise ValueError("Bandpass filtering requires two frequencies!")
 
         a = BandPassButter(x.copy(), 1 / flen, dt, dim=dim)
 
-    elif kind == 'lowpass':
-        a = x.copy(data=LowPassButter(x.copy(), 1/(flen / dt)))
+    elif kind == "lowpass":
+        a = x.copy(data=LowPassButter(x.copy(), 1 / (flen / dt)))
 
-    elif kind == 'highpass':
-        a = x.copy(data=HighPassButter(x.copy(), 1/(flen / dt)))
+    elif kind == "highpass":
+        a = x.copy(data=HighPassButter(x.copy(), 1 / (flen / dt)))
 
     else:
         a = x.copy()
-        a.values = smooth(x.values, flen / dt, window=kind,
-                          axis=x.get_axis_num(dim), **kwargs)
+        a.values = smooth(
+            x.values, flen / dt, window=kind, axis=x.get_axis_num(dim), **kwargs
+        )
 
     return a
 
@@ -91,14 +91,14 @@ def FindLargestSegment(input):
 
 
 def FindSegments(var):
-    '''
+    """
       Finds and return valid index ranges for the input time series.
       Input:
             var - input time series
       Output:
             start - starting indices of valid ranges
             stop  - ending indices of valid ranges
-    '''
+    """
 
     NotNans = np.double(~np.isnan(var))
     edges = np.diff(NotNans)
@@ -121,14 +121,14 @@ def FindSegments(var):
 
 
 def FindGaps(var):
-    '''
+    """
       Finds and returns index ranges for gaps in the input time series.
       Input:
             var - input time series
       Output:
             start - starting indices of gap (NaN)
             stop  - ending indices of gap (NaN)
-    '''
+    """
 
     NotNans = np.double(~np.isnan(var))
     edges = np.diff(NotNans)
@@ -150,12 +150,25 @@ def FindGaps(var):
     return start, stop
 
 
-def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
-                 SubsetLength=None, breakpts=[], multitaper=True,
-                 preserve_area=False, scale=1, linearx=False,
-                 axis=-1, twoside=False, decimate=True,
-                 mark_freqs=[], cycles_per='D', **kwargs):
-    '''
+def PlotSpectrum(
+    var,
+    ax=None,
+    dt=1,
+    nsmooth=5,
+    SubsetLength=None,
+    breakpts=[],
+    multitaper=True,
+    preserve_area=False,
+    scale=1,
+    linearx=False,
+    axis=-1,
+    twoside=False,
+    decimate=True,
+    mark_freqs=[],
+    cycles_per="D",
+    **kwargs
+):
+    """
     Parameters
     ----------
 
@@ -184,25 +197,25 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
         If provided with complex time series, plot either twosided spectra.
     cycles_per: str
         Convert datetime spacing to cycles_per_units.
-    '''
+    """
 
     iscomplex = not np.all(np.isreal(var))
     if not iscomplex:
         twoside = False  # meaningless for real data
 
     if isinstance(var, xr.DataArray):
-        name = ' ' + xr.plot.utils.label_from_attrs(var)
+        name = " " + xr.plot.utils.label_from_attrs(var)
     else:
-        name = ' '
+        name = " "
 
     if ax is None:
         ax = []
         if iscomplex and twoside is True:
-            f, ax = plt.subplots(1, 2, figsize=(8.5, 8.5 / 2.2),
-                                 sharey=True,
-                                 constrained_layout=True)
-            ax[0].set_title('CW (anti-cyclonic)' + name)
-            ax[1].set_title('CCW (cyclonic)' + name)
+            f, ax = plt.subplots(
+                1, 2, figsize=(8.5, 8.5 / 2.2), sharey=True, constrained_layout=True
+            )
+            ax[0].set_title("CW (anti-cyclonic)" + name)
+            ax[1].set_title("CCW (cyclonic)" + name)
         else:
             f, aa = plt.subplots(constrained_layout=True)
             aa.set_title(name)
@@ -210,13 +223,13 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
             ax.append(aa)
             plt.gcf().set_size_inches(8.5, 8.5 / 1.617)
     else:
-        if twoside is False and not hasattr(ax, '__iter__'):
+        if twoside is False and not hasattr(ax, "__iter__"):
             ax.set_title(name)
             ax = [ax, ax]
         elif iscomplex and twoside is True:
-            assert(len(ax) == 2)
-            ax[0].set_title('CW (anti-cyclonic)' + name)
-            ax[1].set_title('CCW (cyclonic)' + name)
+            assert len(ax) == 2
+            ax[0].set_title("CW (anti-cyclonic)" + name)
+            ax[1].set_title("CCW (cyclonic)" + name)
 
     processed_time = False
     if isinstance(var, xr.DataArray) and var.ndim == 1:
@@ -243,17 +256,21 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
         var = var.transpose()
         axis = -1
 
-    if not hasattr(ax, '__iter__'):
+    if not hasattr(ax, "__iter__"):
         ax = [ax]
 
     hdl = []
     for zz in range(var.shape[1]):
         if not iscomplex:
-            S, f, conf = SpectralDensity(var[:, zz] / (scale)**(zz + 1), dt,
-                                         nsmooth, SubsetLength,
-                                         breakpts=breakpts,
-                                         multitaper=multitaper,
-                                         decimate=decimate)
+            S, f, conf = SpectralDensity(
+                var[:, zz] / (scale) ** (zz + 1),
+                dt,
+                nsmooth,
+                SubsetLength,
+                breakpts=breakpts,
+                multitaper=multitaper,
+                decimate=decimate,
+            )
 
             if preserve_area:
                 S = S * f
@@ -261,14 +278,17 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
 
             hdl.append(ax[0].plot(f, S, **kwargs)[0])
             if len(conf) > 2:
-                ax[0].fill_between(f, conf[:, 0], conf[:, 1],
-                                   color=hdl[-1].get_color(), alpha=0.3)
+                ax[0].fill_between(
+                    f, conf[:, 0], conf[:, 1], color=hdl[-1].get_color(), alpha=0.3
+                )
 
         else:
             cw, ccw, f, conf_cw, conf_ccw = RotaryPSD(
-                var[:, zz] / (scale)**(zz + 1), dt,
+                var[:, zz] / (scale) ** (zz + 1),
+                dt,
                 nsmooth=nsmooth,
-                multitaper=multitaper)
+                multitaper=multitaper,
+            )
 
             if preserve_area:
                 cw = cw * f
@@ -281,36 +301,45 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
             hdl.append(ax[0].plot(f, cw, **kwargs)[0])
 
             if len(conf_cw) > 0:
-                ax[0].fill_between(f, conf_cw[:, 0], conf_cw[:, 1],
-                                   color=hdl[-1].get_color(), alpha=0.3)
+                ax[0].fill_between(
+                    f,
+                    conf_cw[:, 0],
+                    conf_cw[:, 1],
+                    color=hdl[-1].get_color(),
+                    alpha=0.3,
+                )
 
             hdl.append(ax[1].plot(f, ccw, **kwargs)[0])
             if len(conf_ccw) > 0:
-                ax[1].fill_between(f, conf_ccw[:, 0], conf_ccw[:, 1],
-                                   color=hdl[-1].get_color(), alpha=0.3)
+                ax[1].fill_between(
+                    f,
+                    conf_ccw[:, 0],
+                    conf_ccw[:, 1],
+                    color=hdl[-1].get_color(),
+                    alpha=0.3,
+                )
 
     for aa in ax:
-        aa.set_yscale('log')
+        aa.set_yscale("log")
         if not linearx:
-            aa.set_xscale('log')
+            aa.set_xscale("log")
 
         if not processed_time:
-            aa.set_xlabel('Frequency')
+            aa.set_xlabel("Frequency")
         else:
-            aa.set_xlabel('Frequency '
-                          + '[cp' + cycles_per.lower() + ']')
+            aa.set_xlabel("Frequency " + "[cp" + cycles_per.lower() + "]")
 
     if preserve_area:
-        ax[0].set_ylabel('Freq x PSD')
-        ax[0].set_yscale('linear')
+        ax[0].set_ylabel("Freq x PSD")
+        ax[0].set_yscale("linear")
     else:
-        ax[0].set_ylabel('PSD')
+        ax[0].set_ylabel("PSD")
 
     [aa.autoscale(enable=True, tight=True) for aa in ax]
 
     if not twoside:
         if iscomplex:
-            ax[0].legend(['CW', 'CCW'])
+            ax[0].legend(["CW", "CCW"])
 
         ax = ax[0]
     else:
@@ -318,7 +347,7 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
             ax[0].invert_xaxis()
 
         if preserve_area:
-            ax[1].set_yscale('linear')
+            ax[1].set_yscale("linear")
 
     if mark_freqs:
         linex(mark_freqs, ax=ax)
@@ -327,7 +356,7 @@ def PlotSpectrum(var, ax=None, dt=1, nsmooth=5,
 
 
 def synthetic(N, dt, α, β):
-    '''
+    """
     Generate time series with spectrum S = α ω^β
 
     Input:
@@ -340,7 +369,7 @@ def synthetic(N, dt, α, β):
 
     Ack:
        Copied from Tom Farrar's synthetic_timeseries_known_spectrum
-    '''
+    """
 
     from numpy import sqrt
 
@@ -348,8 +377,7 @@ def synthetic(N, dt, α, β):
 
     [Y, freq] = CenteredFFT(y, dt)
 
-    Yfilt = sqrt(α) * sqrt(1. / (2 * dt)) \
-        * (np.abs(freq)**(β / 2)) * Y
+    Yfilt = sqrt(α) * sqrt(1.0 / (2 * dt)) * (np.abs(freq) ** (β / 2)) * Y
 
     ff = np.where(freq == 0)
     Yfilt[ff] = 0
@@ -375,8 +403,8 @@ def CenteredFFT(input, dt=1.0, axis=-1):
     X = fftpack.fft(input, axis=axis)
     X = fftpack.fftshift(X, axes=axis)
 
-    if (np.sum(abs(X)**2) / N - np.sum(input**2)) / np.sum(input**2) > 1e-3:
-        raise ValueError('Parseval\'s theorem not satisfied!')
+    if (np.sum(abs(X) ** 2) / N - np.sum(input ** 2)) / np.sum(input ** 2) > 1e-3:
+        raise ValueError("Parseval's theorem not satisfied!")
 
     return X, freq
 
@@ -393,34 +421,34 @@ def AliasFreq(f0, dt):
         if fa <= 1 / (2 * dt):
             return fa
 
-    raise ValueError('No integer found for aliasing')
+    raise ValueError("No integer found for aliasing")
 
 
-def TidalAliases(dt, kind='freq'):
-    ''' Returns alias frequencies of tides as a dictionary.
+def TidalAliases(dt, kind="freq"):
+    """ Returns alias frequencies of tides as a dictionary.
 
         Input:
               dt = sampling time interval (days)
 
-    '''
+    """
 
     # values from, and agree with, Schlax & Chelton (1994)
     TideAlias = dict()
-    if kind == 'freq':
-        TideAlias['M2'] = AliasFreq(1 / (12.420601 / 24), dt)
-        TideAlias['S2'] = AliasFreq(1 / (12.0 / 24), dt)
-        TideAlias['N2'] = AliasFreq(1 / (12.658348 / 24), dt)
-        TideAlias['K1'] = AliasFreq(1 / (23.93447 / 24), dt)
-        TideAlias['O1'] = AliasFreq(1 / (25.819342 / 24), dt)
-        TideAlias['P1'] = AliasFreq(1 / (24.06589 / 24), dt)
+    if kind == "freq":
+        TideAlias["M2"] = AliasFreq(1 / (12.420601 / 24), dt)
+        TideAlias["S2"] = AliasFreq(1 / (12.0 / 24), dt)
+        TideAlias["N2"] = AliasFreq(1 / (12.658348 / 24), dt)
+        TideAlias["K1"] = AliasFreq(1 / (23.93447 / 24), dt)
+        TideAlias["O1"] = AliasFreq(1 / (25.819342 / 24), dt)
+        TideAlias["P1"] = AliasFreq(1 / (24.06589 / 24), dt)
 
-    if kind == 'period':
-        TideAlias['M2'] = 1 / AliasFreq(1 / (12.420601 / 24), dt)
-        TideAlias['S2'] = 1 / AliasFreq(1 / (12.0 / 24), dt)
-        TideAlias['N2'] = 1 / AliasFreq(1 / (12.658348 / 24), dt)
-        TideAlias['K1'] = 1 / AliasFreq(1 / (23.93447 / 24), dt)
-        TideAlias['O1'] = 1 / AliasFreq(1 / (25.819342 / 24), dt)
-        TideAlias['P1'] = 1 / AliasFreq(1 / (24.06589 / 24), dt)
+    if kind == "period":
+        TideAlias["M2"] = 1 / AliasFreq(1 / (12.420601 / 24), dt)
+        TideAlias["S2"] = 1 / AliasFreq(1 / (12.0 / 24), dt)
+        TideAlias["N2"] = 1 / AliasFreq(1 / (12.658348 / 24), dt)
+        TideAlias["K1"] = 1 / AliasFreq(1 / (23.93447 / 24), dt)
+        TideAlias["O1"] = 1 / AliasFreq(1 / (25.819342 / 24), dt)
+        TideAlias["P1"] = 1 / AliasFreq(1 / (24.06589 / 24), dt)
 
     return TideAlias
 
@@ -432,9 +460,17 @@ def ConfChi2(alpha, dof):
     return np.sort(dof / np.array(chi2.interval(1 - alpha, dof)))
 
 
-def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
-                    multitaper=False, fillgaps=False, maxlen=None,
-                    breakpts=[], decimate=True):
+def SpectralDensity(
+    input,
+    dt=1,
+    nsmooth=5,
+    SubsetLength=None,
+    multitaper=False,
+    fillgaps=False,
+    maxlen=None,
+    breakpts=[],
+    decimate=True,
+):
     """ Calculates spectral density for longest valid segment
         Direct translation of Tom's spectrum_band_avg.
         Always applies a Hann window if not multitaper.
@@ -462,7 +498,7 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
     import mtspec
 
     if len(input) == 0:
-        raise ValueError('0 length input!')
+        raise ValueError("0 length input!")
 
     if fillgaps:
         input = FillGaps(input, maxlen=maxlen)
@@ -488,17 +524,22 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
             if zz + SubsetLength > s1:
                 continue
 
-            var = input[zz:zz + SubsetLength - 1].copy()
+            var = input[zz : zz + SubsetLength - 1].copy()
 
             if np.any(np.isnan(var)):
-                raise ValueError('Subset has NaNs!')
+                raise ValueError("Subset has NaNs!")
 
             var = signal.detrend(var)
 
             if multitaper:
                 Y, freq, conf, _, _ = mtspec.mtspec(
-                    data=var, delta=dt, time_bandwidth=nsmooth,
-                    statistics=True, verbose=False, adaptive=True)
+                    data=var,
+                    delta=dt,
+                    time_bandwidth=nsmooth,
+                    statistics=True,
+                    verbose=False,
+                    adaptive=True,
+                )
                 Y = Y[freq > 0]
                 conf = conf[freq > 0, :]
                 freq = freq[freq > 0]
@@ -508,7 +549,7 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
                 T = N * dt
                 window = signal.hann(N)
                 # variance correction
-                window /= np.sqrt(np.sum(window**2) / N)
+                window /= np.sqrt(np.sum(window ** 2) / N)
 
                 try:
                     Y, freq = CenteredFFT(var * window, dt)
@@ -517,10 +558,10 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
                 Y = Y[freq > 0]
                 freq = freq[freq > 0]
                 confint = ConfChi2(0.05, 1)
-                YY_raw.append(2 * T / N**2 * Y * np.conj(Y))
+                YY_raw.append(2 * T / N ** 2 * Y * np.conj(Y))
 
     if YY_raw == []:
-        raise ValueError('No subsets of specified length found.')
+        raise ValueError("No subsets of specified length found.")
 
     # segment averaging
     if len(YY_raw) > 1:
@@ -536,11 +577,11 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
         else:
             nsmooth = nsmooth + [nsmooth[-1]]
             if breakpts == []:
-                raise ValueError('SpectralDensity: ' +
-                                 'Nsmooth is a list but breakpts is empty!')
+                raise ValueError(
+                    "SpectralDensity: " + "Nsmooth is a list but breakpts is empty!"
+                )
 
-            breakpts = [np.where(freq > bb)[0][0]
-                        for bb in breakpts]
+            breakpts = [np.where(freq > bb)[0][0] for bb in breakpts]
 
         breakpts.append(len(YY_raw))
 
@@ -551,14 +592,11 @@ def SpectralDensity(input, dt=1, nsmooth=5, SubsetLength=None,
         for idx, smth in enumerate(nsmooth):
             i0 = i1
             i1 = breakpts[idx]
-            S.append(dcpy.util.MovingAverage(
-                YY_raw[i0:i1], smth, decimate=decimate))
-            f.append(dcpy.util.MovingAverage(
-                freq[i0:i1], smth, decimate=decimate))
+            S.append(dcpy.util.MovingAverage(YY_raw[i0:i1], smth, decimate=decimate))
+            f.append(dcpy.util.MovingAverage(freq[i0:i1], smth, decimate=decimate))
 
             confint = ConfChi2(0.05, 2 * smth)
-            conf.append(np.array([confint[0] * S[idx],
-                                  confint[1] * S[idx]]).T)
+            conf.append(np.array([confint[0] * S[idx], confint[1] * S[idx]]).T)
 
         S = np.concatenate(S)
         f = np.concatenate(f)
@@ -580,11 +618,11 @@ def Coherence(v1, v2, dt=1, nsmooth=5, decimate=True, **kwargs):
     from scipy.signal import detrend
 
     if np.any(np.isnan(v1) | np.isnan(v2)):
-        raise ValueError('NaNs in times series provided to Coherence')
+        raise ValueError("NaNs in times series provided to Coherence")
 
     window = signal.hann(len(v1))
     # variance correction
-    window /= np.sqrt(np.sum(window**2) / len(v1))
+    window /= np.sqrt(np.sum(window ** 2) / len(v1))
 
     y1, freq = CenteredFFT(detrend(v1) * window, dt)
     y1 = y1[freq > 0]
@@ -604,7 +642,7 @@ def Coherence(v1, v2, dt=1, nsmooth=5, decimate=True, **kwargs):
     Cxy = np.abs(C)
     phase = np.angle(C, deg=True)
     if nsmooth > 1:
-        siglevel = np.sqrt(1 - (0.05)**(1 / (nsmooth - 1)))
+        siglevel = np.sqrt(1 - (0.05) ** (1 / (nsmooth - 1)))
     else:
         siglevel = 1
 
@@ -625,10 +663,10 @@ def Coherence(v1, v2, dt=1, nsmooth=5, decimate=True, **kwargs):
 
 
 def MultiTaperCoherence(y0, y1, dt=1, tbp=5, ntapers=None):
-    '''
+    """
         Call out to mt_coherence from mtspec.
         Phase is φ(y0) - φ(y1)
-    '''
+    """
 
     from mtspec import mt_coherence
     from dcpy.util import calc95
@@ -637,7 +675,7 @@ def MultiTaperCoherence(y0, y1, dt=1, tbp=5, ntapers=None):
     # ntapers = 2*tbp - 1 (jLab)
 
     if np.all(np.equal(y0, y1)):
-        raise ValueError('Multitaper autocoherence doesn\'t work!')
+        raise ValueError("Multitaper autocoherence doesn't work!")
 
     if ntapers is None:
         ntapers = 2 * tbp - 1
@@ -645,18 +683,28 @@ def MultiTaperCoherence(y0, y1, dt=1, tbp=5, ntapers=None):
     from scipy.signal import detrend
 
     nf = np.int(len(y0) / 2) + 1
-    out = mt_coherence(dt, detrend(y0), detrend(y1),
-                       tbp=tbp, kspec=ntapers,
-                       nf=nf, p=0.95, iadapt=1,
-                       freq=True, cohe=True, phase=True,
-                       cohe_ci=False, phase_ci=False)
+    out = mt_coherence(
+        dt,
+        detrend(y0),
+        detrend(y1),
+        tbp=tbp,
+        kspec=ntapers,
+        nf=nf,
+        p=0.95,
+        iadapt=1,
+        freq=True,
+        cohe=True,
+        phase=True,
+        cohe_ci=False,
+        phase_ci=False,
+    )
 
-    f = out['freq']
-    cohe = out['cohe']**2
-    phase = out['phase']
+    f = out["freq"]
+    cohe = out["cohe"] ** 2
+    phase = out["phase"]
 
     if ntapers > 1:
-        siglevel = (1 - (0.05)**(1/(tbp/2*ntapers-1)))
+        siglevel = 1 - (0.05) ** (1 / (tbp / 2 * ntapers - 1))
     else:
         siglevel = 1
 
@@ -703,15 +751,26 @@ def RotaryPSD(y, dt=1, nsmooth=5, multitaper=False, decimate=True):
 
     if multitaper is True:
         import mtspec
+
         _, freq, xspec, X, _ = mtspec.mtspec(
-            data=detrend(np.real(y)), delta=dt,
-            time_bandwidth=nsmooth, optional_output=True,
-            statistics=False, verbose=False, adaptive=False)
+            data=detrend(np.real(y)),
+            delta=dt,
+            time_bandwidth=nsmooth,
+            optional_output=True,
+            statistics=False,
+            verbose=False,
+            adaptive=False,
+        )
 
         _, freq, yspec, Y, _ = mtspec.mtspec(
-            data=detrend(np.imag(y)), delta=dt,
-            time_bandwidth=nsmooth, optional_output=True,
-            statistics=False, verbose=False, adaptive=False)
+            data=detrend(np.imag(y)),
+            delta=dt,
+            time_bandwidth=nsmooth,
+            optional_output=True,
+            statistics=False,
+            verbose=False,
+            adaptive=False,
+        )
 
         # for some reason, this normalization is needed :|
         X *= np.sqrt(N)
@@ -719,7 +778,7 @@ def RotaryPSD(y, dt=1, nsmooth=5, multitaper=False, decimate=True):
 
     else:
         window = signal.hann(N)
-        window /= np.sqrt(np.sum(window**2) / N)
+        window /= np.sqrt(np.sum(window ** 2) / N)
 
         X, freq = CenteredFFT(detrend(np.real(y)) * window, dt)
         Y, freq = CenteredFFT(detrend(np.imag(y)) * window, dt)
@@ -729,9 +788,9 @@ def RotaryPSD(y, dt=1, nsmooth=5, multitaper=False, decimate=True):
     Qxy = -dt / N * (np.real(X) * np.imag(Y) - np.imag(X) * np.real(Y))
 
     if multitaper:
-        Gxx = np.mean(Gxx[0:len(freq)], axis=1)
-        Gyy = np.mean(Gyy[0:len(freq)], axis=1)
-        Qxy = np.mean(Qxy[0:len(freq)], axis=1)
+        Gxx = np.mean(Gxx[0 : len(freq)], axis=1)
+        Gyy = np.mean(Gyy[0 : len(freq)], axis=1)
+        Qxy = np.mean(Qxy[0 : len(freq)], axis=1)
 
     else:
         Gxx = MovingAverage(Gxx, nsmooth, decimate=decimate)
@@ -752,59 +811,76 @@ def RotaryPSD(y, dt=1, nsmooth=5, multitaper=False, decimate=True):
         conf_cw = confint * cw[:, np.newaxis]
         conf_ccw = confint * ccw[:, np.newaxis]
 
-    return (np.real(cw), np.real(ccw), freq,
-            np.real(conf_cw), np.real(conf_ccw))
+    return (np.real(cw), np.real(ccw), freq, np.real(conf_cw), np.real(conf_ccw))
 
 
-def PlotCoherence(y0, y1, dt=1, nsmooth=5, multitaper=False, scale=1,
-                  decimate=False):
+def PlotCoherence(y0, y1, dt=1, nsmooth=5, multitaper=False, scale=1, decimate=False):
 
     import dcpy.plots
 
     if multitaper:
-        f, Cxy, phase, siglevel = MultiTaperCoherence(y0, y1,
-                                                      dt=dt,
-                                                      tbp=nsmooth)
+        f, Cxy, phase, siglevel = MultiTaperCoherence(y0, y1, dt=dt, tbp=nsmooth)
     else:
-        f, Cxy, phase, siglevel = Coherence(y0, y1, dt=dt,
-                                            nsmooth=nsmooth,
-                                            decimate=decimate)
+        f, Cxy, phase, siglevel = Coherence(
+            y0, y1, dt=dt, nsmooth=nsmooth, decimate=decimate
+        )
 
     fig, ax = plt.subplots(3, 1, sharex=True, constrained_layout=True)
     fig.set_size_inches((8, 9))
-    PlotSpectrum(y0, ax=ax[0], dt=dt, scale=scale,
-                 nsmooth=nsmooth, multitaper=multitaper, decimate=decimate)
-    PlotSpectrum(y1, ax=ax[0], dt=dt, scale=scale,
-                 nsmooth=nsmooth, multitaper=multitaper, decimate=decimate)
+    PlotSpectrum(
+        y0,
+        ax=ax[0],
+        dt=dt,
+        scale=scale,
+        nsmooth=nsmooth,
+        multitaper=multitaper,
+        decimate=decimate,
+    )
+    PlotSpectrum(
+        y1,
+        ax=ax[0],
+        dt=dt,
+        scale=scale,
+        nsmooth=nsmooth,
+        multitaper=multitaper,
+        decimate=decimate,
+    )
 
     ax[1].plot(f, Cxy)
     dcpy.plots.liney(siglevel, ax=ax[1])
-    ax[1].set_title('{0:.2f}% above 95% significance'
-                    .format(sum(Cxy > siglevel) / len(Cxy) * 100))
+    ax[1].set_title(
+        "{0:.2f}% above 95% significance".format(sum(Cxy > siglevel) / len(Cxy) * 100)
+    )
     ax[1].set_ylim([0, 1])
-    ax[1].set_ylabel('Squared Coherence')
+    ax[1].set_ylabel("Squared Coherence")
 
     ax[2].plot(f, phase)
-    ax[2].set_ylabel('Coherence phase')
-    ax[2].set_title('+ve = y0 leads y1')
+    ax[2].set_ylabel("Coherence phase")
+    ax[2].set_title("+ve = y0 leads y1")
 
     return ax
 
 
-def BandPassButter(input, freqs, dt=1, order=1,
-                   num_discard='auto', axis=-1, dim=None,
-                   returnba=False, debug=False):
+def BandPassButter(
+    input,
+    freqs,
+    dt=1,
+    order=1,
+    num_discard="auto",
+    axis=-1,
+    dim=None,
+    returnba=False,
+    debug=False,
+):
 
-    b, a = signal.butter(N=order,
-                         Wn=np.sort(freqs) * dt / (1 / 2),
-                         btype='bandpass')
+    b, a = signal.butter(N=order, Wn=np.sort(freqs) * dt / (1 / 2), btype="bandpass")
 
     if returnba:
         return b, a
     else:
         if type(input) is xr.core.dataarray.DataArray:
             if len(input.dims) > 1 and dim is None:
-                raise ValueError('Specify dim along which to band-pass')
+                raise ValueError("Specify dim along which to band-pass")
             else:
                 dim = input.dims[0]
 
@@ -814,7 +890,7 @@ def BandPassButter(input, freqs, dt=1, order=1,
             x = input.copy()
             old_dims = x.dims
             idim = input.get_axis_num(dim)
-            stackdims = x.dims[:idim] + x.dims[idim + 1:]
+            stackdims = x.dims[:idim] + x.dims[idim + 1 :]
 
             # xr.testing.assert_equal(x,
             #                         x.stack(newdim=stackdims)
@@ -829,20 +905,20 @@ def BandPassButter(input, freqs, dt=1, order=1,
             if newdims[0] != dim:
                 x = x.transpose()
 
-            x.values = np.apply_along_axis(GappyFilter, 0,
-                                           x.values,
-                                           b, a,
-                                           num_discard=num_discard)
+            x.values = np.apply_along_axis(
+                GappyFilter, 0, x.values, b, a, num_discard=num_discard
+            )
 
             if input.ndim > 2:
                 # unstack back to original shape and ordering
-                bp = x.unstack('newdim').transpose(*list(old_dims))
+                bp = x.unstack("newdim").transpose(*list(old_dims))
             else:
                 bp = x
 
         else:
-            bp = np.apply_along_axis(GappyFilter, axis, input,
-                                     b, a, num_discard=num_discard)
+            bp = np.apply_along_axis(
+                GappyFilter, axis, input, b, a, num_discard=num_discard
+            )
 
         if debug is True:
             PlotSpectrum(input)
@@ -863,21 +939,22 @@ def ImpulseResponse(b, a, eps=1e-2):
     step = np.cumsum(response)
 
     plt.subplot(211)
-    plt.plot(x, impulse, color='gray')
+    plt.plot(x, impulse, color="gray")
     plt.stem(x, response)
-    plt.legend(['input', 'response'])
-    plt.ylabel('Amplitude')
-    plt.xlabel('n (samples)')
-    plt.title('Response differences drops to ' + str(eps) + ' in '
-              + str(implen) + ' samples.')
+    plt.legend(["input", "response"])
+    plt.ylabel("Amplitude")
+    plt.xlabel("n (samples)")
+    plt.title(
+        "Response differences drops to " + str(eps) + " in " + str(implen) + " samples."
+    )
     plt.axvline(implen + int(ntime / 2))
     plt.axvline(-implen + int(ntime / 2))
 
     plt.subplot(212)
     plt.stem(x, step)
-    plt.ylabel('Amplitude')
-    plt.xlabel('n (samples)')
-    plt.title('Step response')
+    plt.ylabel("Amplitude")
+    plt.xlabel("n (samples)")
+    plt.title("Step response")
     plt.axvline(implen)
     plt.subplots_adjust(hspace=0.5)
     plt.show()
@@ -885,24 +962,24 @@ def ImpulseResponse(b, a, eps=1e-2):
 
 def LowPassButter(input, freq, order=1):
 
-    b, a = signal.butter(order, freq / (1 / 2), btype='low')
+    b, a = signal.butter(order, freq / (1 / 2), btype="low")
 
     return GappyFilter(input, b, a)
 
 
 def HighPassButter(input, freq, order=1):
 
-    b, a = signal.butter(order, freq / (1 / 2), btype='high')
+    b, a = signal.butter(order, freq / (1 / 2), btype="high")
 
     return GappyFilter(input, b, a)
 
 
 def EstimateImpulseResponseLength(b, a, eps=1e-2):
-    ''' From scipy filtfilt docs.
+    """ From scipy filtfilt docs.
         Input:
              b, a : filter params
              eps  : How low must the signal drop to? (default 1e-2)
-    '''
+    """
 
     z, p, k = signal.tf2zpk(b, a)
     r = np.max(np.abs(p))
@@ -918,7 +995,7 @@ def oldGappyFilter(input, b, a, num_discard=None):
 
     out = np.empty(input.shape) * np.nan
 
-    if num_discard == 'auto':
+    if num_discard == "auto":
         num_discard = EstimateImpulseResponseLength(b, a, eps=1e-2)
 
     for ii in range(input.shape[1]):
@@ -927,13 +1004,17 @@ def oldGappyFilter(input, b, a, num_discard=None):
         for index, start in np.ndenumerate(segstart):
             stop = segend[index]
             try:
-                out[start:stop, ii] = signal.filtfilt(b, a,
-                                                      input[start:stop, ii],
-                                                      axis=0, method='gust',
-                                                      irlen=num_discard)
+                out[start:stop, ii] = signal.filtfilt(
+                    b,
+                    a,
+                    input[start:stop, ii],
+                    axis=0,
+                    method="gust",
+                    irlen=num_discard,
+                )
                 if num_discard is not None:
-                    out[start:start + num_discard, ii] = np.nan
-                    out[stop - num_discard:stop, ii] = np.nan
+                    out[start : start + num_discard, ii] = np.nan
+                    out[stop - num_discard : stop, ii] = np.nan
             except ValueError:
                 # segment is not long enough for filtfilt
                 pass
@@ -941,11 +1022,11 @@ def oldGappyFilter(input, b, a, num_discard=None):
     return out.squeeze()
 
 
-def GappyFilter(input, b, a, num_discard='auto'):
+def GappyFilter(input, b, a, num_discard="auto"):
 
     out = np.empty(input.shape) * np.nan
 
-    if num_discard == 'auto':
+    if num_discard == "auto":
         num_discard = EstimateImpulseResponseLength(b, a)
 
     segstart, segend = FindSegments(input)
@@ -953,13 +1034,12 @@ def GappyFilter(input, b, a, num_discard='auto'):
     for index, start in np.ndenumerate(segstart):
         stop = segend[index]
         try:
-            out[start:stop] = signal.filtfilt(b, a,
-                                              input[start:stop],
-                                              axis=0, method='gust',
-                                              irlen=num_discard)
+            out[start:stop] = signal.filtfilt(
+                b, a, input[start:stop], axis=0, method="gust", irlen=num_discard
+            )
             if num_discard is not None:
-                out[start:start + num_discard] = np.nan
-                out[stop - num_discard:stop] = np.nan
+                out[start : start + num_discard] = np.nan
+                out[stop - num_discard : stop] = np.nan
         except ValueError:
             # segment is not long enough for filtfilt
             pass
@@ -977,8 +1057,8 @@ def HighPassAndPlot(input, CutoffFreq, titlestr=None, **kwargs):
     ax.append(plt.subplot(4, 1, 1))
     PlotSpectrum(input, ax=ax[0], **kwargs)
     PlotSpectrum(filtered, ax=ax[0], **kwargs)
-    ax[0].legend(['input', 'filtered'])
-    ax[0].axvline(CutoffFreq, color='gray', zorder=-20)
+    ax[0].legend(["input", "filtered"])
+    ax[0].axvline(CutoffFreq, color="gray", zorder=-20)
     ax[0].set_title(titlestr)
 
     ax.append(plt.subplot(4, 1, 2))
@@ -999,25 +1079,24 @@ def apply_along_dim_1d(invar, dim, func, args=(), **kwargs):
 
     x = invar.copy()
     idim = invar.get_axis_num(dim)
-    stackdims = x.dims[:idim] + x.dims[idim + 1:]
+    stackdims = x.dims[:idim] + x.dims[idim + 1 :]
 
     if invar.ndim > 2:
         # reshape to 2D
         # 'dim' is now first index
         x = x.stack(newdim=stackdims)
 
-    x.values = np.apply_along_axis(func, 0, x.values,
-                                   args, **kwargs)
+    x.values = np.apply_along_axis(func, 0, x.values, args, **kwargs)
 
     if invar.ndim > 2:
         # unstack back to original shape and ordering
-        x = x.unstack('newdim').transpose(*list(invar.dims))
+        x = x.unstack("newdim").transpose(*list(invar.dims))
 
     return x
 
 
 def FillGaps(y, x=None, maxlen=None):
-    ''' TODO: use pandas.fillna
+    """ TODO: use pandas.fillna
         Use linear interpolation to fill gaps < maxlen
         Input:
             y : value vector with gaps
@@ -1025,10 +1104,11 @@ def FillGaps(y, x=None, maxlen=None):
             maxlen : max length of gaps to be filled
         Output:
             interpolated array
-    '''
+    """
 
     import numpy as np
     import xarray as xr
+
     if isinstance(y, xr.core.dataarray.DataArray):
         isxarray = True
     else:
@@ -1061,17 +1141,17 @@ def FillGaps(y, x=None, maxlen=None):
             if glen > maxlen:
                 continue
 
-            yfill[g0:g1 + 1] = np.interp(x[g0:g1 + 1],
-                                         x[[g0 - 1, g1 + 1]],
-                                         y[[g0 - 1, g1 + 1]])
+            yfill[g0 : g1 + 1] = np.interp(
+                x[g0 : g1 + 1], x[[g0 - 1, g1 + 1]], y[[g0 - 1, g1 + 1]]
+            )
 
     if isxarray:
-        yfill.attrs['GapFilled'] = 'True'
-        yfill.attrs['MaxGapLen'] = maxlen
-        if 'numTimesGapFilled' in yfill.attrs:
-            yfill.attrs['numTimesGapFilled'] += 1
+        yfill.attrs["GapFilled"] = "True"
+        yfill.attrs["MaxGapLen"] = maxlen
+        if "numTimesGapFilled" in yfill.attrs:
+            yfill.attrs["numTimesGapFilled"] += 1
         else:
-            yfill.attrs['numTimesGapFilled'] = 1
+            yfill.attrs["numTimesGapFilled"] = 1
 
     return yfill
 
@@ -1101,11 +1181,11 @@ def Spectrogram(var, nfft, shift, time=None, dim=None, **kwargs):
             break
 
         if iscomplex:
-            cw, ccw, f, _, _ = RotaryPSD(var[ii - nb2:ii + nb2], **kwargs)
+            cw, ccw, f, _, _ = RotaryPSD(var[ii - nb2 : ii + nb2], **kwargs)
             spec_cw.append(cw)
             spec_ccw.append(ccw)
         else:
-            S, f, _ = SpectralDensity(var[ii - nb2:ii + nb2], **kwargs)
+            S, f, _ = SpectralDensity(var[ii - nb2 : ii + nb2], **kwargs)
             spec.append(S)
 
     if time is None:
@@ -1115,20 +1195,18 @@ def Spectrogram(var, nfft, shift, time=None, dim=None, **kwargs):
 
     if iscomplex:
         spec = xr.Dataset()
-        spec['cw'] = xr.DataArray(np.stack(spec_cw),
-                                  dims=['time', 'freq'],
-                                  coords=[time, f],
-                                  name='CW PSD')
+        spec["cw"] = xr.DataArray(
+            np.stack(spec_cw), dims=["time", "freq"], coords=[time, f], name="CW PSD"
+        )
 
-        spec['ccw'] = xr.DataArray(np.stack(spec_ccw),
-                                   dims=['time', 'freq'],
-                                   coords=[time, f],
-                                   name='CCW PSD')
+        spec["ccw"] = xr.DataArray(
+            np.stack(spec_ccw), dims=["time", "freq"], coords=[time, f], name="CCW PSD"
+        )
 
     else:
-        spec = xr.DataArray(np.stack(spec), dims=['time', 'freq'],
-                            coords=[time, f],
-                            name='PSD')
+        spec = xr.DataArray(
+            np.stack(spec), dims=["time", "freq"], coords=[time, f], name="PSD"
+        )
 
     return spec
 
@@ -1143,34 +1221,33 @@ def PlotSpectrogram(da, nfft, shift, multitaper=False, ax=None, **kwargs):
         else:
             f, ax = plt.subplots(2, 1, sharex=True, constrained_layout=True)
 
-    spec = Spectrogram(da, nfft, shift, dim=da.dims[0],
-                       decimate=False, multitaper=multitaper,
-                       **kwargs)
+    spec = Spectrogram(
+        da, nfft, shift, dim=da.dims[0], decimate=False, multitaper=multitaper, **kwargs
+    )
 
-    plot_kwargs = dict(x=da.dims[0], yscale='log',
-                       cmap=svc.cm.blue_orange_div, robust=True)
-    mtitle = ' [mutitaper]' if multitaper else ' [freq. smoothed]'
+    plot_kwargs = dict(
+        x=da.dims[0], yscale="log", cmap=svc.cm.blue_orange_div, robust=True
+    )
+    mtitle = " [mutitaper]" if multitaper else " [freq. smoothed]"
 
     if iscomplex:
         np.real(da).plot.line(x=da.dims[0], ax=ax[0])
         np.imag(da).plot.line(x=da.dims[0], ax=ax[0])
-        ax[0].legend(('real', 'imag'))
+        ax[0].legend(("real", "imag"))
 
-        hdl = (spec.cw * spec.freq).plot.contourf(ax=ax[1], levels=25,
-                                                  **plot_kwargs)
+        hdl = (spec.cw * spec.freq).plot.contourf(ax=ax[1], levels=25, **plot_kwargs)
 
-        ax[1].set_title('Variance-preserving CW spectrogram' + mtitle)
-        (spec.ccw * spec.freq).plot.contourf(ax=ax[2], levels=hdl.levels,
-                                             **plot_kwargs)
-        ax[2].set_title('Variance-preserving CCW spectrogram' + mtitle)
+        ax[1].set_title("Variance-preserving CW spectrogram" + mtitle)
+        (spec.ccw * spec.freq).plot.contourf(ax=ax[2], levels=hdl.levels, **plot_kwargs)
+        ax[2].set_title("Variance-preserving CCW spectrogram" + mtitle)
 
     else:
         da.plot.line(x=da.dims[0], ax=ax[0])
 
         (spec * spec.freq).plot.contourf(ax=ax[1], levels=25, **plot_kwargs)
-        ax[1].set_title('Variance-preserving spectrogram' + mtitle)
+        ax[1].set_title("Variance-preserving spectrogram" + mtitle)
 
-    [aa.set_xlabel('') for aa in ax[:-1]]
+    [aa.set_xlabel("") for aa in ax[:-1]]
 
     return ax
 
@@ -1178,33 +1255,31 @@ def PlotSpectrogram(da, nfft, shift, multitaper=False, ax=None, **kwargs):
 def wavelet(var, dt=1):
     import wavelets
 
-    wave, period, scale, coi = wavelets.wavelet(var - np.nanmean(var),
-                                                dt=dt,
-                                                pad=1)
+    wave, period, scale, coi = wavelets.wavelet(var - np.nanmean(var), dt=dt, pad=1)
 
     if isinstance(var, xr.DataArray):
         if var.ndim > 1:
-            raise ValueError('Only 1-D data supported!')
+            raise ValueError("Only 1-D data supported!")
 
         dim = var.dims[0]
 
-    wave = xr.DataArray(wave, dims=['period', dim],
-                        coords={'period': period,
-                                dim: var[dim]})
+    wave = xr.DataArray(
+        wave, dims=["period", dim], coords={"period": period, dim: var[dim]}
+    )
     coi = xr.DataArray(coi, dims=[dim], coords={dim: var[dim]})
-    scale = xr.DataArray(scale, dims=['period'], coords={'period': period})
+    scale = xr.DataArray(scale, dims=["period"], coords={"period": period})
 
     w = xr.Dataset()
-    w['coi'] = coi
-    w['scale'] = scale
-    w['wave'] = wave
-    w['power'] = np.abs(w.wave)**2
+    w["coi"] = coi
+    w["scale"] = scale
+    w["wave"] = wave
+    w["power"] = np.abs(w.wave) ** 2
 
     cmat, pmat = xr.broadcast(w.coi, w.period)
     w = w.where(pmat < cmat)
-    w = w.dropna(dim='period', how='all')
+    w = w.dropna(dim="period", how="all")
 
-    w.attrs['long_name'] = 'Wavelet power'
+    w.attrs["long_name"] = "Wavelet power"
 
     return w
 
@@ -1216,48 +1291,65 @@ def plot_scalogram(da, dt=1, ax=None, **kwargs):
     if ax is None:
         f, ax = plt.subplots()
 
-    robust = kwargs.pop('robust', True)
-    cmap = kwargs.pop('cmap', svc.cm.blue_orange_div)
-    levels = kwargs.pop('levels', 20)
+    robust = kwargs.pop("robust", True)
+    cmap = kwargs.pop("cmap", svc.cm.blue_orange_div)
+    levels = kwargs.pop("levels", 20)
 
-    (np.log10(w.power)
-     .plot.contourf(yscale='log', yincrease=False, ax=ax, cmap=cmap,
-                    robust=robust, center=False, levels=levels, **kwargs))
+    (
+        np.log10(w.power).plot.contourf(
+            yscale="log",
+            yincrease=False,
+            ax=ax,
+            cmap=cmap,
+            robust=robust,
+            center=False,
+            levels=levels,
+            **kwargs
+        )
+    )
 
-    (np.log10(w.power)
-     .plot.contour(yscale='log', yincrease=False, ax=ax,
-                   colors='k', robust=robust, center=False,
-                   linestyles='-', linewidths=1,
-                   levels=np.nanpercentile(np.log10(w.power), [90, 95]),
-                   **kwargs))
+    (
+        np.log10(w.power).plot.contour(
+            yscale="log",
+            yincrease=False,
+            ax=ax,
+            colors="k",
+            robust=robust,
+            center=False,
+            linestyles="-",
+            linewidths=1,
+            levels=np.nanpercentile(np.log10(w.power), [90, 95]),
+            **kwargs
+        )
+    )
 
 
 def plot_detailed_scalogram(da, dt=1, **kwargs):
 
-    with plt.style.context('ggplot'):
+    with plt.style.context("ggplot"):
         f, ax = plt.subplots(2, 1, sharex=True, constrained_layout=True)
 
         plot_scalogram(da, dt=dt, ax=ax[0])
 
         da.plot(ax=ax[1])
 
-        ax[0].set_xlabel('')
+        ax[0].set_xlabel("")
 
     return ax
 
 
-def matlab_wavelet(da, dt=1, beta=2.0, gamma=3.0, eng=None, kind='matlab'):
+def matlab_wavelet(da, dt=1, beta=2.0, gamma=3.0, eng=None, kind="matlab"):
 
     import matlab.engine
 
     if eng is None:
-        print('Starting MATLAB...')
+        print("Starting MATLAB...")
         eng = matlab.engine.start_matlab()
-        eng.addpath(eng.genpath('~/tools/'))
+        eng.addpath(eng.genpath("~/tools/"))
 
     if isinstance(da, xr.DataArray):
         if da.ndim > 1:
-            raise ValueError('Only 1-D data supported!')
+            raise ValueError("Only 1-D data supported!")
 
         dim = da.dims[0]
         nparray = da.values
@@ -1267,7 +1359,7 @@ def matlab_wavelet(da, dt=1, beta=2.0, gamma=3.0, eng=None, kind='matlab'):
 
     marray = eng.transpose(matlab.double(list(nparray)))
 
-    if kind == 'jlab':
+    if kind == "jlab":
         fs = eng.morsespace(float(gamma), float(beta), float(len(da)))
 
         wa = np.asarray(eng.wavetrans(marray, [gamma, beta, eng.squeeze(fs)]))
@@ -1276,36 +1368,37 @@ def matlab_wavelet(da, dt=1, beta=2.0, gamma=3.0, eng=None, kind='matlab'):
 
         coi = None
 
-    elif kind == 'matlab':
-        wa, f, coi = eng.cwt(marray, 1.0,
-                             'WaveletParameters', matlab.double([gamma, beta]),
-                             nargout=3)
+    elif kind == "matlab":
+        wa, f, coi = eng.cwt(
+            marray, 1.0, "WaveletParameters", matlab.double([gamma, beta]), nargout=3
+        )
         period = dt * 2 * np.pi / np.asarray(f).squeeze()
 
         coi = np.asarray(coi).squeeze()
         wa = np.asarray(wa).squeeze().T
 
     if isinstance(da, xr.DataArray):
-        power = xr.DataArray(np.abs(wa)**2, dims=[dim, 'period'],
-                             coords={dim: da[dim],
-                                     'period': period})
+        power = xr.DataArray(
+            np.abs(wa) ** 2,
+            dims=[dim, "period"],
+            coords={dim: da[dim], "period": period},
+        )
 
         w = xr.Dataset()
-        w['period'] = xr.DataArray(period, dims=['period'],
-                                   coords={'period': period})
-        w['wave'] = xr.DataArray(wa, dims=[dim, 'period'],
-                                 coords={dim: da[dim],
-                                         'period': period})
-        w['power'] = power
+        w["period"] = xr.DataArray(period, dims=["period"], coords={"period": period})
+        w["wave"] = xr.DataArray(
+            wa, dims=[dim, "period"], coords={dim: da[dim], "period": period}
+        )
+        w["power"] = power
 
         if coi is not None:
-            w['coi'] = xr.DataArray(coi, dims=[dim], coords={dim: da[dim]})
+            w["coi"] = xr.DataArray(coi, dims=[dim], coords={dim: da[dim]})
 
             cmat, pmat = xr.broadcast(w.coi, w.period)
             w = w.where(pmat < cmat)
-            w = w.dropna(dim='period', how='all')
+            w = w.dropna(dim="period", how="all")
 
-        w.attrs['long_name'] = 'Wavelet power'
+        w.attrs["long_name"] = "Wavelet power"
 
     else:
         w = np.abs(wa)
@@ -1323,17 +1416,25 @@ def blackman(y, half_width):
     """
     nf = half_width * 2 + 1
     x = np.linspace(-1, 1, nf, endpoint=True)
-    x = x[1:-1]   # chop off the useless endpoints with zero weight
+    x = x[1:-1]  # chop off the useless endpoints with zero weight
     w = 0.42 + 0.5 * np.cos(x * np.pi) + 0.08 * np.cos(x * 2 * np.pi)
-    ytop = np.convolve(y, w, mode='same')
-    ybot = np.convolve(np.ones_like(y), w, mode='same')
+    ytop = np.convolve(y, w, mode="same")
+    ybot = np.convolve(np.ones_like(y), w, mode="same")
 
     return ytop / ybot
 
 
-def complex_demodulate(ts, central_period, t=None, dim=None,
-                       dt=1, bw=0.1, cycles_per='D', debug=False,
-                       filt='butter'):
+def complex_demodulate(
+    ts,
+    central_period,
+    t=None,
+    dim=None,
+    dt=1,
+    bw=0.1,
+    cycles_per="D",
+    debug=False,
+    filt="butter",
+):
 
     if isinstance(ts, xr.DataArray):
         if dim is None:
@@ -1345,9 +1446,9 @@ def complex_demodulate(ts, central_period, t=None, dim=None,
         dt, t = _process_time(t, cycles_per=cycles_per)
 
     if dim is None:
-        dim = 'dim_0'
+        dim = "dim_0"
 
-    iscomplex = ts.dtype.kind == 'c'  # complex input
+    iscomplex = ts.dtype.kind == "c"  # complex input
     harmonic = np.exp(-1j * 2 * np.pi / np.abs(central_period) * t)
     harmonic_ccw = harmonic.conj()
     product = harmonic * ts
@@ -1355,53 +1456,56 @@ def complex_demodulate(ts, central_period, t=None, dim=None,
     lfreq = np.abs(bw * dt / central_period)
     # print(str(lfreq) + 'cp' + cycles_per.lower())
 
-    if filt is 'blackman':
+    if filt is "blackman":
         amp = blackman(product, int(round(bw * abs(central_period) / dt)))
-    elif filt is 'butter':
-        amp = (LowPassButter(product.real, lfreq, order=1)
-               + 1j * LowPassButter(product.imag, lfreq, order=1))
+    elif filt is "butter":
+        amp = LowPassButter(product.real, lfreq, order=1) + 1j * LowPassButter(
+            product.imag, lfreq, order=1
+        )
 
     if not iscomplex:
         recon = (amp * harmonic_ccw * 2).real
     else:
         product_ccw = harmonic_ccw * ts
-        if filt is 'blackman':
-            ampcw = blackman(product_ccw,
-                             int(round(bw * abs(central_period) / dt)))
-        elif filt is 'butter':
-            ampcw = (LowPassButter(product_ccw.real, lfreq, order=1)
-                     + 1j * LowPassButter(product_ccw.imag, lfreq, order=1))
+        if filt is "blackman":
+            ampcw = blackman(product_ccw, int(round(bw * abs(central_period) / dt)))
+        elif filt is "butter":
+            ampcw = LowPassButter(
+                product_ccw.real, lfreq, order=1
+            ) + 1j * LowPassButter(product_ccw.imag, lfreq, order=1)
 
         recon = amp * harmonic_ccw + ampcw * harmonic
 
     dm = xr.Dataset()
-    dm['ccw'] = xr.DataArray(amp, dims=[dim])
+    dm["ccw"] = xr.DataArray(amp, dims=[dim])
     if iscomplex:
-        dm['cw'] = xr.DataArray(ampcw, dims=[dim])
-    dm['recon'] = xr.DataArray(recon, dims=[dim])
-    dm['amp'] = xr.DataArray(np.abs(recon), dims=[dim])
-    dm['pha'] = xr.DataArray(np.angle(recon, deg=True), dims=[dim])
+        dm["cw"] = xr.DataArray(ampcw, dims=[dim])
+    dm["recon"] = xr.DataArray(recon, dims=[dim])
+    dm["amp"] = xr.DataArray(np.abs(recon), dims=[dim])
+    dm["pha"] = xr.DataArray(np.angle(recon, deg=True), dims=[dim])
     if isinstance(ts, xr.DataArray):
-        dm['signal'] = ts
+        dm["signal"] = ts
     else:
-        dm['signal'] = xr.DataArray(ts, dims=[dim])
+        dm["signal"] = xr.DataArray(ts, dims=[dim])
 
     if debug:
         f, ax = plt.subplots(2, 2, sharey=True, constrained_layout=True)
         kwargs = dict(multitaper=True)
         if iscomplex:
-            PlotSpectrum(dm['signal'], dt=dt, ax=ax[0, :], **kwargs)
-            PlotSpectrum(dm['signal'], dt=dt, ax=ax[1, :],
-                         color='lightgray', **kwargs)
-            PlotSpectrum(dm['recon'].dropna(dim=dim),
-                         dt=dt, twoside=True, ax=ax[0, :], **kwargs)
+            PlotSpectrum(dm["signal"], dt=dt, ax=ax[0, :], **kwargs)
+            PlotSpectrum(dm["signal"], dt=dt, ax=ax[1, :], color="lightgray", **kwargs)
+            PlotSpectrum(
+                dm["recon"].dropna(dim=dim), dt=dt, twoside=True, ax=ax[0, :], **kwargs
+            )
         else:
-            PlotSpectrum(dm['signal'], dt=dt, ax=ax[0, 0], **kwargs)
-            PlotSpectrum(dm['signal'], dt=dt, ax=ax[0, 1], **kwargs)
-            PlotSpectrum(dm['recon'].dropna(dim=dim),
-                         dt=dt, twoside=True, ax=ax[0, 0], **kwargs)
-            PlotSpectrum(dm['recon'].dropna(dim=dim),
-                         dt=dt, twoside=True, ax=ax[0, 1], **kwargs)
+            PlotSpectrum(dm["signal"], dt=dt, ax=ax[0, 0], **kwargs)
+            PlotSpectrum(dm["signal"], dt=dt, ax=ax[0, 1], **kwargs)
+            PlotSpectrum(
+                dm["recon"].dropna(dim=dim), dt=dt, twoside=True, ax=ax[0, 0], **kwargs
+            )
+            PlotSpectrum(
+                dm["recon"].dropna(dim=dim), dt=dt, twoside=True, ax=ax[0, 1], **kwargs
+            )
 
         PlotSpectrum(product, dt=dt, ax=ax[1, :], **kwargs)
         if iscomplex:
@@ -1409,10 +1513,10 @@ def complex_demodulate(ts, central_period, t=None, dim=None,
 
         linex([1 / central_period, lfreq], ax=ax.ravel())
 
-        ax[0, 0].legend(['signal', 'demodulated', 'central_period',
-                         'low-pass'])
-        ax[1, 0].legend(['signal', 'product_cw', 'product_ccw',
-                         'central_period', 'low-pass', ])
+        ax[0, 0].legend(["signal", "demodulated", "central_period", "low-pass"])
+        ax[1, 0].legend(
+            ["signal", "product_cw", "product_ccw", "central_period", "low-pass"]
+        )
 
         # diff = dm.signal-dm.recon
         # f, ax = plt.subplots()

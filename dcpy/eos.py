@@ -17,16 +17,16 @@ Kelvin = 273.15
 gdef = 9.8
 
 # 1 nm = 1.8520 km
-DEG2NM, NM2KM = 60., 1.8520
+DEG2NM, NM2KM = 60.0, 1.8520
 
 # Sidereal day = 23.9344696 hours.
 OMEGA = 7.292e-5  # 7.292115e-5
 
 # Mean radius of earth [m] A.E. Gill.
-earth_radius = 6371000.
+earth_radius = 6371000.0
 
 # Angle conversions.
-deg2rad, rad2deg = pi / 180.0,  180.0 / pi
+deg2rad, rad2deg = pi / 180.0, 180.0 / pi
 
 # Conductivity at S=35 psu , T=15 C [ITPS 68] and P=0 dbar.
 c3515 = 42.914
@@ -43,22 +43,25 @@ def polyval(p, x):
 
     return y
 
-__all__ = ['adtg',
-           'alpha',
-           'aonb',
-           'beta',
-           'dpth',
-           'g',
-           'salt',
-           'fp',
-           'svel',
-           'pres',
-           'dens0',
-           'dens',
-           'pden',
-           'cp',
-           'ptmp',
-           'temp']
+
+__all__ = [
+    "adtg",
+    "alpha",
+    "aonb",
+    "beta",
+    "dpth",
+    "g",
+    "salt",
+    "fp",
+    "svel",
+    "pres",
+    "dens0",
+    "dens",
+    "pden",
+    "cp",
+    "ptmp",
+    "temp",
+]
 
 
 def adtg(s, t, p):
@@ -127,11 +130,17 @@ def adtg(s, t, p):
     c = [1.8741e-8, -6.7795e-10, 8.733e-12, -5.4481e-14]
     d = [-1.1351e-10, 2.7759e-12]
     e = [-4.6206e-13, 1.8676e-14, -2.1687e-16]
-    return (a[0] + (a[1] + (a[2] + a[3] * T68) * T68) * T68 +
-            (b[0] + b[1] * T68) * (s - 35) +
-            ((c[0] + (c[1] + (c[2] + c[3] * T68) * T68) * T68) +
-             (d[0] + d[1] * T68) * (s - 35)) * p +
-            (e[0] + (e[1] + e[2] * T68) * T68) * p * p)
+    return (
+        a[0]
+        + (a[1] + (a[2] + a[3] * T68) * T68) * T68
+        + (b[0] + b[1] * T68) * (s - 35)
+        + (
+            (c[0] + (c[1] + (c[2] + c[3] * T68) * T68) * T68)
+            + (d[0] + d[1] * T68) * (s - 35)
+        )
+        * p
+        + (e[0] + (e[1] + e[2] * T68) * T68) * p * p
+    )
 
 
 def alpha(s, t, p, pt=False):
@@ -212,8 +221,7 @@ def aonb(s, t, p, pt=False):
     # p = np.float_(p)
     t = T68conv(t)
 
-    c1 = np.array([-0.255019e-7, 0.298357e-5, -0.203814e-3,
-                   0.170907e-1, 0.665157e-1])
+    c1 = np.array([-0.255019e-7, 0.298357e-5, -0.203814e-3, 0.170907e-1, 0.665157e-1])
     c2 = np.array([-0.846960e-4, 0.378110e-2])
     c2a = np.array([-0.251520e-11, -0.164759e-6, 0.0])
     c3 = -0.678662e-5
@@ -223,10 +231,14 @@ def aonb(s, t, p, pt=False):
 
     # Now calculate the thermal expansion saline contraction ratio aonb.
     sm35 = s - 35.0
-    return (polyval(c1, t) + sm35 *
-            (polyval(c2, t) + polyval(c2a, p)) +
-            sm35 ** 2 * c3 + p * polyval(c4, t) +
-            c5 * (p ** 2) * (t ** 2) + c6 * p ** 3)
+    return (
+        polyval(c1, t)
+        + sm35 * (polyval(c2, t) + polyval(c2a, p))
+        + sm35 ** 2 * c3
+        + p * polyval(c4, t)
+        + c5 * (p ** 2) * (t ** 2)
+        + c6 * p ** 3
+    )
 
 
 def beta(s, t, p, pt=False):
@@ -281,10 +293,14 @@ def beta(s, t, p, pt=False):
 
     # Now calculate the thermal expansion saline contraction ratio adb
     sm35 = s - 35
-    return (polyval(c1, t) + sm35 *
-            (polyval(c2, t) + polyval(c3, p)) +
-            c4 * (sm35 ** 2) + p * polyval(c5, t) +
-            (p ** 2) * polyval(c6, t) + c7 * (p ** 3))
+    return (
+        polyval(c1, t)
+        + sm35 * (polyval(c2, t) + polyval(c3, p))
+        + c4 * (sm35 ** 2)
+        + p * polyval(c5, t)
+        + (p ** 2) * polyval(c6, t)
+        + c7 * (p ** 3)
+    )
 
 
 def cp(s, t, p):
@@ -342,7 +358,7 @@ def cp(s, t, p):
 
     """
 
-    p = p / 10.  # To convert [db] to [bar] as used in UNESCO routines.
+    p = p / 10.0  # To convert [db] to [bar] as used in UNESCO routines.
     T68 = T68conv(t)
 
     # Eqn. 26 p.32.
@@ -350,19 +366,26 @@ def cp(s, t, p):
     b = (0.1770383, -4.07718e-3, 5.148e-5)
     c = (4217.4, -3.720283, 0.1412855, -2.654387e-3, 2.093236e-5)
 
-    Cpst0 = ((((c[4] * T68 + c[3]) * T68 + c[2]) * T68 + c[1]) * T68 + c[0] +
-             (a[0] + a[1] * T68 + a[2] * T68 ** 2) * s +
-             (b[0] + b[1] * T68 + b[2] * T68 ** 2) * s * s ** 0.5)
+    Cpst0 = (
+        (((c[4] * T68 + c[3]) * T68 + c[2]) * T68 + c[1]) * T68
+        + c[0]
+        + (a[0] + a[1] * T68 + a[2] * T68 ** 2) * s
+        + (b[0] + b[1] * T68 + b[2] * T68 ** 2) * s * s ** 0.5
+    )
 
     # Eqn. 28 p.33.
     a = (-4.9592e-1, 1.45747e-2, -3.13885e-4, 2.0357e-6, 1.7168e-8)
     b = (2.4931e-4, -1.08645e-5, 2.87533e-7, -4.0027e-9, 2.2956e-11)
     c = (-5.422e-8, 2.6380e-9, -6.5637e-11, 6.136e-13)
 
-    del_Cp0t0 = ((((((c[3] * T68 + c[2]) * T68 + c[1]) * T68 + c[0]) * p +
-                   ((((b[4] * T68 + b[3]) * T68 + b[2]) * T68 + b[1]) *
-                    T68 + b[0])) * p + ((((a[4] * T68 + a[3]) * T68 + a[2]) *
-                                         T68 + a[1]) * T68 + a[0])) * p)
+    del_Cp0t0 = (
+        (
+            (((c[3] * T68 + c[2]) * T68 + c[1]) * T68 + c[0]) * p
+            + ((((b[4] * T68 + b[3]) * T68 + b[2]) * T68 + b[1]) * T68 + b[0])
+        )
+        * p
+        + ((((a[4] * T68 + a[3]) * T68 + a[2]) * T68 + a[1]) * T68 + a[0])
+    ) * p
 
     # Eqn 29 p.34.
     d = (4.9247e-3, -1.28315e-4, 9.802e-7, 2.5941e-8, -2.9179e-10)
@@ -374,12 +397,15 @@ def cp(s, t, p):
 
     S3_2 = s * s ** 0.5
 
-    del_Cpstp = ((((((d[4] * T68 + d[3]) * T68 + d[2]) * T68 + d[1]) *
-                   T68 + d[0]) * s + ((e[2] * T68 + e[1]) * T68 + e[0]) *
-                  S3_2) * p +
-                 ((((f[3] * T68 + f[2]) * T68 + f[1]) * T68 + f[0]) * s +
-                  g0 * S3_2) * p ** 2 + (((h[2] * T68 + h[1]) * T68 + h[0]) *
-                                         s + j1 * T68 * S3_2) * p ** 3)
+    del_Cpstp = (
+        (
+            ((((d[4] * T68 + d[3]) * T68 + d[2]) * T68 + d[1]) * T68 + d[0]) * s
+            + ((e[2] * T68 + e[1]) * T68 + e[0]) * S3_2
+        )
+        * p
+        + ((((f[3] * T68 + f[2]) * T68 + f[1]) * T68 + f[0]) * s + g0 * S3_2) * p ** 2
+        + (((h[2] * T68 + h[1]) * T68 + h[0]) * s + j1 * T68 * S3_2) * p ** 3
+    )
 
     return Cpst0 + del_Cp0t0 + del_Cpstp
 
@@ -431,9 +457,12 @@ def dens0(s, t):
     b = (8.24493e-1, -4.0899e-3, 7.6438e-5, -8.2467e-7, 5.3875e-9)
     c = (-5.72466e-3, 1.0227e-4, -1.6546e-6)
     d = 4.8314e-4
-    return (smow(t) + (b[0] + (b[1] + (b[2] + (b[3] + b[4] * T68) * T68) *
-            T68) * T68) * s + (c[0] + (c[1] + c[2] * T68) * T68) * s *
-            s ** 0.5 + d * s ** 2)
+    return (
+        smow(t)
+        + (b[0] + (b[1] + (b[2] + (b[3] + b[4] * T68) * T68) * T68) * T68) * s
+        + (c[0] + (c[1] + c[2] * T68) * T68) * s * s ** 0.5
+        + d * s ** 2
+    )
 
 
 def dens(s, t, p):
@@ -482,7 +511,7 @@ def dens(s, t, p):
     # UNESCO 1983. Eqn..7  p.15.
     densP0 = dens0(s, t)
     K = seck(s, t, p)
-    p = p / 10.  # Convert from db to atm pressure units.
+    p = p / 10.0  # Convert from db to atm pressure units.
     return densP0 / (1 - p / K)
 
 
@@ -532,8 +561,7 @@ def dpth(p, lat):
     X = np.sin(lat * deg2rad)
     X = X * X
 
-    bot_line = (9.780318 * (1.0 + (5.2788e-3 + 2.36e-5 * X) * X) +
-                gam_dash * 0.5 * p)
+    bot_line = 9.780318 * (1.0 + (5.2788e-3 + 2.36e-5 * X) * X) + gam_dash * 0.5 * p
     top_line = (((c[3] * p + c[2]) * p + c[1]) * p + c[0]) * p
     return top_line / bot_line
 
@@ -898,31 +926,63 @@ def svel(s, t, p):
     T68 = T68conv(t)
 
     # Eqn 34 p.46.
-    c00, c01, c02, c03, c04, c05 = (1402.388, 5.03711, -5.80852e-2, 3.3420e-4,
-                                    -1.47800e-6, 3.1464e-9)
-    c10, c11, c12, c13, c14 = (0.153563, 6.8982e-4, -8.1788e-6, 1.3621e-7,
-                               -6.1185e-10)
-    c20, c21, c22, c23, c24 = (3.1260e-5, -1.7107e-6, 2.5974e-8, -2.5335e-10,
-                               1.0405e-12)
+    c00, c01, c02, c03, c04, c05 = (
+        1402.388,
+        5.03711,
+        -5.80852e-2,
+        3.3420e-4,
+        -1.47800e-6,
+        3.1464e-9,
+    )
+    c10, c11, c12, c13, c14 = (0.153563, 6.8982e-4, -8.1788e-6, 1.3621e-7, -6.1185e-10)
+    c20, c21, c22, c23, c24 = (
+        3.1260e-5,
+        -1.7107e-6,
+        2.5974e-8,
+        -2.5335e-10,
+        1.0405e-12,
+    )
     c30, c31, c32 = (-9.7729e-9, 3.8504e-10, -2.3643e-12)
 
-    Cw = (((((c32 * T68 + c31) * T68 + c30) * p +
-            ((((c24 * T68 + c23) * T68 + c22) * T68 + c21) * T68 + c20)) * p +
-           ((((c14 * T68 + c13) * T68 + c12) * T68 + c11) * T68 + c10)) *
-          p + ((((c05 * T68 + c04) * T68 + c03) * T68 + c02) * T68 + c01) *
-          T68 + c00)
+    Cw = (
+        (
+            (
+                ((c32 * T68 + c31) * T68 + c30) * p
+                + ((((c24 * T68 + c23) * T68 + c22) * T68 + c21) * T68 + c20)
+            )
+            * p
+            + ((((c14 * T68 + c13) * T68 + c12) * T68 + c11) * T68 + c10)
+        )
+        * p
+        + ((((c05 * T68 + c04) * T68 + c03) * T68 + c02) * T68 + c01) * T68
+        + c00
+    )
 
     # Eqn. 35. p.47
     a00, a01, a02, a03, a04 = (1.389, -1.262e-2, 7.164e-5, 2.006e-6, -3.21e-8)
-    a10, a11, a12, a13, a14 = (9.4742e-5, -1.2580e-5, -6.4885e-8, 1.0507e-8,
-                               -2.0122e-10)
+    a10, a11, a12, a13, a14 = (
+        9.4742e-5,
+        -1.2580e-5,
+        -6.4885e-8,
+        1.0507e-8,
+        -2.0122e-10,
+    )
     a20, a21, a22, a23 = (-3.9064e-7, 9.1041e-9, -1.6002e-10, 7.988e-12)
     a30, a31, a32 = (1.100e-10, 6.649e-12, -3.389e-13)
 
-    A = (((((a32 * T68 + a31) * T68 + a30) * p +
-           (((a23 * T68 + a22) * T68 + a21) * T68 + a20)) * p +
-          ((((a14 * T68 + a13) * T68 + a12) * T68 + a11) * T68 + a10)) * p +
-         (((a04 * T68 + a03) * T68 + a02) * T68 + a01) * T68 + a00)
+    A = (
+        (
+            (
+                ((a32 * T68 + a31) * T68 + a30) * p
+                + (((a23 * T68 + a22) * T68 + a21) * T68 + a20)
+            )
+            * p
+            + ((((a14 * T68 + a13) * T68 + a12) * T68 + a11) * T68 + a10)
+        )
+        * p
+        + (((a04 * T68 + a03) * T68 + a02) * T68 + a01) * T68
+        + a00
+    )
 
     # Eqn 36 p.47.
     b00, b01, b10, b11 = -1.922e-2, -4.42e-5, 7.3637e-5, 1.7945e-7

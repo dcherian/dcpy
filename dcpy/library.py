@@ -6,15 +6,17 @@ from __future__ import division, absolute_import
 import numpy as np
 
 
-__all__ = ['cndr',
-           'salds',
-           'salrp',
-           'salrt',
-           'seck',
-           'sals',
-           'smow',
-           'T68conv',
-           'T90conv']
+__all__ = [
+    "cndr",
+    "salds",
+    "salrp",
+    "salrt",
+    "seck",
+    "sals",
+    "smow",
+    "T68conv",
+    "T90conv",
+]
 
 
 # Constants.
@@ -91,7 +93,7 @@ def cndr(s, t, p):
 
     # Once Rt found, corresponding to each (s,t) evaluate r.
     # Eqn(4) p.8 UNESCO 1983.
-    A = (d[2] + d[3] * T68)
+    A = d[2] + d[3] * T68
     B = 1 + d[0] * T68 + d[1] * T68 ** 2
     C = p * (e[0] + e[1] * p + e[2] * p ** 2)
 
@@ -141,12 +143,15 @@ def salds(rtx, delt):
        http://unesdoc.UNESCO.org/images/0005/000598/059832eb.pdf
 
     """
-    ds = (a[1] +
-          (2 * a[2] + (3 * a[3] + (4 * a[4] + 5 * a[5] * rtx) * rtx) * rtx) *
-          rtx + (delt / (1 + k * delt)) *
-          (b[1] +
-           (2 * b[2] + (3 * b[3] + (4 * b[4] + 5 * b[5] * rtx) * rtx) * rtx) *
-           rtx))
+    ds = (
+        a[1]
+        + (2 * a[2] + (3 * a[3] + (4 * a[4] + 5 * a[5] * rtx) * rtx) * rtx) * rtx
+        + (delt / (1 + k * delt))
+        * (
+            b[1]
+            + (2 * b[2] + (3 * b[3] + (4 * b[4] + 5 * b[5] * rtx) * rtx) * rtx) * rtx
+        )
+    )
 
     return ds
 
@@ -194,8 +199,9 @@ def salrp(r, t, p):
     # Eqn(4) p.8 UNESCO.
     T68 = T68conv(t)
 
-    rp = (1 + (p * (e[0] + e[1] * p + e[2] * p ** 2)) /
-          (1 + d[0] * T68 + d[1] * T68 ** 2 + (d[2] + d[3] * T68) * r))
+    rp = 1 + (p * (e[0] + e[1] * p + e[2] * p ** 2)) / (
+        1 + d[0] * T68 + d[1] * T68 ** 2 + (d[2] + d[3] * T68) * r
+    )
 
     return rp
 
@@ -310,8 +316,15 @@ def seck(s, t, p=0):
 
     f = [54.6746, -0.603459, 1.09987e-2, -6.1670e-5]
     g = [7.944e-2, 1.6483e-2, -5.3009e-4]
-    K0 = (KW + (f[0] + (f[1] + (f[2] + f[3] * T68) * T68) * T68 +
-                (g[0] + (g[1] + g[2] * T68) * T68) * s ** 0.5) * s)  # Eqn 16.
+    K0 = (
+        KW
+        + (
+            f[0]
+            + (f[1] + (f[2] + f[3] * T68) * T68) * T68
+            + (g[0] + (g[1] + g[2] * T68) * T68) * s ** 0.5
+        )
+        * s
+    )  # Eqn 16.
     return K0 + (A + B * p) * p  # Eqn 15.
 
 
@@ -353,11 +366,10 @@ def sals(rt, t):
     del_T68 = T68conv(t) - 15
 
     Rtx = (rt) ** 0.5
-    del_S = ((del_T68 / (1 + k * del_T68)) *
-             (b[0] + (b[1] + (b[2] + (b[3] + (b[4] + b[5] * Rtx) *
-                                      Rtx) * Rtx) * Rtx) * Rtx))
-    s = a[0] + (a[1] + (a[2] + (a[3] + (a[4] + a[5] * Rtx) *
-                                Rtx) * Rtx) * Rtx) * Rtx
+    del_S = (del_T68 / (1 + k * del_T68)) * (
+        b[0] + (b[1] + (b[2] + (b[3] + (b[4] + b[5] * Rtx) * Rtx) * Rtx) * Rtx) * Rtx
+    )
+    s = a[0] + (a[1] + (a[2] + (a[3] + (a[4] + a[5] * Rtx) * Rtx) * Rtx) * Rtx) * Rtx
     s += del_S
 
     return s
@@ -399,12 +411,10 @@ def smow(t):
 
     """
 
-    a = (999.842594, 6.793952e-2, -9.095290e-3, 1.001685e-4, -1.120083e-6,
-         6.536332e-9)
+    a = (999.842594, 6.793952e-2, -9.095290e-3, 1.001685e-4, -1.120083e-6, 6.536332e-9)
 
     T68 = T68conv(t)
-    return (a[0] + (a[1] + (a[2] + (a[3] + (a[4] + a[5] * T68) * T68) * T68) *
-            T68) * T68)
+    return a[0] + (a[1] + (a[2] + (a[3] + (a[4] + a[5] * T68) * T68) * T68) * T68) * T68
 
 
 def T68conv(T90):
@@ -446,7 +456,7 @@ def T68conv(T90):
     return T90 * 1.00024
 
 
-def T90conv(t, t_type='T68'):
+def T90conv(t, t_type="T68"):
     """
     Convert IPTS-68 or IPTS-48 to temperature to ITS-90.
 
@@ -494,9 +504,9 @@ def T90conv(t, t_type='T68'):
        note, available from http://www.ices.dk/ocean/procedures/its.htm
 
     """
-    if t_type == 'T68':
+    if t_type == "T68":
         T90 = t / 1.00024
-    elif t_type == 'T48':
+    elif t_type == "T48":
         T90 = (t - 4.4e-6 * t * (100 - t)) / 1.00024
     else:
         raise NameError("Unrecognized temperature type.  Try 'T68'' or 'T48'")
@@ -526,6 +536,7 @@ def atleast_2d(*arys):
         return res
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod()

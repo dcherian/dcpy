@@ -9,19 +9,20 @@ import xarray as xr
 ROBUST_PERCENTILE = 2
 
 OPTIONS = dict()
-OPTIONS['cmap_divergent'] = mpl.cm.RdBu_r
-OPTIONS['cmap_sequential'] = mpl.cm.viridis
+OPTIONS["cmap_divergent"] = mpl.cm.RdBu_r
+OPTIONS["cmap_sequential"] = mpl.cm.viridis
 
 # Joshua Stevens Sargassum colormap
-white_blue_orange_red =  sns.blend_palette(
+white_blue_orange_red = sns.blend_palette(
     colors=["w", "#5ABCE1", "#FFA500", "#ED2E00"], n_colors=20, as_cmap=True
 )
 
 
-def offset_line_plot(da, x, y, ax=None, offset=0, remove_mean=False,
-                     legend=True, robust=False, **kwargs):
+def offset_line_plot(
+    da, x, y, ax=None, offset=0, remove_mean=False, legend=True, robust=False, **kwargs
+):
 
-    assert(da[y].ndim == 1)
+    assert da[y].ndim == 1
 
     axnum = da.get_axis_num(y)
 
@@ -34,7 +35,7 @@ def offset_line_plot(da, x, y, ax=None, offset=0, remove_mean=False,
 
     # remove mean and add offset
     if remove_mean:
-        daoffset = (da.groupby(y) - da.groupby(y).mean())
+        daoffset = da.groupby(y) - da.groupby(y).mean()
     else:
         daoffset = da
 
@@ -57,13 +58,12 @@ def offset_line_plot(da, x, y, ax=None, offset=0, remove_mean=False,
     return hdl
 
 
-def FillRectangle(x, y=None, ax=None, color='k', alpha=0.05,
-                  zorder=-1, **kwargs):
+def FillRectangle(x, y=None, ax=None, color="k", alpha=0.05, zorder=-1, **kwargs):
     if ax is None:
         ax = plt.gca()
 
     if len(x) > 2:
-        raise ValueError('FillRectangle: len(x) should be 2!')
+        raise ValueError("FillRectangle: len(x) should be 2!")
 
     if not isinstance(ax, list):
         ax = [ax]
@@ -73,68 +73,81 @@ def FillRectangle(x, y=None, ax=None, color='k', alpha=0.05,
             yl = aa.get_ylim()
             y = [yl[1], yl[1], yl[0], yl[0]]
 
-        aa.fill([x[0], x[1], x[1], x[0]], y,
-                color=color, alpha=alpha, zorder=zorder,
-                linewidth=None, **kwargs)
+        aa.fill(
+            [x[0], x[1], x[1], x[0]],
+            y,
+            color=color,
+            alpha=alpha,
+            zorder=zorder,
+            linewidth=None,
+            **kwargs,
+        )
 
 
-def linex(var, ax=None, label=None, color='gray', linestyle='--', zorder=-1,
-          **kwargs):
+def linex(var, ax=None, label=None, color="gray", linestyle="--", zorder=-1, **kwargs):
 
     if ax is None:
         ax = plt.gca()
 
-    if not hasattr(ax, '__iter__'):
+    if not hasattr(ax, "__iter__"):
         ax = [ax]
 
-    if label is not None and not hasattr(label, '__iter__'):
+    if label is not None and not hasattr(label, "__iter__"):
         label = [label]
 
     var = np.array(var, ndmin=1)
     for idx, vv in enumerate(var):
         for aa in ax:
-            aa.axvline(vv, color=color, linestyle=linestyle,
-                       zorder=zorder, **kwargs)
+            aa.axvline(vv, color=color, linestyle=linestyle, zorder=zorder, **kwargs)
             if label is not None:
-                aa.text(vv, 1, ' ' + label[idx], ha='center', va='bottom',
-                        transform=aa.get_xaxis_transform('grid'))
+                aa.text(
+                    vv,
+                    1,
+                    " " + label[idx],
+                    ha="center",
+                    va="bottom",
+                    transform=aa.get_xaxis_transform("grid"),
+                )
 
 
-def liney(var, ax=None, label=None, color='gray', linestyle='--', zorder=-1,
-          **kwargs):
+def liney(var, ax=None, label=None, color="gray", linestyle="--", zorder=-1, **kwargs):
 
     if ax is None:
         ax = plt.gca()
 
-    if not hasattr(ax, '__iter__'):
+    if not hasattr(ax, "__iter__"):
         ax = [ax]
 
-    if label is not None and not hasattr(label, '__iter__'):
+    if label is not None and not hasattr(label, "__iter__"):
         label = [label]
 
     var = np.array(var, ndmin=1)
     for idx, vv in enumerate(var):
         for aa in ax:
-            aa.axhline(vv, color=color, linestyle=linestyle,
-                       zorder=zorder, **kwargs)
+            aa.axhline(vv, color=color, linestyle=linestyle, zorder=zorder, **kwargs)
             if label is not None:
-                aa.text(1, vv, ' ' + label[idx], ha='left', va='center',
-                        transform=aa.get_yaxis_transform('grid'))
+                aa.text(
+                    1,
+                    vv,
+                    " " + label[idx],
+                    ha="left",
+                    va="center",
+                    transform=aa.get_yaxis_transform("grid"),
+                )
 
 
-def hist(var, log=False, bins=100, alpha=0.5, normed=True,
-         mark95=False, **kwargs):
+def hist(var, log=False, bins=100, alpha=0.5, normed=True, mark95=False, **kwargs):
 
     var = var.copy()
     if log:
         var = np.log10(abs(var))
 
     var = var[np.isfinite(var)]
-    plt.hist(var, bins=bins, alpha=alpha,
-             normed=normed, **kwargs)
+    plt.hist(var, bins=bins, alpha=alpha, normed=normed, **kwargs)
 
     if mark95 is True:
         from dcpy.util import calc95
+
         linex(calc95(var))
 
 
@@ -149,7 +162,7 @@ def line45(ax=None, **kwargs):
     ax.set_xlim(newlimits)
     ax.set_ylim(newlimits)
 
-    kwargs.setdefault('color', 'gray')
+    kwargs.setdefault("color", "gray")
     ax.plot([0, 1], [0, 1], transform=ax.transAxes, **kwargs)
 
 
@@ -160,8 +173,10 @@ def symyaxis():
 
 
 def robust_lim(data, lotile=2, hitile=98, axis=-1):
-    return [np.nanpercentile(data, lotile, axis=axis).squeeze(),
-            np.nanpercentile(data, hitile, axis=axis).squeeze()]
+    return [
+        np.nanpercentile(data, lotile, axis=axis).squeeze(),
+        np.nanpercentile(data, hitile, axis=axis).squeeze(),
+    ]
 
 
 def align_yaxis(ax1, v1, ax2, v2):
@@ -194,23 +209,22 @@ def annotate_end(hdl, label, **kwargs):
     x = hdl.get_xdata()
     color = hdl.get_color()
 
-    defaults = {'ha': 'left', 'clip_on': False, 'color': color}
+    defaults = {"ha": "left", "clip_on": False, "color": color}
     defaults.update(**kwargs)
 
-    if x.dtype.kind == 'M':
+    if x.dtype.kind == "M":
         mask = np.isnat(x) | np.isnan(y)
     else:
         mask = np.isnan(x) | np.isnan(y)
 
-    point = ax.plot(x[~mask][-1], y[~mask][-1], 'o', ms=4, color=color,
-                    clip_on=False)
-    text = ax.text(x[~mask][-1], y[~mask][-1], '  ' + label, **defaults)
+    point = ax.plot(x[~mask][-1], y[~mask][-1], "o", ms=4, color=color, clip_on=False)
+    text = ax.text(x[~mask][-1], y[~mask][-1], "  " + label, **defaults)
 
     return point, text
 
 
-def contour_label_spines(cs, prefix='', rotation=None, **kwargs):
-    '''
+def contour_label_spines(cs, prefix="", rotation=None, **kwargs):
+    """
     Fancy spine labelling of contours.
 
     Parameters
@@ -230,21 +244,21 @@ def contour_label_spines(cs, prefix='', rotation=None, **kwargs):
     -------
 
     None
-    '''
+    """
 
     def _edit_text_labels(t, ax, prefix, rotation):
         xlim = ax.get_xlim()
 
         if abs(t.get_position()[0] - xlim[1]) / xlim[1] < 1e-6:
             # right spine lables
-            t.set_verticalalignment('center')
+            t.set_verticalalignment("center")
         else:
             # top spine labels need to be aligned to the bottom
-            t.set_verticalalignment('bottom')
+            t.set_verticalalignment("bottom")
 
         t.set_clip_on(False)
-        t.set_horizontalalignment('left')
-        t.set_text(' ' + prefix + t.get_text())
+        t.set_horizontalalignment("left")
+        t.set_text(" " + prefix + t.get_text())
         t.set_rotation(rotation)
 
     # need to set these up first
@@ -266,21 +280,20 @@ def contour_label_spines(cs, prefix='', rotation=None, **kwargs):
     return clabels
 
 
-def set_axes_color(ax, color, spine='left'):
-    '''
+def set_axes_color(ax, color, spine="left"):
+    """
     Consistently set color of axis ticks, tick labels, axis label and spine.
-    '''
+    """
 
     ax.spines[spine].set_visible(True)
     ax.spines[spine].set_color(color)
     [tt.set_color(color) for tt in ax.get_yticklabels()]
     ax.yaxis.label.set_color(color)
-    ax.tick_params('y', colors=color)
+    ax.tick_params("y", colors=color)
 
 
-def label_subplots(ax, x=0.05, y=0.9, prefix='(', suffix=')', labels=None,
-                   **kwargs):
-    '''
+def label_subplots(ax, x=0.05, y=0.9, prefix="(", suffix=")", labels=None, **kwargs):
+    """
     Alphabetically label subplots with prefix + alphabet + suffix + labels
 
     Inputs
@@ -296,24 +309,31 @@ def label_subplots(ax, x=0.05, y=0.9, prefix='(', suffix=')', labels=None,
 
     labels : list, optional
         optional list of labels
-    '''
+    """
 
-    alphabet = 'abcdefghijklmnopqrstuvwxyz'
+    alphabet = "abcdefghijklmnopqrstuvwxyz"
 
     if labels is not None:
-        assert(len(labels) == len(ax))
+        assert len(labels) == len(ax)
     else:
-        labels = [''] * len(ax)
+        labels = [""] * len(ax)
 
     hdl = []
-    for aa, bb, ll in zip(ax, alphabet[:len(ax)], labels):
-        hdl.append(aa.text(x=x, y=y, s=prefix + bb + suffix + ' ' + ll,
-                           transform=aa.transAxes, **kwargs))
+    for aa, bb, ll in zip(ax, alphabet[: len(ax)], labels):
+        hdl.append(
+            aa.text(
+                x=x,
+                y=y,
+                s=prefix + bb + suffix + " " + ll,
+                transform=aa.transAxes,
+                **kwargs,
+            )
+        )
 
     return hdl
 
 
-def contour_overlimit(da, mappable, ax=None, color='w', **kwargs):
+def contour_overlimit(da, mappable, ax=None, color="w", **kwargs):
 
     clim = mappable.get_clim()
 
@@ -327,13 +347,13 @@ def _determine_extend(calc_data, vmin, vmax):
     extend_min = calc_data.min() < vmin
     extend_max = calc_data.max() > vmax
     if extend_min and extend_max:
-        extend = 'both'
+        extend = "both"
     elif extend_min:
-        extend = 'min'
+        extend = "min"
     elif extend_max:
-        extend = 'max'
+        extend = "max"
     else:
-        extend = 'neither'
+        extend = "neither"
     return extend
 
 
@@ -345,11 +365,11 @@ def build_discrete_cmap(cmap, levels, extend, filled):
 
     if not filled:
         # non-filled contour plots
-        extend = 'max'
+        extend = "max"
 
-    if extend == 'both':
+    if extend == "both":
         ext_n = 2
-    elif extend in ['min', 'max']:
+    elif extend in ["min", "max"]:
         ext_n = 1
     else:
         ext_n = 0
@@ -357,10 +377,9 @@ def build_discrete_cmap(cmap, levels, extend, filled):
     n_colors = len(levels) + ext_n - 1
     pal = _color_palette(cmap, n_colors)
 
-    new_cmap, cnorm = mpl.colors.from_levels_and_colors(
-        levels, pal, extend=extend)
+    new_cmap, cnorm = mpl.colors.from_levels_and_colors(levels, pal, extend=extend)
     # copy the old cmap name, for easier testing
-    new_cmap.name = getattr(cmap, 'name', cmap)
+    new_cmap.name = getattr(cmap, "name", cmap)
 
     return new_cmap, cnorm
 
@@ -368,7 +387,8 @@ def build_discrete_cmap(cmap, levels, extend, filled):
 def _color_palette(cmap, n_colors):
     import matplotlib.pyplot as plt
     from matplotlib.colors import ListedColormap
-    colors_i = np.linspace(0, 1., n_colors)
+
+    colors_i = np.linspace(0, 1.0, n_colors)
     if isinstance(cmap, (list, tuple)):
         # we have a list of colors
         cmap = ListedColormap(cmap, N=n_colors)
@@ -383,6 +403,7 @@ def _color_palette(cmap, n_colors):
             # ValueError happens when mpl doesn't like a colormap, try seaborn
             try:
                 from seaborn.apionly import color_palette
+
                 pal = color_palette(cmap, n_colors=n_colors)
             except (ValueError, ImportError):
                 # or maybe we just got a single color as a string
@@ -400,16 +421,26 @@ def is_scalar(value):
 
     Any non-iterable, string, or 0-D array
     """
-    return (getattr(value, 'ndim', None) == 0)
+    return getattr(value, "ndim", None) == 0
 
 
 # _determine_cmap_params is adapted from Seaborn:
 # https://github.com/mwaskom/seaborn/blob/v0.6/seaborn/matrix.py#L158
 # Used under the terms of Seaborn's license, see licenses/SEABORN_LICENSE.
 
-def cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
-                center=None, robust=False, extend=None,
-                levels=None, filled=True, norm=None):
+
+def cmap_params(
+    plot_data,
+    vmin=None,
+    vmax=None,
+    cmap=None,
+    center=None,
+    robust=False,
+    extend=None,
+    levels=None,
+    filled=True,
+    norm=None,
+):
     """
     Use some heuristics to set good defaults for colorbar and range.
 
@@ -493,16 +524,18 @@ def cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
             norm.vmin = vmin
         else:
             if not vmin_was_none and vmin != norm.vmin:
-                raise ValueError('Cannot supply vmin and a norm'
-                                 + ' with a different vmin.')
+                raise ValueError(
+                    "Cannot supply vmin and a norm" + " with a different vmin."
+                )
             vmin = norm.vmin
 
         if norm.vmax is None:
             norm.vmax = vmax
         else:
             if not vmax_was_none and vmax != norm.vmax:
-                raise ValueError('Cannot supply vmax and a norm'
-                                 + ' with a different vmax.')
+                raise ValueError(
+                    "Cannot supply vmax and a norm" + " with a different vmax."
+                )
             vmax = norm.vmax
 
     # if BoundaryNorm, then set levels
@@ -543,17 +576,17 @@ def annotate_heatmap_string(mesh, annot_data, **kwargs):
     ax = mesh.axes
     mesh.update_scalarmappable()
     height, width = annot_data.shape
-    xpos, ypos = np.meshgrid(np.arange(width) + .5, np.arange(height) + .5)
+    xpos, ypos = np.meshgrid(np.arange(width) + 0.5, np.arange(height) + 0.5)
 
-    for x, y, m, color, ann in zip(xpos.flat, ypos.flat,
-                                   mesh.get_array(), mesh.get_facecolors(),
-                                   annot_data.flat):
+    for x, y, m, color, ann in zip(
+        xpos.flat, ypos.flat, mesh.get_array(), mesh.get_facecolors(), annot_data.flat
+    ):
         if m is not np.ma.masked:
             lum = relative_luminance(color)
-            text_color = ".15" if lum > .408 else "w"
+            text_color = ".15" if lum > 0.408 else "w"
             text_kwargs = dict(color=text_color, ha="center", va="center")
             text_kwargs.update(**kwargs)
-            ax.text(x, y, ann.decode('UTF-8'), **text_kwargs)
+            ax.text(x, y, ann.decode("UTF-8"), **text_kwargs)
 
 
 def fill_step(da, dim=None, ax=None, **kwargs):
@@ -567,21 +600,25 @@ def fill_step(da, dim=None, ax=None, **kwargs):
     coord = da[dim]
 
     dc = coord.diff(dim).mean()
-    icoord = np.linspace(-dc + coord.min(), dc + coord.max(),
-                         coord.size * 50)
+    icoord = np.linspace(-dc + coord.min(), dc + coord.max(), coord.size * 50)
 
     # build step like array
-    dai = (da.interp({dim: icoord}, method='nearest')
-           .bfill(dim).ffill(dim))
+    dai = da.interp({dim: icoord}, method="nearest").bfill(dim).ffill(dim)
 
-    alpha = kwargs.pop('alpha', 0.3)
-    color = kwargs.pop('color', None)
+    alpha = kwargs.pop("alpha", 0.3)
+    color = kwargs.pop("color", None)
 
-    line_kwargs = {'lw': 1.2}
+    line_kwargs = {"lw": 1.2}
     line_kwargs.update(**kwargs)
 
-    hfill = ax.fill_between(icoord, dai, zorder=kwargs.pop('zorder', None),
-                            color=color, alpha=alpha, linewidths=0)
+    hfill = ax.fill_between(
+        icoord,
+        dai,
+        zorder=kwargs.pop("zorder", None),
+        color=color,
+        alpha=alpha,
+        linewidths=0,
+    )
     hline = dai.plot.line(x=dim, color=color, **line_kwargs)[0]
 
     return [hfill, hline]
@@ -595,31 +632,31 @@ def colorbar(mappable, ax=None, **kwargs):
         ax = plt.gca()
 
     divider = make_axes_locatable(ax)
-    orientation = kwargs.pop('orientation', 'vertical')
-    if orientation == 'vertical':
-        loc = 'right'
-    elif orientation == 'horizontal':
-        loc = 'bottom'
+    orientation = kwargs.pop("orientation", "vertical")
+    if orientation == "vertical":
+        loc = "right"
+    elif orientation == "horizontal":
+        loc = "bottom"
 
-    cax = divider.append_axes(loc, '5%', pad='3%', axes_class=mpl.pyplot.Axes)
+    cax = divider.append_axes(loc, "5%", pad="3%", axes_class=mpl.pyplot.Axes)
     ax.get_figure().colorbar(mappable, cax=cax, orientation=orientation)
 
 
 def pow10Formatter(x, pos):
-    '''
+    """
     Format color bar labels to show scientific label
-    '''
+    """
 
-    a, b = '{:.1e}'.format(x).split('e')
+    a, b = "{:.1e}".format(x).split("e")
     b = int(b)
 
     if int(np.float(a)) != 1:
-        return r'${} \times 10^{{{}}}$'.format(a, b)
+        return r"${} \times 10^{{{}}}$".format(a, b)
     else:
-        return r'$10^{{{}}}$'.format(b)
+        return r"$10^{{{}}}$".format(b)
 
 
-def rain_colormap(subset=slice(None,None)):
+def rain_colormap(subset=slice(None, None)):
 
     import seaborn as sns
 
@@ -652,12 +689,15 @@ def trim_map(ax, xlim, ylim):
 
     import matplotlib.path as mpath
 
-    rect = mpath.Path([[xlim[0], ylim[0]],
-                       [xlim[1], ylim[0]],
-                       [xlim[1], ylim[1]],
-                       [xlim[0], ylim[1]],
-                       [xlim[0], ylim[0]],
-                       ]).interpolated(20)
+    rect = mpath.Path(
+        [
+            [xlim[0], ylim[0]],
+            [xlim[1], ylim[0]],
+            [xlim[1], ylim[1]],
+            [xlim[0], ylim[1]],
+            [xlim[0], ylim[0]],
+        ]
+    ).interpolated(20)
 
     proj_to_data = ccrs.PlateCarree()._as_mpl_transform(ax) - ax.transData
     rect_in_target = proj_to_data.transform_path(rect)
@@ -666,14 +706,13 @@ def trim_map(ax, xlim, ylim):
 
     # Notice the ugly hack to stop any further clipping - this is
     # the same problem as #363.
-    ax.set_extent([xlim[0], xlim[1], ylim[0] - 2, ylim[1]],
-                  crs=ccrs.PlateCarree())
+    ax.set_extent([xlim[0], xlim[1], ylim[0] - 2, ylim[1]], crs=ccrs.PlateCarree())
 
 
 # subset.plot(cmap=mpl.cm.Greys)
 # from https://rnovitsky.blogspot.com/2010/04/using-hillshade-image-as-intensity.html?m=1
 def hillshade(data, scale=10.0, azdeg=165.0, altdeg=45.0):
-    ''' convert data to hillshade based on matplotlib.colors.LightSource class.
+    """ convert data to hillshade based on matplotlib.colors.LightSource class.
     input:
          data - a 2-d array of data
          scale - scaling value of the data. higher number = lower gradient
@@ -681,23 +720,23 @@ def hillshade(data, scale=10.0, azdeg=165.0, altdeg=45.0):
                       270 west
          altdeg - where the light comes from: 0 horison ; 90 zenith
     output: a 2-d array of normalized hilshade
-    '''
+    """
     # convert alt, az to radians
-    az = azdeg * np.pi/180.0
-    alt = altdeg * np.pi/180.0
+    az = azdeg * np.pi / 180.0
+    alt = altdeg * np.pi / 180.0
     # gradient in x and y directions
     dx, dy = np.gradient(data / float(scale))
-    slope = 0.5*np.pi - np.arctan(np.hypot(dx, dy))
+    slope = 0.5 * np.pi - np.arctan(np.hypot(dx, dy))
     aspect = np.arctan2(dx, dy)
-    intensity = (np.sin(alt)*np.sin(slope)
-                 + np.cos(alt)*np.cos(slope)*np.cos(-az - aspect - 0.5*np.pi))
-    intensity = (intensity - intensity.min())/(intensity.max() - intensity.min())
+    intensity = np.sin(alt) * np.sin(slope) + np.cos(alt) * np.cos(slope) * np.cos(
+        -az - aspect - 0.5 * np.pi
+    )
+    intensity = (intensity - intensity.min()) / (intensity.max() - intensity.min())
     return intensity
 
 
-def set_shade(a, intensity=None, cmap=mpl.cm.jet,
-              scale=10.0, azdeg=165.0, altdeg=45.0):
-    ''' sets shading for data array based on intensity layer
+def set_shade(a, intensity=None, cmap=mpl.cm.jet, scale=10.0, azdeg=165.0, altdeg=45.0):
+    """ sets shading for data array based on intensity layer
     or the data's value itself.
     inputs:
     a - a 2-d array or masked array
@@ -713,48 +752,43 @@ def set_shade(a, intensity=None, cmap=mpl.cm.jet,
     rgb - an rgb set of the Pegtop soft light composition of the data and
            intensity can be used as input for imshow()
     based on ImageMagick's Pegtop_light:
-    http://www.imagemagick.org/Usage/compose/#pegtoplight'''
+    http://www.imagemagick.org/Usage/compose/#pegtoplight"""
 
     if intensity is None:
         # hilshading the data
-        intensity = hillshade(a,scale=10.0,azdeg=165.0,altdeg=45.0)
+        intensity = hillshade(a, scale=10.0, azdeg=165.0, altdeg=45.0)
     else:
-      # or normalize the intensity
-        intensity = (intensity - intensity.min())/(intensity.max() - intensity.min())
+        # or normalize the intensity
+        intensity = (intensity - intensity.min()) / (intensity.max() - intensity.min())
 
     # get rgb of normalized data based on cmap
-    rgb = cmap((a-a.min())/float(a.max()-a.min()))[:,:,:3]
+    rgb = cmap((a - a.min()) / float(a.max() - a.min()))[:, :, :3]
     # form an rgb eqvivalent of intensity
     d = intensity.repeat(3).reshape(rgb.shape)
     # simulate illumination based on pegtop algorithm.
-    rgb = 2*d*rgb+(rgb**2)*(1-2*d)
+    rgb = 2 * d * rgb + (rgb ** 2) * (1 - 2 * d)
 
     return rgb
 
 
-def get_shade_field(ds, method='matplotlib', altdeg=45, azdeg=20, vert_exag=25):
+def get_shade_field(ds, method="matplotlib", altdeg=45, azdeg=20, vert_exag=25):
 
-    '''
+    """
     Good parameters might be azdeg=315, altdeg=45, vert_exag=45
-    '''
+    """
 
-    if method == 'matplotlib':
+    if method == "matplotlib":
         ls = mpl.colors.LightSource(azdeg=azdeg, altdeg=altdeg)
-        rgba = ls.shade(ds.values,
-                        cmap=mpl.cm.Greys,
-                        vert_exag=vert_exag)
+        rgba = ls.shade(ds.values, cmap=mpl.cm.Greys, vert_exag=vert_exag)
 
     else:
         rgba = set_shade(ds.values, cmap=mpl.cm.Greys_r, azdeg=azdeg)
 
-    return xr.DataArray(rgba,
-                        dims=list(ds.dims) + ['rgb'],
-                        coords=ds.coords)
+    return xr.DataArray(rgba, dims=list(ds.dims) + ["rgb"], coords=ds.coords)
 
 
 def rgb2gray(rgb):
-    gray = (rgb[:, :, :3]
-            .dot(xr.DataArray([0.2989, 0.5870, 0.1140], dims=['rgb'])))
+    gray = rgb[:, :, :3].dot(xr.DataArray([0.2989, 0.5870, 0.1140], dims=["rgb"]))
     # gray = 1 - gray
 
     # gray.values[gray.values < 0] = 0
@@ -775,9 +809,9 @@ def plot_shaded_topo(shade, ax=None, mask=None):
         gray = gray.where(mask)
         gray.values[np.isnan(gray.values)] = 0
 
-    gray.plot.imshow(ax=ax, x='x', y='y',
-                     transform=ccrs.PlateCarree(),
-                     add_labels=False, zorder=-1)
+    gray.plot.imshow(
+        ax=ax, x="x", y="y", transform=ccrs.PlateCarree(), add_labels=False, zorder=-1
+    )
 
 
 def pub_fig_width(pub: str, width="two column"):
@@ -819,6 +853,7 @@ def pub_fig_width(pub: str, width="two column"):
         raise ValueError(f"Width {width} not supported!")
 
     return widths[pub][width]
+
 
 def concise_date_formatter(ax, axis="x", minticks=3, maxticks=7):
     """

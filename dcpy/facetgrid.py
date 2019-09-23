@@ -17,7 +17,7 @@ from xarray.plot.utils import label_from_attrs
 
 # Overrides axes.labelsize, xtick.major.size, ytick.major.size
 # from mpl.rcParams
-_FONTSIZE = 'small'
+_FONTSIZE = "small"
 # For major ticks on x, y axes
 _NTICKS = 5
 
@@ -30,15 +30,23 @@ def _nicetitle(coord, value, maxchar, template):
     title = template.format(coord=coord, value=prettyvalue)
 
     if len(title) > maxchar:
-        title = title[:(maxchar - 3)] + '...'
+        title = title[: (maxchar - 3)] + "..."
 
     return title
 
 
 class facetgrid:
-
-    def __init__(self, row, col, sharex=True, sharey=True, squeeze=True,
-                 subplot_kw={}, gridspec_kw=dict(), plot_kwargs=dict()):
+    def __init__(
+        self,
+        row,
+        col,
+        sharex=True,
+        sharey=True,
+        squeeze=True,
+        subplot_kw={},
+        gridspec_kw=dict(),
+        plot_kwargs=dict(),
+    ):
 
         try:
             self.nrows = len(row)
@@ -50,30 +58,35 @@ class facetgrid:
         except TypeError:
             self.ncols = 1
 
-        self.fig, self.axes = plt.subplots(self.nrows, self.ncols,
-                                           sharex=sharex, sharey=sharey,
-                                           constrained_layout=True,
-                                           squeeze=False,
-                                           gridspec_kw=gridspec_kw,
-                                           subplot_kw=subplot_kw)
+        self.fig, self.axes = plt.subplots(
+            self.nrows,
+            self.ncols,
+            sharex=sharex,
+            sharey=sharey,
+            constrained_layout=True,
+            squeeze=False,
+            gridspec_kw=gridspec_kw,
+            subplot_kw=subplot_kw,
+        )
 
-        self.fig.set_constrained_layout_pads(w_pad=1/72.0, h_pad=1/72.0,
-                                             wspace=0.01, hspace=0.01)
+        self.fig.set_constrained_layout_pads(
+            w_pad=1 / 72.0, h_pad=1 / 72.0, wspace=0.01, hspace=0.01
+        )
 
         self.x = None
         self.y = None
         self.func = None
 
         self.handles = dict()
-        self.handles['titles'] = []
-        self.handles['legend'] = []
-        self.handles['colorbar'] = []
-        self.handles['first'] = None
+        self.handles["titles"] = []
+        self.handles["legend"] = []
+        self.handles["colorbar"] = []
+        self.handles["first"] = None
 
         self.kwargs = dict(add_colorbar=False, add_labels=False, **plot_kwargs)
 
-        self._row_var = ''
-        self._col_var = ''
+        self._row_var = ""
+        self._col_var = ""
 
         if isinstance(row, xr.DataArray):
             self.row = row.name
@@ -88,7 +101,7 @@ class facetgrid:
             self.col = col.name
             self.col_locs = list(col.values)
         elif isinstance(col, dict):
-            assert(len(col) == 1)
+            assert len(col) == 1
             self.col = list(col.keys())[0]
             self.col_locs = list(col.values())
         else:
@@ -117,14 +130,15 @@ class facetgrid:
 
         return x, y
 
-    def map_col(self, col_name, data, func=None, x=None, y=None, defaults=True,
-                **kwargs):
+    def map_col(
+        self, col_name, data, func=None, x=None, y=None, defaults=True, **kwargs
+    ):
 
         if defaults:
             x, y = self._parse_x_y(x, y)
 
         if self.func is None and func is None:
-            raise ValueError('Need to pass a plotting function to map or set self.func')
+            raise ValueError("Need to pass a plotting function to map or set self.func")
 
         if self.func is None:
             self.func = func
@@ -138,28 +152,33 @@ class facetgrid:
 
         if data is not None:
             for ax, loc in zip(self.col_axes[col_name], self.row_locs):
-                hdl = func(data.sel(**{self.row: loc, 'method':'nearest'}),
-                           x=x, y=y, ax=ax, **kwargs)
-                if self.handles['first'] is None:
-                    self.handles['first'] = hdl
+                hdl = func(
+                    data.sel(**{self.row: loc, "method": "nearest"}),
+                    x=x,
+                    y=y,
+                    ax=ax,
+                    **kwargs,
+                )
+                if self.handles["first"] is None:
+                    self.handles["first"] = hdl
 
         else:
             for ax in self.col_axes[col_name]:
                 plt.sca(ax)
                 hdl = func(**kwargs)
-                if self.handles['first'] is None:
-                    self.handles['first'] = hdl
+                if self.handles["first"] is None:
+                    self.handles["first"] = hdl
 
-
-    def map_row(self, row_name, data, func=None, x=None, y=None, defaults=True,
-                **kwargs):
+    def map_row(
+        self, row_name, data, func=None, x=None, y=None, defaults=True, **kwargs
+    ):
 
         if x is None or y is None:
             if defaults:
                 x, y = self._parse_x_y(x, y)
 
         if self.func is None and func is None:
-            raise ValueError('Need to pass a plotting function to map or set self.func')
+            raise ValueError("Need to pass a plotting function to map or set self.func")
 
         if self.func is None:
             self.func = func
@@ -174,20 +193,20 @@ class facetgrid:
         if data is not None:
             for ax, loc in zip(self.row_axes[row_name], self.col_locs):
                 if self.ncols > 1:
-                    subset = data.sel(**{self.col: loc, 'method': 'nearest'})
+                    subset = data.sel(**{self.col: loc, "method": "nearest"})
                 else:
                     subset = data
 
                 hdl = func(subset, x=x, y=y, ax=ax, **kwargs)
-                if self.handles['first'] is None:
-                    self.handles['first'] = hdl
+                if self.handles["first"] is None:
+                    self.handles["first"] = hdl
 
         else:
             for ax in self.row_axes[row_name]:
                 plt.sca(ax)
                 hdl = func(**kwargs)
-                if self.handles['first'] is None:
-                    self.handles['first'] = hdl
+                if self.handles["first"] is None:
+                    self.handles["first"] = hdl
 
     def map(self, func, **kwargs):
         for ax in self.axes.flat:
@@ -195,13 +214,14 @@ class facetgrid:
             func(**kwargs)
 
     def add_colorbar(self, **kwargs):
-        if self.handles['first'] is None:
-            raise ValueError('No mappables?')
+        if self.handles["first"] is None:
+            raise ValueError("No mappables?")
 
-        self.fig.colorbar(self.handles['first'], ax=self.axes, **kwargs)
+        self.fig.colorbar(self.handles["first"], ax=self.axes, **kwargs)
 
-    def set_titles(self, template="{value}", maxchar=30,
-                   col_names=None, row_names=None, **kwargs):
+    def set_titles(
+        self, template="{value}", maxchar=30, col_names=None, row_names=None, **kwargs
+    ):
         """
         Draw titles either above each facet or on the grid margins.
 
@@ -226,21 +246,24 @@ class facetgrid:
 
         kwargs["size"] = kwargs.pop("size", mpl.rcParams["axes.labelsize"])
 
-        nicetitle = functools.partial(_nicetitle, maxchar=maxchar,
-                                      template=template)
+        nicetitle = functools.partial(_nicetitle, maxchar=maxchar, template=template)
 
         # The row titles on the right edge of the grid
         for ax, row_name in zip(self.axes[:, -1], row_names):
-            title = nicetitle(coord=self.row,
-                              value=row_name,
-                              maxchar=maxchar)
-            ax.annotate(title, xy=(1.02, .5), xycoords="axes fraction",
-                        rotation=270, ha="left", va="center", **kwargs)
+            title = nicetitle(coord=self.row, value=row_name, maxchar=maxchar)
+            ax.annotate(
+                title,
+                xy=(1.02, 0.5),
+                xycoords="axes fraction",
+                rotation=270,
+                ha="left",
+                va="center",
+                **kwargs,
+            )
 
         # The column titles on the top row
         for ax, col_name in zip(self.axes[0, :], col_names):
-            title = nicetitle(coord=self.col, value=col_name,
-                              maxchar=maxchar)
+            title = nicetitle(coord=self.col, value=col_name, maxchar=maxchar)
             ax.set_title(title, **kwargs)
 
         return self
@@ -266,26 +289,28 @@ class facetgrid:
         self.set_xlabels(xlabel)
         self.set_ylabels(ylabel)
 
-    def set_row_labels(self, row_names=None, template="{value}",
-                       maxchar=30, **kwargs):
+    def set_row_labels(self, row_names=None, template="{value}", maxchar=30, **kwargs):
 
         row_names = self.row_locs if row_names is None else row_names
 
         kwargs["size"] = kwargs.pop("size", mpl.rcParams["axes.labelsize"])
 
-        nicetitle = functools.partial(_nicetitle, maxchar=maxchar,
-                                      template=template)
+        nicetitle = functools.partial(_nicetitle, maxchar=maxchar, template=template)
 
         # The row titles on the right edge of the grid
         for ax, row_name in zip(self.axes[:, -1], row_names):
-            title = nicetitle(coord=self.row,
-                              value=row_name,
-                              maxchar=maxchar)
-            ax.annotate(title, xy=(1.02, .5), xycoords="axes fraction",
-                        rotation=270, ha="left", va="center", **kwargs)
+            title = nicetitle(coord=self.row, value=row_name, maxchar=maxchar)
+            ax.annotate(
+                title,
+                xy=(1.02, 0.5),
+                xycoords="axes fraction",
+                rotation=270,
+                ha="left",
+                va="center",
+                **kwargs,
+            )
 
         return self
-
 
     def set_col_labels(self, col_names=None, template="{value}", maxchar=30, **kwargs):
 
@@ -295,14 +320,11 @@ class facetgrid:
 
         kwargs["size"] = kwargs.pop("size", mpl.rcParams["axes.labelsize"])
 
-        nicetitle = functools.partial(_nicetitle, maxchar=maxchar,
-                                      template=template)
+        nicetitle = functools.partial(_nicetitle, maxchar=maxchar, template=template)
 
         # The column titles on the top row
         for ax, col_name in zip(self.axes[0, :], col_names):
-            title = nicetitle(coord=self.col,
-                              value=col_name,
-                              maxchar=maxchar)
+            title = nicetitle(coord=self.col, value=col_name, maxchar=maxchar)
             ax.set_title(title, **kwargs)
 
         return self
@@ -311,7 +333,7 @@ class facetgrid:
 
         for cc in col:
             if cc not in self.col_axes:
-                raise ValueError(f'Column {cc} not found in col_axes.')
+                raise ValueError(f"Column {cc} not found in col_axes.")
 
             for ax in self.col_axes[cc]:
                 ax.set_yticklabels([])
@@ -319,8 +341,8 @@ class facetgrid:
     def clean_labels(self):
         # turn off visibility for x, y labels
         for aa in self.axes[:, 1:].flat:
-            aa.set_ylabel('')
+            aa.set_ylabel("")
         for aa in self.axes[:-1, :].flat:
-            aa.set_xlabel('')
+            aa.set_xlabel("")
         for aa in self.axes[1:, :].flat:
-            aa.set_title('')
+            aa.set_title("")

@@ -1,10 +1,11 @@
 import numpy as np
 
+
 def ExtractSeason(time, var, season):
-    ''' Given a season, return data only for the months in that season
+    """ Given a season, return data only for the months in that season
     season can be one of SW, NE, SW->NE, NE→SW or any 3 letter
     month abbreviation.
-    '''
+    """
 
     import numpy as np
     from dcpy.util import datenum2datetime
@@ -16,22 +17,24 @@ def ExtractSeason(time, var, season):
     dates = datenum2datetime(time)
     months = [d.month for d in dates]
 
-    seasonMonths = {'SW': [5, 6, 7, 8],
-                    'SW→NE': [9, 10],
-                    'NE': [11, 12, 1, 2],
-                    'NE→SW': [3, 4],
-                    'Jan': [1],
-                    'Feb': [2],
-                    'Mar': [3],
-                    'Apr': [4],
-                    'May': [5],
-                    'Jun': [6],
-                    'Jul': [7],
-                    'Aug': [8],
-                    'Sep': [9],
-                    'Oct': [10],
-                    'Nov': [11],
-                    'Dec': [12]}
+    seasonMonths = {
+        "SW": [5, 6, 7, 8],
+        "SW→NE": [9, 10],
+        "NE": [11, 12, 1, 2],
+        "NE→SW": [3, 4],
+        "Jan": [1],
+        "Feb": [2],
+        "Mar": [3],
+        "Apr": [4],
+        "May": [5],
+        "Jun": [6],
+        "Jul": [7],
+        "Aug": [8],
+        "Sep": [9],
+        "Oct": [10],
+        "Nov": [11],
+        "Dec": [12],
+    }
 
     mask = np.asarray([m in seasonMonths[season] for m in months])
 
@@ -40,6 +43,7 @@ def ExtractSeason(time, var, season):
 
 def find_approx(vec, value):
     import numpy as np
+
     ind = np.nanargmin(np.abs(vec - value))
     return ind
 
@@ -48,43 +52,48 @@ def dt64_to_datenum(dt64):
     import matplotlib.dates as mdt
     import datetime as pdt
 
-    return mdt.date2num(dt64.astype('M8[s]').astype(pdt.datetime))
+    return mdt.date2num(dt64.astype("M8[s]").astype(pdt.datetime))
 
 
 def mdatenum2dt64(dnum):
     import numpy as np
 
-    return ((-86400 + dnum * 86400).astype('timedelta64[s]')
-            + np.datetime64('0001-01-01'))
+    return (-86400 + dnum * 86400).astype("timedelta64[s]") + np.datetime64(
+        "0001-01-01"
+    )
 
 
 def datenum2datetime(matlab_datenum):
-    '''
+    """
     Converts matlab datenum to matplotlib datetime.
-    '''
+    """
     import numpy as np
 
-    python_datetime = ((-86400 + matlab_datenum * 86400).astype('timedelta64[s]')
-                       + np.datetime64('0000-01-01')).astype('datetime64[ns]')
+    python_datetime = (
+        (-86400 + matlab_datenum * 86400).astype("timedelta64[s]")
+        + np.datetime64("0000-01-01")
+    ).astype("datetime64[ns]")
     # python_datetime = num2date(matlab_datenum-366)
 
     return np.asarray(python_datetime)
 
 
-def calc95(input, kind='twosided'):
+def calc95(input, kind="twosided"):
 
     import numpy as np
+
     input = np.sort(input)
-    if kind is 'twosided':
-        interval = input[[np.int(np.floor(0.025 * len(input))),
-                          np.int(np.ceil(0.975 * len(input)))]]
+    if kind is "twosided":
+        interval = input[
+            [np.int(np.floor(0.025 * len(input))), np.int(np.ceil(0.975 * len(input)))]
+        ]
     else:
         interval = input[np.int(np.ceil(0.95 * len(input)))]
 
     return interval
 
 
-def smooth(x, window_len=11, window='hanning', axis=-1, preserve_nan=True):
+def smooth(x, window_len=11, window="hanning", axis=-1, preserve_nan=True):
     """smooth the data using a window with requested size.
 
     This method is based on the convolution of a scaled window
@@ -126,30 +135,37 @@ def smooth(x, window_len=11, window='hanning', axis=-1, preserve_nan=True):
     if window_len < 3:
         return x
 
-    if window is 'hann':
-        window = 'hanning'
+    if window is "hann":
+        window = "hanning"
 
     window_len = np.int(np.ceil(window_len))
     if np.mod(window_len, 2) < 1e-4:
         window_len = window_len + 1
 
-    if window == 'flat':  # moving average
-        wnd = np.ones(window_len, 'd')
+    if window == "flat":  # moving average
+        wnd = np.ones(window_len, "d")
     else:
-        wnd = eval('np.' + window + '(window_len)')
+        wnd = eval("np." + window + "(window_len)")
 
     if x.ndim > 1:
-        new_size = np.int32(np.ones((x.ndim, )))
+        new_size = np.int32(np.ones((x.ndim,)))
         new_size[axis] = window_len
         new_wnd = np.zeros(new_size)
-        new_wnd = np.reshape(new_wnd, (window_len,
-                                       np.int32(new_size.prod() / window_len)))
+        new_wnd = np.reshape(
+            new_wnd, (window_len, np.int32(new_size.prod() / window_len))
+        )
         new_wnd[:, 0] = wnd
         wnd = np.reshape(new_wnd, new_size)
 
-    y = convolve(x, wnd, boundary='fill', normalize_kernel=True,
-                 fill_value=np.nan,
-                 preserve_nan=preserve_nan, nan_treatment='interpolate')
+    y = convolve(
+        x,
+        wnd,
+        boundary="fill",
+        normalize_kernel=True,
+        fill_value=np.nan,
+        preserve_nan=preserve_nan,
+        nan_treatment="interpolate",
+    )
 
     return y
 
@@ -165,7 +181,7 @@ def MovingAverage(vin, N, dim=None, decimate=True, min_count=1, **kwargs):
     else:
         y = move_mean(vin, window=N, min_count=min_count, **kwargs)
         if decimate:
-            return y[N - 1:len(y) - N + 1:N]
+            return y[N - 1 : len(y) - N + 1 : N]
         else:
             return y
 
@@ -191,16 +207,15 @@ def BinEqualizeHist(coords, bins=10, offset=0.0, label=None):
     counts = hist[:, ::-1].T
     transformed = eq_hist(counts, counts != 0)
     span = transformed.max() - transformed.min()
-    compressed = np.where(counts != 0,
-                          offset + (1.0 - offset) * transformed / span,
-                          np.nan)
+    compressed = np.where(
+        counts != 0, offset + (1.0 - offset) * transformed / span, np.nan
+    )
     compressed = np.flipud(compressed)
     return xs[:-1], ys[:-1], np.ma.masked_invalid(compressed)
 
 
 # Print iterations progress
-def print_progress(iteration, total, prefix='', suffix='',
-                   decimals=1, bar_length=100):
+def print_progress(iteration, total, prefix="", suffix="", decimals=1, bar_length=100):
     """
     Call in a loop to create terminal progress bar
     @params:
@@ -214,26 +229,26 @@ def print_progress(iteration, total, prefix='', suffix='',
     """
 
     import sys
+
     str_format = "{0:." + str(decimals) + "f}"
     percents = str_format.format(100 * (iteration / float(total)))
     filled_length = int(round(bar_length * iteration / float(total)))
-    bar = '█' * filled_length + '-' * (bar_length - filled_length)
+    bar = "█" * filled_length + "-" * (bar_length - filled_length)
 
-    sys.stdout.write('\r%s |%s| %s%s %s' % (prefix, bar,
-                                            percents, '%', suffix)),
+    sys.stdout.write("\r%s |%s| %s%s %s" % (prefix, bar, percents, "%", suffix)),
 
     if iteration == total:
-        sys.stdout.write('\n')
+        sys.stdout.write("\n")
 
     sys.stdout.flush()
 
 
-def rms(da, axis='time'):
-    return np.sqrt((np.abs(da)**2).mean(axis))
+def rms(da, axis="time"):
+    return np.sqrt((np.abs(da) ** 2).mean(axis))
 
 
-def ms(da, axis='time'):
-    return (np.abs(da)**2).mean(axis)
+def ms(da, axis="time"):
+    return (np.abs(da) ** 2).mean(axis)
 
 
 def calc_iso_surface(data, value, zs, interp_order=3, power_parameter=0.5):
@@ -265,18 +280,18 @@ def calc_iso_surface(data, value, zs, interp_order=3, power_parameter=0.5):
     if interp_order < 1:
         interp_order = 1
 
-    dist = (data - value)**2
+    dist = (data - value) ** 2
     arg = np.argsort(dist, axis=2)
     dist.sort(axis=2)
-    w_total = 0.
+    w_total = 0.0
     z = np.zeros(data.shape[:2], dtype=float)
     for i in range(int(interp_order)):
         zi = np.take(zs, arg[:, :, i])
         valuei = dist[:, :, i]
         wi = 1 / valuei
-        np.clip(wi, 0, 1.e6, out=wi)  # avoiding overflows
-        w_total += wi**power_parameter
-        z += zi * wi**power_parameter
+        np.clip(wi, 0, 1.0e6, out=wi)  # avoiding overflows
+        w_total += wi ** power_parameter
+        z += zi * wi ** power_parameter
 
     z /= w_total
 
