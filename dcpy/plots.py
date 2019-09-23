@@ -768,3 +768,68 @@ def plot_shaded_topo(shade, ax=None, mask=None):
     gray.plot.imshow(ax=ax, x='x', y='y',
                      transform=ccrs.PlateCarree(),
                      add_labels=False, zorder=-1)
+
+
+def pub_fig_width(pub: str, width="two column"):
+    """
+    Returns standard figure widths for publication in inches.
+
+    Parameters
+    ----------
+
+    pub: str, one of ["jpo"]
+        Publication name
+    width: str
+        One of ["single column", "medium 1", "medium 2", "two column"]
+
+    Returns
+    -------
+    width: float32, inches
+    """
+
+    # JPO:
+    # the standard figure sizes: 19pc (one column) and 39 pc (two columns).
+    # Two other standard sizes for your illustrations are 27pc and 33pc,
+    # for those illustrations that are between one and two columns wide.
+    # 1 in = 6.0225 pc
+
+    pc_to_inch = 1 / 6.0225
+    widths = {
+        "jpo": {
+            "single column": 19 * pc_to_inch,
+            "medium 1": 27 * pc_to_inch,
+            "medium 2": 33 * pc_to_inch,
+            "two column": 39 * pc_to_inch,
+        }
+    }
+
+    if pub not in widths:
+        raise ValueError(f"Publication {pub} not supported!")
+    if width not in ["single column", "medium 1", "medium 2", "two column"]:
+        raise ValueError(f"Width {width} not supported!")
+
+    return widths[pub][width]
+
+def concise_date_formatter(ax, axis="x", minticks=3, maxticks=7):
+    """
+    Parameters
+    ----------
+
+    ax: matplotlib Axes
+    minticks, maxticks: int, optional
+
+    """
+    import matplotlib.dates as mdates
+
+    if maxticks < minticks:
+        maxticks = minticks + 5
+
+    if axis == "x":
+        axis = ax.xaxis
+    if axis == "y":
+        axis = ax.yaxis
+
+    locator = mdates.AutoDateLocator(minticks=minticks, maxticks=maxticks)
+    formatter = mdates.ConciseDateFormatter(locator)
+    axis.set_major_locator(locator)
+    axis.set_major_formatter(formatter)
