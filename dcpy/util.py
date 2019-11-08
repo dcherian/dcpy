@@ -1,4 +1,33 @@
 import numpy as np
+import xarray as xr
+
+
+def split_to_dataset(obj, dim, maxlen):
+    grouped = obj.groupby(dim)
+
+    grouped_dim = grouped._group_dim
+    idim = "i" + grouped_dim
+    reshaped = []
+    for label, group in grouped:
+        time = (
+            group.time.reset_coords(drop=True)
+            .drop(grouped_dim)
+            .rename({grouped_dim: idim})
+            .expand_dims(dim)
+        )
+
+        reshaped.append(
+            group.reset_coords()
+            .drop([dim, grouped_dim])
+            .rename({grouped_dim: idim})
+            .assign({grouped_dim: time, idim: np.arange(len(group[grouped_dim]))})
+            .reindex(itime=np.arange(maxlen))
+        )
+
+    dataset = xr.concat(reshaped, dim=dim)
+    dataset[dim] = grouped._unique_coord
+
+    return dataset
 
 
 def ExtractSeason(time, var, season):
