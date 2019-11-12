@@ -4,7 +4,7 @@ import numpy as np
 import xarray as xr
 
 
-def dask_len(obj, optimize=False):
+def len(obj, optimize=False):
     if optimize:
         return len(dask.optimize(obj.__dask_graph__())[0])
     else:
@@ -54,14 +54,14 @@ def batch_load(obj, factor=2):
     else:
         dataset = obj
 
-    result = xr.full_like(obj, np.nan).load()
+    # result = xr.full_like(obj, np.nan).load()
+    computed = []
     for label, chunk in split_blocks(dataset, factor=factor):
         print(f"computing {label}")
-        computed = chunk.compute()
-        print(f"merging...")
-        result = xr.merge([result, computed], compat="no_conflicts")
+        computed.append(chunk.compute())
+    result = xr.combine_by_coords(computed)
 
     if isinstance(obj, xr.DataArray):
-        obj = obj._from_temp_dataset(result)
+        result = obj._from_temp_dataset(result)
 
     return result
