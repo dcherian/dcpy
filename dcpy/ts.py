@@ -639,10 +639,10 @@ def Coherence(v1, v2, dt=1, nsmooth=5, decimate=True, **kwargs):
     f = MovingAverage(freq, nsmooth, decimate=decimate)
     C = P12 / np.sqrt(P11 * P22)
 
-    Cxy = np.abs(C)
+    Cxy = C
     phase = np.angle(C, deg=True)
     if nsmooth > 1:
-        siglevel = np.sqrt(1 - (0.05) ** (1 / (nsmooth - 1)))
+        siglevel = (1 - (0.05) ** (1 / (nsmooth - 1)))
     else:
         siglevel = 1
 
