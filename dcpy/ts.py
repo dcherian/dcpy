@@ -639,10 +639,10 @@ def Coherence(v1, v2, dt=1, nsmooth=5, decimate=True, **kwargs):
     f = MovingAverage(freq, nsmooth, decimate=decimate)
     C = P12 / np.sqrt(P11 * P22)
 
-    Cxy = np.abs(C)
+    Cxy = C
     phase = np.angle(C, deg=True)
     if nsmooth > 1:
-        siglevel = np.sqrt(1 - (0.05) ** (1 / (nsmooth - 1)))
+        siglevel = (1 - (0.05) ** (1 / (nsmooth - 1)))
     else:
         siglevel = 1
 
@@ -1525,3 +1525,36 @@ def complex_demodulate(
         # ax.plot(diff.real)
 
     return dm
+
+
+def find_peaks(data, dim, debug=True):
+    """ Only returns peak indexes along dimension "dim". """
+    import scipy as sp
+
+    def wrap_find_peaks(invar, kwargs={}):
+        result = sp.signal.find_peaks(invar, **kwargs)[0]
+
+        # pad with NaNs so that shape of returned object is invariant
+        new_result = np.full_like(invar, fill_value=np.nan)
+        new_result[: len(result)] = result
+        return new_result
+
+    indexes = xr.apply_ufunc(
+        wrap_find_peaks,
+        data,
+        vectorize=True,  # loops with numpy over core dim?
+        dask="parallelized",  # loop with dask
+        input_core_dims=[[dim]],
+        output_core_dims=[[dim]],  # expect latitude dim in output
+        output_dtypes=[np.float32],  # required for dask
+    )
+
+    squashed = indexes.dropna(dim, how="all").drop(dim).drop("variable")
+
+    if debug is True:
+        plt.figure()
+        data.isel(period=1).plot.line(x=dim)
+        idx = squashed.isel(period=1).dropna("latitude").astype(np.int32)
+        dcpy.plots.linex(data[dim][idx])
+
+    return squashed
