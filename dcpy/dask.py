@@ -5,6 +5,17 @@ import xarray as xr
 
 
 def len(obj, optimize=False):
+    """ Returns length of dask graph.
+
+    Parameters
+    ----------
+    optimize: bool, optional
+        Optimize graph?
+
+    Returns
+    -------
+    number of tasks, int
+    """
     if optimize:
         return len(dask.optimize(obj.__dask_graph__())[0])
     else:
@@ -14,12 +25,16 @@ def len(obj, optimize=False):
 def split_blocks(dataset, factor=1):
     """ Splits xarray datasets into its chunks; where each chunk is a dataset
 
-    Inputs
-    ------
+    Parameters
+    ----------
     dataset: xarray.Dataset
         Dataset to split into blocks
     factor: int
         Multiple of chunksize along each dimension to make one block
+
+    Returns
+    -------
+    generator yielding ("isel dictionary", dataset)
     """
     chunk_slices = {}
     for dim, chunks in dataset.chunks.items():
@@ -41,9 +56,8 @@ def batch_load(obj, factor=2):
     """
     Load xarray object values by calling compute on block subsets (that are an integral multiple of chunks along each chunked dimension)
 
-    Inputs
-    ------
-
+    Parameters
+    ----------
     obj: xarray object
     factor: int
         multiple of chunksize to load at a single time.
