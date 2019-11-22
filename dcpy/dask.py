@@ -65,3 +65,35 @@ def batch_load(obj, factor=2):
         result = obj._from_temp_dataset(result)
 
     return result
+
+
+def batch_to_zarr(ds, file, dim, batch_size, **kwargs):
+    """
+    Batched writing of dask arrays to zarr files.
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        Dataset to write.
+    file : str
+        filename
+    dim : str
+        Dimension along which to split dataset and append. Passed to `to_zarr` as `append_dim`
+    batch_size : int
+        Size of a single batch
+
+    Returns
+    -------
+    None
+    """
+
+    import tqdm
+
+    ds.isel({dim: [0]}).to_zarr(file, consolidated=True, mode="w", **kwargs)
+
+    for t in tqdm.tqdm(range(1, ds.sizes[dim], batch_size)):
+        if "encoding" in kwargs:
+            del kwargs["encoding"]
+        ds.isel({dim: slice(t, t + batch_size)}).to_zarr(
+            file, consolidated=True, mode="a", append_dim=dim, **kwargs
+        )
