@@ -74,13 +74,13 @@ def _gufunc_pchip_roots(x, y, target, out=None):  # pragma: no cover
 )
 def _gufunc_pchip(x, y, ix, out=None):  # pragma: no cover
     xy = preprocess_nan_func(x, y, out)
-    if xy is None or len(x) < 2:
+    min_points = 2  # TODO: make this a kwarg
+    if xy is None or len(x) < min_points:
         return
     x, y = xy
 
-    # interpolating function
-    ifn = interpolate.PchipInterpolator(x, y, extrapolate=False)
-    out[:] = ifn(ix)
+    interpolator = interpolate.PchipInterpolator(x, y, extrapolate=False)
+    out[:] = interpolator(ix)
 
 
 def pchip(obj, dim, ix):
