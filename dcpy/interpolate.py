@@ -1,10 +1,13 @@
+# These pchip implementations are simplified from those at xyzpy and add dask support
+# https://github.com/jcmgray/xyzpy/blob/develop/xyzpy/signal.py
+
 # Note that guvectorized functions must be defined in a module for dask distributed :/
 # see https://github.com/numba/numba/issues/4314
 
 # guvectorized functions have out=None, you need to assign to out. no returns allowed!
 # slightly modified from xyzpy
 
-from xarray import apply_ufunc
+import xarray as xr
 from numba import njit, guvectorize, double, int_, jitclass
 import numpy as np
 from scipy import interpolate
@@ -52,7 +55,10 @@ def _gufunc_pchip_roots(x, y, target, out=None):  # pragma: no cover
     flattened = roots.ravel()
     for idx, f in enumerate(flattened):
         if f.size > 1:
-            warnings.warn("Found multiple roots. Picking the shallowest.", UserWarning)
+            warnings.warn(
+                "Found multiple roots. Picking the first one. This will depend on the ordering of `dim`",
+                UserWarning,
+            )
             flattened[idx] = f[0]
     good = flattened.nonzero()[0]
     out[:] = (
@@ -107,7 +113,7 @@ def pchip(obj, dim, ix):
 
     output_core_dims = [("__temp_dim__",)]
 
-    result = apply_ufunc(
+    result = xr.apply_ufunc(
         _gufunc_pchip,
         *args,
         input_core_dims=input_core_dims,
@@ -125,16 +131,18 @@ def pchip_fillna(obj, dim):
 
 
 def pchip_roots(obj, dim, target):
-    """Interpolate along axis ``dim`` using :func:`scipy.interpolate.pchip`.
+    """
+    Find locations where `obj == target` along dimension `dim`.
+
     Parameters
     ----------
     obj : xarray.Dataset or xarray.DataArray
         The object to interpolate.
     dim : str
         The axis to interpolate along.
-    ix : int or array
-        If int, interpolate to this many points spaced evenly along the range
-        of the original data. If array, interpolate to those points directly.
+    target : target values to locate
+        Locates values by constructing PchipInterpolant and solving for roots.
+
     Returns
     -------
     new_xobj : xarray.DataArray or xarray.Dataset
@@ -143,9 +151,11 @@ def pchip_roots(obj, dim, target):
     if isinstance(target, (np.ndarray, list)):
         target = xr.DataArray(target, dims="target")
 
+    assert target.ndim == 1
+
     input_core_dims = [(dim,), (dim,), target.dims]
 
-    result = apply_ufunc(
+    result = xr.apply_ufunc(
         _gufunc_pchip_roots,
         obj[dim],
         obj,
