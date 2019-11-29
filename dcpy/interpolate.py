@@ -23,7 +23,6 @@ def preprocess_nan_func(x, y, out):  # pragma: no cover
     num_nan = np.sum(~mask)
 
     if x.size - num_nan < 2:
-        out[:] = np.nan
         return
     elif num_nan != 0:
         x = x[mask]
@@ -45,11 +44,16 @@ def preprocess_nan_func(x, y, out):  # pragma: no cover
 def _gufunc_pchip_roots(x, y, target, out=None):  # pragma: no cover
     xy = preprocess_nan_func(x, y, out)
     if xy is None:
+        out[:] = np.nan
         return
     x, y = xy
 
+    # reshape to [target, ...]
+    target = np.reshape(target, [len(target)] + [1,] * y.ndim)
+    y = y[np.newaxis, ...]
+
     interpolator = interpolate.PchipInterpolator(
-        x, (y - np.atleast_2d(target).T).T, extrapolate=False, axis=0
+        x, y - target, extrapolate=False, axis=-1,
     )
     roots = interpolator.roots()
     flattened = roots.ravel()
@@ -82,6 +86,7 @@ def _gufunc_pchip(x, y, ix, out=None):  # pragma: no cover
     xy = preprocess_nan_func(x, y, out)
     min_points = 2  # TODO: make this a kwarg
     if xy is None or len(x) < min_points:
+        out[:] = np.nan
         return
     x, y = xy
 
