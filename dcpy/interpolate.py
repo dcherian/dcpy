@@ -12,6 +12,21 @@ from numba import njit, guvectorize, double, int_, jitclass
 import numpy as np
 from scipy import interpolate
 import warnings
+from typing import Any, Iterable
+
+
+def is_scalar(value: Any, include_0d: bool = True) -> bool:
+    """Whether to treat a value as a scalar.
+
+    Any non-iterable, string, or 0-D array
+    """
+    if include_0d:
+        include_0d = getattr(value, "ndim", None) == 0
+    return (
+        include_0d
+        or isinstance(value, (str, bytes))
+        or not (isinstance(value, (Iterable,)) or hasattr(value, "__array_function__"))
+    )
 
 
 @njit
@@ -41,7 +56,7 @@ def preprocess_nan_func(x, y, out):  # pragma: no cover
     "(n),(n),(m)->(m)",
     forceobj=True,
 )
-def _gufunc_pchip_roots(x, y, target, out=None):  # pragma: no cover
+def _gufunc_pchip_roots(x, y, target, out):  # pragma: no cover
     xy = preprocess_nan_func(x, y, out)
     if xy is None:
         out[:] = np.nan
@@ -67,7 +82,6 @@ def _gufunc_pchip_roots(x, y, target, out=None):  # pragma: no cover
     good = flattened.nonzero()[0]
     out[:] = (
         np.where(np.isin(np.arange(flattened.size), good), flattened, np.nan)
-        .astype(x.dtype)
         .reshape(roots.shape)
     )
 
@@ -152,6 +166,9 @@ def pchip_roots(obj, dim, target):
     -------
     new_xobj : xarray.DataArray or xarray.Dataset
     """
+
+    if is_scalar(target):
+        target = np.array(target, ndmin=1)
 
     if isinstance(target, (np.ndarray, list)):
         target = xr.DataArray(target, dims="target")
