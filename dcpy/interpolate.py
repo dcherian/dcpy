@@ -38,11 +38,10 @@ def preprocess_nan_func(x, y, out):  # pragma: no cover
     num_nan = np.sum(~mask)
 
     if x.size - num_nan < 2:
-        return
+        return None
     elif num_nan != 0:
         x = x[mask]
         y = y[mask]
-
     return x, y
 
 
@@ -80,10 +79,9 @@ def _gufunc_pchip_roots(x, y, target, out):  # pragma: no cover
             )
             flattened[idx] = f[0]
     good = flattened.nonzero()[0]
-    out[:] = (
-        np.where(np.isin(np.arange(flattened.size), good), flattened, np.nan)
-        .reshape(roots.shape)
-    )
+    out[:] = np.where(
+        np.isin(np.arange(flattened.size), good), flattened, np.nan
+    ).reshape(roots.shape)
 
 
 @guvectorize(
@@ -187,4 +185,8 @@ def pchip_roots(obj, dim, target):
         dask="parallelized",
         output_dtypes=[float],
     )
-    return result.assign_coords({target.dims[0]: target})
+    result = result.assign_coords({target.dims[0]: target})
+    if "target" not in result.dims:
+        result = result.expand_dims("target")
+
+    return result
