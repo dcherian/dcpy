@@ -3,9 +3,10 @@
 
 # Note that guvectorized functions must be defined in a module for dask distributed :/
 # see https://github.com/numba/numba/issues/4314
+# iterative development of a guvectorized function is not possible
 
 # guvectorized functions have out=None, you need to assign to out. no returns allowed!
-# slightly modified from xyzpy
+# These functions have been slightly modified from those in xyzpy
 
 import xarray as xr
 from numba import njit, guvectorize, double, int_, jitclass
@@ -55,7 +56,7 @@ def preprocess_nan_func(x, y, out):  # pragma: no cover
     "(n),(n),(m)->(m)",
     forceobj=True,
 )
-def _gufunc_pchip_roots(x, y, target, out):  # pragma: no cover
+def _gufunc_pchip_roots(x, y, target, out):
     xy = preprocess_nan_func(x, y, out)
     if xy is None:
         out[:] = np.nan
@@ -94,7 +95,7 @@ def _gufunc_pchip_roots(x, y, target, out):  # pragma: no cover
     "(n),(n),(m)->(m)",
     forceobj=True,
 )
-def _gufunc_pchip(x, y, ix, out=None):  # pragma: no cover
+def _gufunc_pchip(x, y, ix, out=None):
     xy = preprocess_nan_func(x, y, out)
     min_points = 2  # TODO: make this a kwarg
     if xy is None or len(x) < min_points:
