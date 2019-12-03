@@ -132,7 +132,7 @@ def pchip(obj, dim, ix):
     else:
         ix_np = np.array(ix, ndmin=1)
 
-    input_core_dims = [(dim,), (dim,), ("__temp_dim__", )]
+    input_core_dims = [(dim,), (dim,), ("__temp_dim__",)]
     args = (obj[dim], obj, ix_np)
 
     output_core_dims = [("__temp_dim__",)]
