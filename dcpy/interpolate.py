@@ -6,7 +6,6 @@
 # iterative development of a guvectorized function is not possible
 
 # guvectorized functions have out=None, you need to assign to out. no returns allowed!
-# These functions have been slightly modified from those in xyzpy
 
 import xarray as xr
 from numba import njit, guvectorize, double, int_, jitclass
@@ -126,8 +125,15 @@ def pchip(obj, dim, ix):
     new_xobj : xarray.DataArray or xarray.Dataset
     """
 
-    input_core_dims = [(dim,), (dim,), (dim,)]
-    args = (obj[dim], obj, ix)
+    if isinstance(ix, xr.DataArray):
+        ix_np = ix.values
+    elif isinstance(ix, np.ndarray):
+        ix_np = ix
+    else:
+        ix_np = np.array(ix, ndmin=1)
+
+    input_core_dims = [(dim,), (dim,), ("__temp_dim__", )]
+    args = (obj[dim], obj, ix_np)
 
     output_core_dims = [("__temp_dim__",)]
 
@@ -138,10 +144,16 @@ def pchip(obj, dim, ix):
         output_core_dims=output_core_dims,
         dask="parallelized",
         output_dtypes=[float],
-        output_sizes={"__temp_dim__": len(ix)},
+        output_sizes={"__temp_dim__": len(ix_np)},
     )
-    result["__temp_dim__"] = ix.values
-    return result.rename({"__temp_dim__": dim})
+    result["__temp_dim__"] = ix_np
+
+    if hasattr(ix, "name") and ix.name is not None:
+        new_dim = ix.name
+    else:
+        new_dim = dim
+
+    return result.rename({"__temp_dim__": new_dim})
 
 
 def pchip_fillna(obj, dim):

@@ -3,7 +3,7 @@ import pytest
 import xarray as xr
 
 import scipy.interpolate
-from dcpy.interpolate import pchip_fillna, pchip_roots
+from dcpy.interpolate import pchip, pchip_fillna, pchip_roots
 
 
 @pytest.fixture
@@ -34,6 +34,31 @@ def test_roots(data, targets, maybe_chunk):
     xr.testing.assert_equal(expected, actual)
 
 
+def expected_pchip_interpolate_z(data, ix):
+
+    data = data.compute()
+    stacked = data.stack({"stacked": ["x", "y"]})
+
+    expected = (
+        stacked.isel(z=0).drop_vars("z").expand_dims(z=np.array(ix, ndmin=1)).copy()
+    )
+    for ii in np.arange(stacked.sizes["stacked"]):
+        subset = stacked.isel(stacked=ii)
+        mask = np.isnan(subset)
+        interpolator = scipy.interpolate.PchipInterpolator(
+            x=subset.z.values[~mask], y=subset.values[~mask], extrapolate=False
+        )
+        expected[:, ii] = interpolator(ix)
+
+    expected = (
+        expected.isel(z=slice(len(ix)))
+        .assign_coords(z=ix)
+        .unstack("stacked")
+        .transpose("x", "y", "z")
+    )
+    return expected
+
+
 @pytest.mark.parametrize("maybe_chunk", [False, True])
 def test_pchip_fillna(data, maybe_chunk):
 
@@ -43,21 +68,32 @@ def test_pchip_fillna(data, maybe_chunk):
         data = data.chunk({"x": 1, "y": 2})
 
     actual = pchip_fillna(data, "z")
+    expected = expected_pchip_interpolate_z(data, data["z"])
+    xr.testing.assert_equal(expected, actual)
 
-    data = data.compute()
-    stacked = data.stack({"stacked": ["x", "y"]})
-    expected = stacked.copy(deep=True)
-    for ii in np.arange(stacked.sizes["stacked"]):
-        subset = stacked.isel(stacked=ii)
-        mask = np.isnan(subset)
-        interpolator = scipy.interpolate.PchipInterpolator(
-            x=subset.z.values[~mask], y=subset.values[~mask], extrapolate=False
-        )
-        expected[:, ii] = interpolator(subset.z)
 
-    xr.testing.assert_equal(
-        expected.unstack("stacked").transpose("x", "y", "z"), actual
-    )
+@pytest.mark.parametrize(
+    "newz",
+    [
+        -31.23,
+        [-31.23],
+        np.linspace(-60, 0, 150),
+        xr.DataArray(np.linspace(-60, 0, 150), dims="z", name="newz"),
+    ],
+)
+@pytest.mark.parametrize("maybe_chunk", [False, True])
+def test_pchip_interpolate(data, maybe_chunk, newz):
+
+    if maybe_chunk:
+        data = data.chunk({"x": 1, "y": 2})
+
+    actual = pchip(data, "z", newz)
+    expected = expected_pchip_interpolate_z(data, np.array(newz, ndmin=1))
+    if isinstance(newz, xr.DataArray):
+        assert "newz" in actual.dims
+        xr.testing.assert_equal(expected, actual.rename({"newz": "z"}))
+    else:
+        xr.testing.assert_equal(expected, actual)
 
 
 # TODO: Multiple roots; check warning
