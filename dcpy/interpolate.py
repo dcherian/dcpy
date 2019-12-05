@@ -106,7 +106,7 @@ def _gufunc_pchip(x, y, ix, out=None):
     out[:] = interpolator(ix)
 
 
-def pchip(obj, dim, ix):
+def pchip(obj, dim, ix, core_dim=None):
     """
     Interpolate along axis ``dim`` using :func:`scipy.interpolate.pchip`.
 
@@ -126,16 +126,25 @@ def pchip(obj, dim, ix):
     """
 
     if isinstance(ix, xr.DataArray):
-        ix_np = ix.values
-    elif isinstance(ix, np.ndarray):
-        ix_np = ix
+        ix_da = ix
+        if ix_da.ndim == 1:
+            core_dim = ix_da.dims[0]
+        if core_dim is None:
+            raise ValueError("core_dim must be provided if ix is a DataArray")
     else:
-        ix_np = np.array(ix, ndmin=1)
+        ix_da = xr.DataArray(np.array(ix, ndmin=1), dims="__temp_dim__")
+        core_dim = "__temp_dim__"
 
-    input_core_dims = [(dim,), (dim,), ("__temp_dim__",)]
-    args = (obj[dim], obj, ix_np)
+    # TODO: unify_chunks
 
-    output_core_dims = [("__temp_dim__",)]
+    input_core_dims = [(dim,), (dim,), (core_dim,)]
+    if core_dim == dim:
+        raise ValueError(
+            f"core_dim must not be {dim} i.e. not a dimension of the provided DataArray. Please rename this dimension of ix."
+        )
+    args = (obj[dim], obj, ix_da)
+
+    output_core_dims = [(core_dim,)]
 
     result = xr.apply_ufunc(
         _gufunc_pchip,
@@ -144,16 +153,16 @@ def pchip(obj, dim, ix):
         output_core_dims=output_core_dims,
         dask="parallelized",
         output_dtypes=[float],
-        output_sizes={"__temp_dim__": len(ix_np)},
+        output_sizes={core_dim: ix_da.sizes[core_dim]},
     )
-    result["__temp_dim__"] = ix_np
 
-    if hasattr(ix, "name") and ix.name is not None:
-        new_dim = ix.name
-    else:
-        new_dim = dim
+    #if ix_da.name is not None:
+    #    new_dim = ix.name
+    #else:
+    #    new_dim = dim
+    #.rename({core_dim: new_dim})
 
-    return result.rename({"__temp_dim__": new_dim})
+    return result.assign_coords({f"{dim}_{core_dim}": ix_da})
 
 
 def pchip_fillna(obj, dim):

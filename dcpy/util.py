@@ -1,5 +1,59 @@
 import numpy as np
+import scipy as sp
 import xarray as xr
+
+
+def to_uniform_grid(data, coord, dim, new_coord):
+    """
+    Interpolate from multidimensional coordinate to 1D coordinate.
+
+    Inputs
+    ------
+
+    data: DataArray, Dataset
+        Input data to interpolate
+
+    coord : str
+        Name of the multidimensional coordinate that we will be interpolating to.
+        Must exist in data
+
+    dim : str
+        Dimension name whose size will change after interpolation
+
+    new_coord : np.ndarray, DataArray
+        Uniform coordinate to interpolate to
+    """
+
+    if coord not in data:
+        raise ValueError(f"{coord} is not in the provided dataset.")
+
+    if isinstance(new_coord, np.ndarray):
+        new_coord = xr.DataArray(new_coord, dims=[coord], name=coord)
+
+    def _wrap_interp(x, y, newy):
+        f = sp.interpolate.interp1d(
+            x.squeeze(), y.squeeze(), bounds_error=False, fill_value=np.nan
+        )
+        return f(newy)
+
+    dim = set([dim])
+
+    result = xr.apply_ufunc(
+        _wrap_interp,
+        data[coord],
+        data,
+        new_coord,
+        input_core_dims=[dim, dim, [coord]],
+        output_core_dims=[[coord]],  # order is important
+        exclude_dims=dim,  # since size of dimension is changing
+        vectorize=True,
+        dask="parallelized",
+        output_dtypes=[np.float64],
+    )
+
+    result[coord] = new_coord
+
+    return result
 
 
 def split_to_dataset(obj, dim, maxlen):
