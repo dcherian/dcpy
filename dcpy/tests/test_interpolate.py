@@ -36,6 +36,7 @@ def test_roots(data, targets, maybe_chunk):
 
 def expected_pchip_interpolate_z(data, ix):
 
+    assert ix.ndim == 1
     data = data.compute()
     stacked = data.stack({"stacked": ["x", "y"]})
 
@@ -79,21 +80,55 @@ def test_pchip_fillna(data, maybe_chunk):
         [-31.23],
         np.linspace(-60, 0, 150),
         xr.DataArray(np.linspace(-60, 0, 150), dims="target", name="newz"),
+        (
+            xr.DataArray(
+                np.linspace(-60, 0, 150), dims="target", name="newz"
+            ).expand_dims(x=2, y=3)
+        ),
     ],
 )
 @pytest.mark.parametrize("maybe_chunk", [False, True])
 def test_pchip_interpolate(data, maybe_chunk, newz):
 
+    if isinstance(newz, xr.DataArray) and "x" in newz.dims:
+        ix_nd_da = True
+    else:
+        ix_nd_da = False
+
+    if ix_nd_da:
+        # hack for pytest.parametrize & xarray align
+        # assign coords so alignment works
+        newz["x"] = data.x
+        newz["y"] = data.y
+
     if maybe_chunk:
         data = data.chunk({"x": 1, "y": 2})
-        if isinstance(newz, xr.DataArray) and "x" in newz:
-            newz = newz.chunk({"x"})
+        if ix_nd_da:
+            # TODO : is this necessary?
+            newz = newz.chunk({"x": 1, "y": 2})
 
     actual = pchip(data, "z", newz)
-    expected = expected_pchip_interpolate_z(data, np.array(newz, ndmin=1))
+
+    if ix_nd_da:
+        # expected_pchip_interpolate_z expects 1D values.
+        # so I subset now and broadcast later before comparing
+        # could be avoided by modifying expected_pchip_interpolate_na
+        expected_newz = newz.isel(x=0, y=0).drop(["x", "y"]).values
+    else:
+        expected_newz = np.array(newz, ndmin=1)
+
+    expected = expected_pchip_interpolate_z(data, expected_newz)
+
+    if ix_nd_da:
+        expected = expected.rename({"z": "target"})
+        expected["z_target"] = newz
+        expected = expected.drop("target")
+
     if isinstance(newz, xr.DataArray):
         assert "target" in actual.dims
-        xr.testing.assert_equal(expected.rename({"z": "target"}), actual)
+        if "target" not in expected.dims:
+            expected = expected.rename({"z": "target"})
+        xr.testing.assert_equal(expected, actual)
     else:
         xr.testing.assert_equal(expected, actual)
 

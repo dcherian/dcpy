@@ -129,9 +129,14 @@ def pchip(obj, dim, ix, core_dim=None):
         ix_da = ix
         if ix_da.ndim == 1:
             core_dim = ix_da.dims[0]
-        if core_dim is None:
-            raise ValueError("core_dim must be provided if ix is a DataArray")
-        provided_numpy = False
+        inferred_core_dim = set(ix_da.dims) - set(obj.dims)
+        if len(inferred_core_dim) > 1 and core_dim is None:
+            raise ValueError(
+                f"Set of dims in `ix` but not in `obj` is not of length 1: {core_dim}, . `core_dim` must be specified explicitly."
+            )
+        else:
+            core_dim = list(inferred_core_dim)[0]
+            provided_numpy = False
     else:
         ix_da = xr.DataArray(np.array(ix, ndmin=1), dims="__temp_dim__")
         core_dim = "__temp_dim__"
