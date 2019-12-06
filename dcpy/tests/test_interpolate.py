@@ -78,7 +78,7 @@ def test_pchip_fillna(data, maybe_chunk):
         -31.23,
         [-31.23],
         np.linspace(-60, 0, 150),
-        xr.DataArray(np.linspace(-60, 0, 150), dims="z", name="newz"),
+        xr.DataArray(np.linspace(-60, 0, 150), dims="target", name="newz"),
     ],
 )
 @pytest.mark.parametrize("maybe_chunk", [False, True])
@@ -86,15 +86,20 @@ def test_pchip_interpolate(data, maybe_chunk, newz):
 
     if maybe_chunk:
         data = data.chunk({"x": 1, "y": 2})
+        if isinstance(newz, xr.DataArray) and "x" in newz:
+            newz = newz.chunk({"x"})
 
     actual = pchip(data, "z", newz)
     expected = expected_pchip_interpolate_z(data, np.array(newz, ndmin=1))
     if isinstance(newz, xr.DataArray):
-        assert "newz" in actual.dims
-        xr.testing.assert_equal(expected, actual.rename({"newz": "z"}))
+        assert "target" in actual.dims
+        xr.testing.assert_equal(expected.rename({"z": "target"}), actual)
     else:
         xr.testing.assert_equal(expected, actual)
 
 
+# TODO: test errors
+# TODO: test unify_chunks
 # TODO: Multiple roots; check warning
 # TODO: weird numpy size > 0 warning
+# TODO: test with datasets and coords with the interpolated dimension

@@ -131,9 +131,11 @@ def pchip(obj, dim, ix, core_dim=None):
             core_dim = ix_da.dims[0]
         if core_dim is None:
             raise ValueError("core_dim must be provided if ix is a DataArray")
+        provided_numpy = False
     else:
         ix_da = xr.DataArray(np.array(ix, ndmin=1), dims="__temp_dim__")
         core_dim = "__temp_dim__"
+        provided_numpy = True
 
     # TODO: unify_chunks
 
@@ -156,13 +158,17 @@ def pchip(obj, dim, ix, core_dim=None):
         output_sizes={core_dim: ix_da.sizes[core_dim]},
     )
 
-    #if ix_da.name is not None:
-    #    new_dim = ix.name
-    #else:
-    #    new_dim = dim
-    #.rename({core_dim: new_dim})
+    # TODO: do I really want this?
+    # it is convenient and we do want to keep the new coordinates somehow.
+    if provided_numpy:
+        result = result.rename({core_dim: dim}).assign_coords({f"{dim}": ix_da.values})
+    else:
+        if ix_da.ndim > 1:
+            result = result.assign_coords({f"{dim}_{core_dim}": ix_da})
+        else:
+            result = result.assign_coords({f"{core_dim}": ix_da.values})
 
-    return result.assign_coords({f"{dim}_{core_dim}": ix_da})
+    return result
 
 
 def pchip_fillna(obj, dim):
