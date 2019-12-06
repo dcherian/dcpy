@@ -140,9 +140,9 @@ def pchip(obj, dim, ix, core_dim=None):
     # TODO: unify_chunks
 
     input_core_dims = [(dim,), (dim,), (core_dim,)]
-    if core_dim == dim:
+    if core_dim == dim and not ix.equals(obj[dim]):
         raise ValueError(
-            f"core_dim must not be {dim} i.e. not a dimension of the provided DataArray. Please rename this dimension of ix."
+            f"core_dim must not be {dim} i.e. not a dimension of the provided DataArray unless the associated coordinates are equal. Please rename this dimension of ix."
         )
     args = (obj[dim], obj, ix_da)
 
