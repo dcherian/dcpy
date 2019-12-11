@@ -229,3 +229,71 @@ def pchip_roots(obj, dim, target):
         result = result.expand_dims("target")
 
     return result
+
+
+@guvectorize(
+    [(double[:], double[:], double[:], double[:])],
+    "(n), (n), (m) -> (m)",
+    nopython=True,
+)
+def remap(values, zeuc, edges, out=None):
+    func = np.nanmean
+
+    out[:] = np.nan
+    idx = np.digitize(zeuc, edges)
+    idx = np.where(~np.isnan(zeuc), idx, np.nan)
+
+    minz = edges.min()
+    maxz = edges.max()
+
+    for ii in np.unique(idx):
+        # 1. handle bunch of values in same bin
+        # 2. should also take care of NaN
+        # 3. from digitize docstring
+        #         If values in x are beyond the bounds of bins,
+        #         0 or len(bins) is returned as appropriate.
+        if ~np.isnan(ii):
+            mask = (idx == ii) & (zeuc >= minz) & (zeuc <= maxz)
+            if np.any(mask):
+                out[np.int(ii) - 1] = func(values[mask])
+
+
+def bin_to_new_coord(data, old_coord, new_coord, edges, reduce_func=None):
+    """
+    Bin to a new 1D coordinate.
+    """
+
+    if not isinstance(old_coord, str) or old_coord not in data.dims:
+        raise ValueError(
+            f"old_coord must be the name of an existing dimension in data."
+            f"Expected one of {data.dims}. Received {old_coord}."
+        )
+
+    if not isinstance(new_coord, str) or new_coord not in data.coords:
+        raise ValueError(
+            f"old_coord must be the name of an existing coordinate variable."
+            f"Expected one of {set(data.coords)}. Received {new_coord}."
+        )
+
+    if reduce_func is not None:
+        raise ValueError("reduce_func support has not been implemented yet")
+
+    new_1d_coord = xr.DataArray((edges[:-1] + edges[1:]) / 2, dims=(new_coord,))
+
+    remapped = xr.apply_ufunc(
+        remap,
+        data,
+        data[new_coord],
+        edges,
+        input_core_dims=[[old_coord], [old_coord], ["__temp_dim__"]],
+        output_core_dims=[[new_coord]],
+        exclude_dims=set((old_coord,)),
+        dask="parallelized",
+        # vectorize=True,  # TODO: guvectorize instead
+        output_dtypes=[float],
+        output_sizes={new_coord: len(edges)},
+        # kwargs={"func": reduce_func}  # TODO: add support for reduce_func
+    ).isel({new_coord: slice(-1)})
+    remapped[new_coord] = new_1d_coord
+
+    return remapped
