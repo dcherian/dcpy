@@ -126,17 +126,22 @@ def pchip(obj, dim, ix, core_dim=None):
     """
 
     if isinstance(ix, xr.DataArray):
-        ix_da = ix
+        ix_da = ix.copy()
         if ix_da.ndim == 1:
             core_dim = ix_da.dims[0]
-        inferred_core_dim = set(ix_da.dims) - set(obj.dims)
-        if len(inferred_core_dim) > 1 and core_dim is None:
-            raise ValueError(
-                f"Set of dims in `ix` but not in `obj` is not of length 1: {core_dim}, . `core_dim` must be specified explicitly."
-            )
         else:
-            core_dim = list(inferred_core_dim)[0]
-            provided_numpy = False
+            inferred_core_dim = set(ix_da.dims) - set(obj.dims)
+            if len(inferred_core_dim) == 0 and core_dim is None:
+                raise ValueError(
+                    "Could not infer the core interpolation dimension. Please explicitly pass core_dim."
+                )
+            if len(inferred_core_dim) > 1 and core_dim is None:
+                raise ValueError(
+                    f"Set of dims in `ix` but not in `obj` is not of length 1: {core_dim}, . `core_dim` must be specified explicitly."
+                )
+            else:
+                core_dim = list(inferred_core_dim)[0]
+        provided_numpy = False
     else:
         ix_da = xr.DataArray(np.array(ix, ndmin=1), dims="__temp_dim__")
         core_dim = "__temp_dim__"
@@ -144,13 +149,12 @@ def pchip(obj, dim, ix, core_dim=None):
 
     # TODO: unify_chunks
 
-    input_core_dims = [(dim,), (dim,), (core_dim,)]
     if core_dim == dim and not ix.equals(obj[dim]):
-        raise ValueError(
-            f"core_dim must not be {dim} i.e. not a dimension of the provided DataArray unless the associated coordinates are equal. Please rename this dimension of ix."
-        )
-    args = (obj[dim], obj, ix_da)
+        ix_da = ix_da.rename({dim: "__temp_dim__"})
+        core_dim = "__temp_dim__"
 
+    args = (obj[dim], obj, ix_da)
+    input_core_dims = [(dim,), (dim,), (core_dim,)]
     output_core_dims = [(core_dim,)]
 
     result = xr.apply_ufunc(
@@ -172,6 +176,8 @@ def pchip(obj, dim, ix, core_dim=None):
             result = result.assign_coords({f"{dim}_{core_dim}": ix_da})
         else:
             result = result.assign_coords({f"{core_dim}": ix_da.values})
+    if "__temp_dim__" in result.dims:
+        result = result.rename({"__temp_dim__": dim})
 
     return result
 
