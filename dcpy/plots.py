@@ -878,3 +878,29 @@ def concise_date_formatter(ax, axis="x", minticks=3, maxticks=7):
     formatter = mdates.ConciseDateFormatter(locator)
     axis.set_major_locator(locator)
     axis.set_major_formatter(formatter)
+
+
+def fill_between(da, axis, x, y, ax=None, **kwargs):
+    import matplotlib.pyplot as plt
+
+    if ax is None:
+        ax = plt.gca()
+
+    if axis == "x":
+        plotfunc = ax.fill_betweenx
+        assert(da.sizes[x] == 2)
+        assert(da[y].ndim == 1)
+        arg0 = da[y]
+        arg1 = da.isel({x: 0})
+        arg2 = da.isel({x: 1})
+    elif axis == "y":
+        plotfunc = ax.fill_between
+        assert(da.sizes[y] == 2)
+        assert(da[x].ndim == 1)
+        arg0 = da[x]
+        arg1 = da.isel({y: 0})
+        arg2 = da.isel({y: 1})
+    else:
+        raise ValueError(f"axis must 'x' or 'y'. Recieved {axis}")
+
+    plotfunc(arg0, arg1, arg2, **kwargs)
