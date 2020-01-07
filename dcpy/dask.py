@@ -22,6 +22,33 @@ def ntasks(obj, optimize=False):
         return len(obj.__dask_graph__())
 
 
+def visualize_one_chunk(dataset):
+    return dask.visualize(
+        dask.optimize(get_one_chunk(dataset))[0].__dask_graph__(),
+        rankdir="LR",
+        # optimize_graph=True,
+    )
+
+
+def get_one_chunk(dataset):
+    if isinstance(dataset, xr.DataArray):
+        array = dataset
+        dataset = dataset._to_temp_dataset()
+        to_array = True
+    else:
+        to_array = False
+    chunk_slices = dict()
+    for dim, chunks in dataset.chunks.items():
+        start = 0
+        chunk = chunks[0]
+        stop = start + chunk
+        chunk_slices[dim] = slice(start, stop)
+    subset = dataset.isel(chunk_slices)
+    if to_array:
+        subset = array._from_temp_dataset(subset)
+    return subset
+
+
 def split_blocks(dataset, factor=1):
     """ Splits xarray datasets into its chunks; where each chunk is a dataset
 
