@@ -4,7 +4,7 @@ import numpy as np
 import xarray as xr
 
 
-def len(obj, optimize=False):
+def ntasks(obj, optimize=False):
     """ Returns length of dask graph.
 
     Parameters
@@ -17,7 +17,7 @@ def len(obj, optimize=False):
     number of tasks, int
     """
     if optimize:
-        return len(dask.optimize(obj.__dask_graph__())[0])
+        return len(dask.optimize(obj)[0].__dask_graph__())
     else:
         return len(obj.__dask_graph__())
 
