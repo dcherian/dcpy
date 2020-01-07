@@ -126,17 +126,22 @@ def pchip(obj, dim, ix, core_dim=None):
     """
 
     if isinstance(ix, xr.DataArray):
-        ix_da = ix
+        ix_da = ix.copy()
         if ix_da.ndim == 1:
             core_dim = ix_da.dims[0]
-        inferred_core_dim = set(ix_da.dims) - set(obj.dims)
-        if len(inferred_core_dim) > 1 and core_dim is None:
-            raise ValueError(
-                f"Set of dims in `ix` but not in `obj` is not of length 1: {core_dim}, . `core_dim` must be specified explicitly."
-            )
         else:
-            core_dim = list(inferred_core_dim)[0]
-            provided_numpy = False
+            inferred_core_dim = set(ix_da.dims) - set(obj.dims)
+            if len(inferred_core_dim) == 0 and core_dim is None:
+                raise ValueError(
+                    "Could not infer the core interpolation dimension. Please explicitly pass core_dim."
+                )
+            if len(inferred_core_dim) > 1 and core_dim is None:
+                raise ValueError(
+                    f"Set of dims in `ix` but not in `obj` is not of length 1: {core_dim}, . `core_dim` must be specified explicitly."
+                )
+            else:
+                core_dim = list(inferred_core_dim)[0]
+        provided_numpy = False
     else:
         ix_da = xr.DataArray(np.array(ix, ndmin=1), dims="__temp_dim__")
         core_dim = "__temp_dim__"
@@ -144,13 +149,12 @@ def pchip(obj, dim, ix, core_dim=None):
 
     # TODO: unify_chunks
 
-    input_core_dims = [(dim,), (dim,), (core_dim,)]
     if core_dim == dim and not ix.equals(obj[dim]):
-        raise ValueError(
-            f"core_dim must not be {dim} i.e. not a dimension of the provided DataArray unless the associated coordinates are equal. Please rename this dimension of ix."
-        )
-    args = (obj[dim], obj, ix_da)
+        ix_da = ix_da.rename({dim: "__temp_dim__"})
+        core_dim = "__temp_dim__"
 
+    args = (obj[dim], obj, ix_da)
+    input_core_dims = [(dim,), (dim,), (core_dim,)]
     output_core_dims = [(core_dim,)]
 
     result = xr.apply_ufunc(
@@ -172,6 +176,8 @@ def pchip(obj, dim, ix, core_dim=None):
             result = result.assign_coords({f"{dim}_{core_dim}": ix_da})
         else:
             result = result.assign_coords({f"{core_dim}": ix_da.values})
+    if "__temp_dim__" in result.dims:
+        result = result.rename({"__temp_dim__": dim})
 
     return result
 
@@ -223,3 +229,71 @@ def pchip_roots(obj, dim, target):
         result = result.expand_dims("target")
 
     return result
+
+
+@guvectorize(
+    [(double[:], double[:], double[:], double[:])],
+    "(n), (n), (m) -> (m)",
+    nopython=True,
+)
+def remap(values, zeuc, edges, out=None):
+    func = np.nanmean
+
+    out[:] = np.nan
+    idx = np.digitize(zeuc, edges)
+    idx = np.where(~np.isnan(zeuc), idx, np.nan)
+
+    minz = edges.min()
+    maxz = edges.max()
+
+    for ii in np.unique(idx):
+        # 1. handle bunch of values in same bin
+        # 2. should also take care of NaN
+        # 3. from digitize docstring
+        #         If values in x are beyond the bounds of bins,
+        #         0 or len(bins) is returned as appropriate.
+        if ~np.isnan(ii):
+            mask = (idx == ii) & (zeuc >= minz) & (zeuc <= maxz)
+            if np.any(mask):
+                out[np.int(ii) - 1] = func(values[mask])
+
+
+def bin_to_new_coord(data, old_coord, new_coord, edges, reduce_func=None):
+    """
+    Bin to a new 1D coordinate.
+    """
+
+    if not isinstance(old_coord, str) or old_coord not in data.dims:
+        raise ValueError(
+            f"old_coord must be the name of an existing dimension in data."
+            f"Expected one of {data.dims}. Received {old_coord}."
+        )
+
+    if not isinstance(new_coord, str) or new_coord not in data.coords:
+        raise ValueError(
+            f"old_coord must be the name of an existing coordinate variable."
+            f"Expected one of {set(data.coords)}. Received {new_coord}."
+        )
+
+    if reduce_func is not None:
+        raise ValueError("reduce_func support has not been implemented yet")
+
+    new_1d_coord = xr.DataArray((edges[:-1] + edges[1:]) / 2, dims=(new_coord,))
+
+    remapped = xr.apply_ufunc(
+        remap,
+        data,
+        data[new_coord],
+        edges,
+        input_core_dims=[[old_coord], [old_coord], ["__temp_dim__"]],
+        output_core_dims=[[new_coord]],
+        exclude_dims=set((old_coord,)),
+        dask="parallelized",
+        # vectorize=True,  # TODO: guvectorize instead
+        output_dtypes=[float],
+        output_sizes={new_coord: len(edges)},
+        # kwargs={"func": reduce_func}  # TODO: add support for reduce_func
+    ).isel({new_coord: slice(-1)})
+    remapped[new_coord] = new_1d_coord
+
+    return remapped
