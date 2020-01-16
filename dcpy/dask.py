@@ -108,7 +108,7 @@ def batch_load(obj, factor=2):
     return result
 
 
-def batch_to_zarr(ds, file, dim, batch_size, **kwargs):
+def batch_to_zarr(ds, file, dim, batch_size, restart=False, **kwargs):
     """
     Batched writing of dask arrays to zarr files.
 
@@ -130,7 +130,13 @@ def batch_to_zarr(ds, file, dim, batch_size, **kwargs):
 
     import tqdm
 
-    ds.isel({dim: [0]}).to_zarr(file, consolidated=True, mode="w", **kwargs)
+    if not restart:
+        ds.isel({dim: [0]}).to_zarr(file, consolidated=True, mode="w", **kwargs)
+    else:
+        opened = xr.open_zarr(file, consolidated=True)
+        ds = ds.sel(time=slice(opened[dim][-1], None))
+        print(f"Restarting. Last index = {opened[dim][-1].values}. Starting from {ds[dim][1].values}")
+        opened.close()
 
     for t in tqdm.tqdm(range(1, ds.sizes[dim], batch_size)):
         if "encoding" in kwargs:
