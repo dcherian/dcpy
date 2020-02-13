@@ -287,9 +287,18 @@ def set_axes_color(ax, color, spine="left"):
 
     ax.spines[spine].set_visible(True)
     ax.spines[spine].set_color(color)
-    [tt.set_color(color) for tt in ax.get_yticklabels()]
-    ax.yaxis.label.set_color(color)
-    ax.tick_params("y", colors=color)
+    if spine in ["left", "right"]:
+        labels = ax.get_yticklabels()
+        xory = "y"
+        axis = ax.yaxis
+    elif spine in ["top", "bottom"]:
+        labels = ax.get_xticklabels()
+        xory = "x"
+        axis = ax.xaxis
+
+    [tt.set_color(color) for tt in labels]
+    axis.label.set_color(color)
+    ax.tick_params(xory, colors=color)
 
 
 def label_subplots(ax, x=0.05, y=0.9, prefix="(", suffix=")", labels=None, **kwargs):
@@ -878,6 +887,8 @@ def concise_date_formatter(ax, axis="x", minticks=3, maxticks=7):
     formatter = mdates.ConciseDateFormatter(locator)
     axis.set_major_locator(locator)
     axis.set_major_formatter(formatter)
+
+    [tt.set_rotation(0) for tt in axis.get_ticklabels()]
 
 
 def fill_between(da, axis, x, y, ax=None, **kwargs):
