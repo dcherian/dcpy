@@ -157,6 +157,9 @@ EMBED_INDEXES = False
 
 def dask_safeslice(data, indices, chunks=None):
     """
+    COPIED FROM https://github.com/dask/dask/issues/5540#issuecomment-601150129
+    Added fancy indexing xarray.core.indexing.DaskIndexingAdapter
+
     Return a subset of a dask array, but with indexing applied independently to
     each slice of the input array, *prior* to their recombination to produce
     the result array.
@@ -309,7 +312,12 @@ def dask_safeslice(data, indices, chunks=None):
                 # operation, so that the memory associated with the whole chunk
                 # can be released.
                 # But ACTUALLY this is not so, given the next step (see on).
-                result = result.__getitem__(tuple(indices))
+                try:
+                    result = result.__getitem__(tuple(indices))
+                except NotImplementedError:
+                    result = data
+                    for axis, subkey in reversed(list(enumerate(tuple(indices)))):
+                        result = result[(slice(None),) * axis + (subkey,)]
 
             # AND FINALLY : apply a numpy copy to this indexed-chunk.
             # This is essential, to release the source chunks ??
@@ -334,3 +342,16 @@ def dask_safeslice(data, indices, chunks=None):
     ]
     result = result.__getitem__(tuple(all_dim_indices))
     return result
+
+
+def index(da, indexers):
+    from xarray.core.indexing import remap_label_indexers
+
+    if not isinstance(da, xr.DataArray):
+        raise TypeError(f"Expected DataArray. Received {type(da).__name__}")
+    pos_indexers, new_indexes = remap_label_indexers(da, indexers)
+    dask_indexers = list(pos_indexers.values())
+
+    # TODO: avoid the sel. That could be slow
+    indexed = da.sel(**indexers).copy(data=dask_safeslice(da.data, dask_indexers))
+    return indexed
