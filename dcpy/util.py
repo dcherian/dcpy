@@ -379,3 +379,14 @@ def calc_iso_surface(data, value, zs, interp_order=3, power_parameter=0.5):
     z /= w_total
 
     return z
+
+
+def index_unindexed_dims(obj):
+    """
+    Adds integer indexes to any unindexed dimensions in obj.
+    """
+    obj = obj.copy()
+    dims = set(obj.dims) - set(obj.indexes)
+    for dim in dims:
+        obj = obj.assign_coords({dim: np.arange(obj.sizes[dim])})
+    return obj
