@@ -31,12 +31,12 @@ def dataset_center_pacific(da, name=None):
     # roll so that pacific is in the middle
     # and we have coverage of all 3 basins
 
-    da = da.roll(**{name: -1 * da[name].searchsorted(20)})
+    da = da.roll(**{name: -1 * da[name].searchsorted(20)}, roll_coords=True)
 
     coord = da[name].values
     coord[coord < 20] += 360
 
-    da[name].values = coord
+    da = da.assign_coords({name: coord})
 
     return da
 
