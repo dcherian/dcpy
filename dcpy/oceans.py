@@ -177,7 +177,7 @@ def TSplot(
     plot_distrib=True,
     Sbins=30,
     Tbins=30,
-    plot_kwargs={},
+    plot_kwargs=None,
     hexbin=True,
     fontsize=9,
 ):
@@ -225,6 +225,8 @@ def TSplot(
 
     # colormap = cmo.cm.matter
 
+    if plot_kwargs is None:
+        plot_kwargs = {}
     if any([kw in plot_kwargs for kw in ["c", "C", "s"]]):
         raise ValueError(
             "plot_kwargs cannot contain c, C, or s. "
@@ -377,8 +379,8 @@ def argo_mld_clim(kind="monthly", fname=None):
     if fname is None:
         if kind is "monthly":
             fname = (
-                "~/datasets/argomld/Argo_mixedlayers_monthlyclim_03192017.nc"
-            )  # noqa
+                "~/datasets/argomld/Argo_mixedlayers_monthlyclim_03192017.nc"  # noqa
+            )
 
         if kind is "annual":
             fname = "~/datasets/argomld/Argo_mixedlayers_all_03192017.nc"
@@ -519,9 +521,10 @@ def read_aquarius_l3(dirname="/home/deepak/datasets/aquarius/L3/combined/"):
     return aq
 
 
-def read_argo_clim(dirname="/home/deepak/datasets/argoclim/"):
+def read_argo_clim(dirname="/home/deepak/datasets/argoclim/", chunks=None):
 
-    chunks = {"LATITUDE": 10, "LONGITUDE": 10}
+    if chunks is None:
+        chunks = {"LATITUDE": 20, "LONGITUDE": 60}
 
     argoT = xr.open_dataset(
         dirname + "RG_ArgoClim_Temperature_2016.nc", decode_times=False, chunks=chunks
@@ -533,7 +536,8 @@ def read_argo_clim(dirname="/home/deepak/datasets/argoclim/"):
     argoS["S"] = argoS.ARGO_SALINITY_ANOMALY + argoS.ARGO_SALINITY_MEAN
     argoT["T"] = argoT.ARGO_TEMPERATURE_ANOMALY + argoT.ARGO_TEMPERATURE_MEAN
 
-    argo = xr.merge([argoT, argoS])
+    # override for BATHYMETRY_MASK which is in both files
+    argo = xr.merge([argoT, argoS], compat="override")
 
     argo = argo.rename(
         {
@@ -550,8 +554,8 @@ def read_argo_clim(dirname="/home/deepak/datasets/argoclim/"):
 
     _, ref_date = xr.coding.times._unpack_netcdf_time_units(argo.time.units)
 
-    argo.time.values = pd.Timestamp(ref_date) + pd.to_timedelta(
-        30 * argo.time.values, unit="D"
+    argo = argo.assign_coords(
+        time=pd.Timestamp(ref_date) + pd.to_timedelta(30 * argo.time.values, unit="D")
     )
 
     return argo
