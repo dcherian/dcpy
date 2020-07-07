@@ -49,43 +49,44 @@ def preprocess_nan_func(x, y, out):  # pragma: no cover
     return x, y
 
 
-@guvectorize(
-    [
-        (int_[:], int_[:], double[:], double[:]),
-        (double[:], int_[:], double[:], double[:]),
-        (int_[:], double[:], double[:], double[:]),
-        (double[:], double[:], double[:], double[:]),
-    ],
-    "(n),(n),(m)->(m)",
-    forceobj=True,
-)
-def _gufunc_pchip_roots(x, y, target, out):
-    xy = preprocess_nan_func(x, y, out)
-    if xy is None:
-        out[:] = np.nan
-        return
-    x, y = xy
-
-    # reshape to [target, ...]
-    target = np.reshape(target, [len(target)] + [1,] * y.ndim)
-    y = y[np.newaxis, ...]
-
-    interpolator = interpolate.PchipInterpolator(
-        x, y - target, extrapolate=False, axis=-1,
+def make_root_finder(interpolator):
+    @guvectorize(
+        [
+            (int_[:], int_[:], double[:], double[:]),
+            (double[:], int_[:], double[:], double[:]),
+            (int_[:], double[:], double[:], double[:]),
+            (double[:], double[:], double[:], double[:]),
+        ],
+        "(n),(n),(m)->(m)",
+        forceobj=True,
     )
-    roots = interpolator.roots()
-    flattened = roots.ravel()
-    for idx, f in enumerate(flattened):
-        if f.size > 1:
-            warnings.warn(
-                "Found multiple roots. Picking the first one. This will depend on the ordering of `dim`",
-                UserWarning,
-            )
-            flattened[idx] = f[0]
-    good = flattened.nonzero()[0]
-    out[:] = np.where(
-        np.isin(np.arange(flattened.size), good), flattened, np.nan
-    ).reshape(roots.shape)
+    def _roots(x, y, target, out):
+        xy = preprocess_nan_func(x, y, out)
+        if xy is None:
+            out[:] = np.nan
+            return
+        x, y = xy
+
+        # reshape to [target, ...]
+        target = np.reshape(target, [len(target)] + [1,] * y.ndim)
+        y = y[np.newaxis, ...]
+
+        interpfn = interpolator(x, y - target)
+        roots = interpfn.roots()
+        flattened = roots.ravel()
+        for idx, f in enumerate(flattened):
+            if f.size > 1:
+                warnings.warn(
+                    "Found multiple roots. Picking the first one. This will depend on the ordering of `dim`",
+                    UserWarning,
+                )
+                flattened[idx] = f[0]
+        good = flattened.nonzero()[0]
+        out[:] = np.where(
+            np.isin(np.arange(flattened.size), good), flattened, np.nan
+        ).reshape(roots.shape)
+
+    return _roots
 
 
 # https://numba.pydata.org/numba-doc/latest/user/faq.html#can-i-pass-a-function-as-an-argument-to-a-jitted-function
@@ -195,36 +196,7 @@ def _interpolator(obj, dim, ix, core_dim=None, interp_gufunc=None, *args, **kwar
     return result
 
 
-_gufunc_pchip = make_interpolator(
-    partial(interpolate.PchipInterpolator, extrapolate=False)
-)
-pchip = partial(_interpolator, interp_gufunc=_gufunc_pchip)
-pchip.__doc__ = "Uses PCHIP interpolator\n\n" + pchip.__doc__
-
-
-# http://www.nehalemlabs.net/prototype/blog/2014/04/12/how-to-fix-scipys-interpolating-spline-default-behavior/
-def moving_average(series):
-    b = sp.signal.get_window(("gaussian", 4), 5, fftbins=False)
-    average = sp.ndimage.convolve1d(series, b / b.sum())
-    var = sp.ndimage.convolve1d(np.power(series - average, 2), b / b.sum())
-    return average, var
-
-
-def univ_spline(x, y):
-    _, var = moving_average(y)
-    w = 1 / np.sqrt(var)
-    return interpolate.UnivariateSpline(x, y, w=w)
-
-
-spline = partial(_interpolator, interp_gufunc=make_interpolator(univ_spline))
-spline.__doc__ = "Uses UnivariateSpline interpolator\n\n" + spline.__doc__
-
-
-def pchip_fillna(obj, dim):
-    return pchip(obj, dim, obj[dim])
-
-
-def pchip_roots(obj, dim, target):
+def _roots(obj, dim, target, _root_finder):
     """
     Find locations where `obj == target` along dimension `dim`.
 
@@ -253,7 +225,7 @@ def pchip_roots(obj, dim, target):
     input_core_dims = [(dim,), (dim,), target.dims]
 
     result = xr.apply_ufunc(
-        _gufunc_pchip_roots,
+        _root_finder,
         obj[dim],
         obj,
         target,
@@ -267,6 +239,88 @@ def pchip_roots(obj, dim, target):
         result = result.expand_dims("target")
 
     return result
+
+
+class Interpolator:
+    def __init__(self, interpolator, root_finder, obj, dim):
+        self._interp_gufunc = interpolator
+        self._roots_gufunc = root_finder
+        self.obj = obj
+        self.dim = dim
+
+    def smooth(self, *args, **kwargs):
+        return self.interp(ix=self.obj[self.dim], *args, **kwargs)
+
+    def interp(self, ix, core_dim=None, *args, **kwargs):
+        return _interpolator(
+            obj=self.obj,
+            dim=self.dim,
+            ix=ix,
+            interp_gufunc=self._interp_gufunc,
+            *args,
+            **kwargs,
+        )
+
+    def roots(self, target=0.0):
+        if self._roots_gufunc is not None:
+            return _roots(
+                obj=self.obj,
+                dim=self.dim,
+                target=target,
+                _root_finder=self._roots_gufunc,
+            )
+        else:
+            raise NotImplementedError(
+                f"Root finding not implemented for {str(self._interp_gufunc)} yet"
+            )
+
+    def derivative(self):
+        pass
+
+
+_pchip = partial(interpolate.PchipInterpolator, extrapolate=False, axis=-1)
+_gufunc_pchip = make_interpolator(_pchip)
+_gufunc_pchip_roots = make_root_finder(_pchip)
+
+
+def PchipInterpolator(obj, dim):
+    return Interpolator(_gufunc_pchip, _gufunc_pchip_roots, obj, dim)
+
+
+def pchip(obj, dim, ix, core_dim=None, *args, **kwargs):
+    interpolator = PchipInterpolator(obj, dim)
+    return interpolator.interp(ix=ix, core_dim=core_dim, *args, **kwargs)
+
+
+def pchip_roots(obj, dim, target=0.0):
+    interpolator = PchipInterpolator(obj, dim)
+    return interpolator.roots(target=target)
+
+
+def moving_average(series):
+    b = sp.signal.get_window(("gaussian", 4), 5, fftbins=False)
+    average = sp.ndimage.convolve1d(series, b / b.sum())
+    var = sp.ndimage.convolve1d(np.power(series - average, 2), b / b.sum())
+    return average, var
+
+
+def univ_spline(x, y, *args, **kwargs):
+    # http://www.nehalemlabs.net/prototype/blog/2014/04/12/how-to-fix-scipys-interpolating-spline-default-behavior/
+    _, var = moving_average(y)
+    w = 1 / np.sqrt(var)
+    return interpolate.UnivariateSpline(x, y, w=w, *args, **kwargs)
+
+
+_gufunc_spline = make_interpolator(univ_spline)
+_gufunc_spline_roots = make_root_finder(univ_spline)
+
+
+def UnivariateSpline(obj, dim):
+    return Interpolator(_gufunc_spline, _gufunc_spline_roots, obj, dim)
+
+
+def pchip_fillna(obj, dim):
+    return pchip(obj, dim, obj[dim])
 
 
 @guvectorize(

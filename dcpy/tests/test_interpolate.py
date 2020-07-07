@@ -1,9 +1,9 @@
 import numpy as np
 import pytest
-import xarray as xr
-
 import scipy.interpolate
-from dcpy.interpolate import pchip, pchip_fillna, pchip_roots
+from dcpy.interpolate import bin_to_new_coord, pchip, pchip_fillna, pchip_roots
+
+import xarray as xr
 
 
 @pytest.fixture
@@ -139,7 +139,7 @@ def test_pchip_interpolate(data, maybe_chunk, newz):
 # TODO: weird numpy size > 0 warning
 # TODO: test with datasets and coords with the interpolated dimension
 
-
+@pytest.mark.xfail
 def test_bin_to_new_coord():
     depth = xr.DataArray(np.arange(-20, 0, 1), dims=["depth"])
     z0 = xr.DataArray(np.random.randint(-20, 0, (10,)) * 1.0, dims=("time",))
