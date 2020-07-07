@@ -7,12 +7,16 @@
 
 # guvectorized functions have out=None, you need to assign to out. no returns allowed!
 
-import xarray as xr
-from numba import njit, guvectorize, double, int_, jitclass
-import numpy as np
-from scipy import interpolate
 import warnings
+from functools import partial
 from typing import Any, Iterable
+
+import numpy as np
+import scipy as sp
+from numba import double, guvectorize, int_, njit
+from scipy import interpolate
+
+import xarray as xr
 
 
 def is_scalar(value: Any, include_0d: bool = True) -> bool:
@@ -84,29 +88,36 @@ def _gufunc_pchip_roots(x, y, target, out):
     ).reshape(roots.shape)
 
 
-@guvectorize(
-    [
-        (int_[:], int_[:], double[:], double[:]),
-        (double[:], int_[:], double[:], double[:]),
-        (int_[:], double[:], double[:], double[:]),
-        (double[:], double[:], double[:], double[:]),
-    ],
-    "(n),(n),(m)->(m)",
-    forceobj=True,
-)
-def _gufunc_pchip(x, y, ix, out=None):
-    xy = preprocess_nan_func(x, y, out)
-    min_points = 2  # TODO: make this a kwarg
-    if xy is None or len(x) < min_points:
-        out[:] = np.nan
-        return
-    x, y = xy
+# https://numba.pydata.org/numba-doc/latest/user/faq.html#can-i-pass-a-function-as-an-argument-to-a-jitted-function
+def make_interpolator(interpolator):
+    @guvectorize(
+        [
+            (int_[:], int_[:], double[:], double[:]),
+            (double[:], int_[:], double[:], double[:]),
+            (int_[:], double[:], double[:], double[:]),
+            (double[:], double[:], double[:], double[:]),
+        ],
+        "(n),(n),(m)->(m)",
+        forceobj=True,
+    )
+    def f(x, y, ix, out):
+        xy = preprocess_nan_func(x, y, out)
+        min_points = 2  # TODO: make this a kwarg
+        if xy is None or len(x) < min_points:
+            out[:] = np.nan
+            return
+        x, y = xy
+        interpfn = interpolator(x, y)
+        out[:] = interpfn(ix)
 
-    interpolator = interpolate.PchipInterpolator(x, y, extrapolate=False)
-    out[:] = interpolator(ix)
+        # disable extrapolation; needed for UnivariateSpline
+        out[ix < x.min()] = np.nan
+        out[ix > x.max()] = np.nan
+
+    return f
 
 
-def pchip(obj, dim, ix, core_dim=None):
+def _interpolator(obj, dim, ix, core_dim=None, interp_gufunc=None, *args, **kwargs):
     """
     Interpolate along axis ``dim`` using :func:`scipy.interpolate.pchip`.
 
@@ -153,18 +164,20 @@ def pchip(obj, dim, ix, core_dim=None):
         ix_da = ix_da.rename({dim: "__temp_dim__"})
         core_dim = "__temp_dim__"
 
-    args = (obj[dim], obj, ix_da)
+    extra_args = (obj[dim], obj, ix_da)
     input_core_dims = [(dim,), (dim,), (core_dim,)]
     output_core_dims = [(core_dim,)]
 
     result = xr.apply_ufunc(
-        _gufunc_pchip,
+        interp_gufunc,
+        *extra_args,
         *args,
         input_core_dims=input_core_dims,
         output_core_dims=output_core_dims,
         dask="parallelized",
         output_dtypes=[float],
         output_sizes={core_dim: ix_da.sizes[core_dim]},
+        kwargs=kwargs,
     )
 
     # TODO: do I really want this?
@@ -180,6 +193,31 @@ def pchip(obj, dim, ix, core_dim=None):
         result = result.rename({"__temp_dim__": dim})
 
     return result
+
+
+_gufunc_pchip = make_interpolator(
+    partial(interpolate.PchipInterpolator, extrapolate=False)
+)
+pchip = partial(_interpolator, interp_gufunc=_gufunc_pchip)
+pchip.__doc__ = "Uses PCHIP interpolator\n\n" + pchip.__doc__
+
+
+# http://www.nehalemlabs.net/prototype/blog/2014/04/12/how-to-fix-scipys-interpolating-spline-default-behavior/
+def moving_average(series):
+    b = sp.signal.get_window(("gaussian", 4), 5, fftbins=False)
+    average = sp.ndimage.convolve1d(series, b / b.sum())
+    var = sp.ndimage.convolve1d(np.power(series - average, 2), b / b.sum())
+    return average, var
+
+
+def univ_spline(x, y):
+    _, var = moving_average(y)
+    w = 1 / np.sqrt(var)
+    return interpolate.UnivariateSpline(x, y, w=w)
+
+
+spline = partial(_interpolator, interp_gufunc=make_interpolator(univ_spline))
+spline.__doc__ = "Uses UnivariateSpline interpolator\n\n" + spline.__doc__
 
 
 def pchip_fillna(obj, dim):
