@@ -6,6 +6,9 @@ import numpy as np
 import seaborn as sns
 import xarray as xr
 
+
+HORCBAR = {"orientation": "horizontal", "aspect": 40, "shrink": 0.8}
+
 ROBUST_PERCENTILE = 2
 
 OPTIONS = dict()
@@ -301,7 +304,9 @@ def set_axes_color(ax, color, spine="left"):
     ax.tick_params(xory, colors=color)
 
 
-def label_subplots(ax, x=0.05, y=0.9, prefix="(", suffix=")", labels=None, **kwargs):
+def label_subplots(
+    ax, x=0.05, y=0.9, prefix="(", suffix=")", labels=None, start="a", **kwargs
+):
     """
     Alphabetically label subplots with prefix + alphabet + suffix + labels
 
@@ -318,9 +323,14 @@ def label_subplots(ax, x=0.05, y=0.9, prefix="(", suffix=")", labels=None, **kwa
 
     labels : list, optional
         optional list of labels
+
+    start : str
+        Letter to start labeling with
     """
 
     alphabet = "abcdefghijklmnopqrstuvwxyz"
+
+    alphabet = alphabet[alphabet.find(start) :]
 
     if labels is not None:
         assert len(labels) == len(ax)
@@ -864,7 +874,7 @@ def pub_fig_width(pub: str, width="two column"):
     return widths[pub][width]
 
 
-def concise_date_formatter(ax, axis="x", minticks=3, maxticks=7):
+def concise_date_formatter(ax, axis="x", minticks=3, maxticks=7, **kwargs):
     """
     Parameters
     ----------
@@ -884,7 +894,7 @@ def concise_date_formatter(ax, axis="x", minticks=3, maxticks=7):
         axis = ax.yaxis
 
     locator = mdates.AutoDateLocator(minticks=minticks, maxticks=maxticks)
-    formatter = mdates.ConciseDateFormatter(locator)
+    formatter = mdates.ConciseDateFormatter(locator, **kwargs)
     axis.set_major_locator(locator)
     axis.set_major_formatter(formatter)
 
@@ -899,15 +909,15 @@ def fill_between(da, axis, x, y, ax=None, **kwargs):
 
     if axis == "x":
         plotfunc = ax.fill_betweenx
-        assert(da.sizes[x] == 2)
-        assert(da[y].ndim == 1)
+        assert da.sizes[x] == 2
+        assert da[y].ndim == 1
         arg0 = da[y]
         arg1 = da.isel({x: 0})
         arg2 = da.isel({x: 1})
     elif axis == "y":
         plotfunc = ax.fill_between
-        assert(da.sizes[y] == 2)
-        assert(da[x].ndim == 1)
+        assert da.sizes[y] == 2
+        assert da[x].ndim == 1
         arg0 = da[x]
         arg1 = da.isel({y: 0})
         arg2 = da.isel({y: 1})
@@ -915,3 +925,81 @@ def fill_between(da, axis, x, y, ax=None, **kwargs):
         raise ValueError(f"axis must 'x' or 'y'. Recieved {axis}")
 
     plotfunc(arg0, arg1, arg2, **kwargs)
+
+
+def quiver(ds, x, y, u, v, ax=None, **kwargs):
+    if ax is None:
+        ax = plt.gca()
+    import dask
+
+    x, y, u, v = dask.compute(xr.broadcast(ds[x], ds[y], ds[u], ds[v]))[0]
+    hdl = ax.quiver(x.values, y.values, u.values, v.values, **kwargs)
+    return hdl
+
+
+def clean_axes(ax):
+
+    ax = np.atleast_2d(ax)
+
+    [aa.set_title("") for aa in ax[1:, :].flat]
+    [aa.set_xlabel("") for aa in ax[:-1, :].flat]
+    [aa.set_ylabel("") for aa in ax[:, 1:].flat]
+    [aa.tick_params(labelbottom=False) for aa in ax[:-1, :].flat]
+    [aa.tick_params(labelleft=False) for aa in ax[:, 1:].flat]
+
+
+def lat_lon_ticks(ax, x="lon", y="lat"):
+
+    ylabels = []
+    for tt in ax.get_yticks():
+        if tt < 0:
+            add = "S"
+        elif tt > 0:
+            add = "N"
+        else:
+            add = ""
+
+        ylabels.append(str(tt) + "°" + add)
+
+    ax.set_yticklabels(ylabels)
+    ax.set_ylabel("")
+
+    ax.set_xticklabels([str(tt)[1:] + "°W" for tt in ax.get_xticks()])
+    ax.set_xlabel("")
+
+
+def plot_mask(ax, mask):
+
+    mask.plot.contourf(
+        ax=ax, alpha=0.8, levels=[-0.1, 0.1], add_colorbar=False, cmap=mpl.cm.Greys_r
+    )
+    mask.fillna(0).plot.contour(
+        ax=ax, levels=[1.5], add_colorbar=False, colors="k", linewidths=0.5
+    )
+
+
+def cbar_inset_axes(ax):
+
+    from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+
+    inset_kwargs = dict(
+        width="50%",  # width = 50% of parent_bbox width
+        height="5%",  # height : 5%
+        loc="lower left",
+        bbox_to_anchor=[0, 0.075, 1, 1],
+    )
+
+    cax = inset_axes(ax, **inset_kwargs, bbox_transform=ax.transAxes)
+
+    return cax
+
+
+def add_contour_legend(cs, label, **kwargs):
+    """ Adds a separate legend for a contour. Call this before adding the final legend. """
+
+    ax = cs.ax
+    if "$" in label:
+        raise ValueError(
+            "'$' found in label. mpl adds this automatically and will raise an error if present."
+        )
+    ax.add_artist(ax.legend(*cs.legend_elements(label), **kwargs))
