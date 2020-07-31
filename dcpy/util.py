@@ -400,3 +400,13 @@ def interp_zero_crossing(da, debug=False):
         plt.axhline(0)
 
     return coords
+
+def index_unindexed_dims(obj):
+    """
+    Adds integer indexes to any unindexed dimensions in obj.
+    """
+    obj = obj.copy()
+    dims = set(obj.dims) - set(obj.indexes)
+    for dim in dims:
+        obj = obj.assign_coords({dim: np.arange(obj.sizes[dim])})
+    return obj
