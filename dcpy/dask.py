@@ -136,7 +136,9 @@ def batch_to_zarr(ds, file, dim, batch_size, restart=False, **kwargs):
         print("Restarting...")
         opened = xr.open_zarr(file, consolidated=True)
         ds = ds.sel(time=slice(opened[dim][-1], None))
-        print(f"Last index = {opened[dim][-1].values}. Starting from {ds[dim][1].values}")
+        print(
+            f"Last index = {opened[dim][-1].values}. Starting from {ds[dim][1].values}"
+        )
         opened.close()
 
     for t in tqdm.tqdm(range(1, ds.sizes[dim], batch_size)):
@@ -146,6 +148,27 @@ def batch_to_zarr(ds, file, dim, batch_size, restart=False, **kwargs):
             file, consolidated=True, mode="a", append_dim=dim, **kwargs
         )
 
+
+def map_copy(obj):
+    from xarray import DataArray
+    import numpy as np
+
+    if isinstance(obj, DataArray):
+        name = obj.name
+        dataset = obj._to_temp_dataset()
+    else:
+        dataset = obj.copy(deep=True)
+
+    for var in dataset.variables:
+        if dask.is_dask_collection(dataset[var]):
+            dataset[var].data = dataset[var].data.map_blocks(np.copy)
+
+    if isinstance(obj, DataArray):
+        result = obj._from_temp_dataset(dataset)
+    else:
+        result = dataset
+
+    return result
 
 #
 # Examples of the 'fetch all the chunks' dask memory problem,

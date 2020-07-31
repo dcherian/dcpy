@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import scipy as sp
 import xarray as xr
 
@@ -380,6 +381,25 @@ def calc_iso_surface(data, value, zs, interp_order=3, power_parameter=0.5):
 
     return z
 
+
+def interp_zero_crossing(da, debug=False):
+    def crossings_nonzero_all(data):
+        pos = data > 0
+        npos = ~pos
+        return ((pos[:-1] & npos[1:]) | (npos[:-1] & pos[1:])).nonzero()[0]
+
+    newtime = pd.date_range(da.time[0].values, da.time[-1].values, freq="1min")
+    interped = da.compute().interp(time=newtime, method="cubic")
+
+    idx = crossings_nonzero_all(interped.values)
+    coords = interped.time[idx]
+
+    if debug:
+        interped.plot(marker=".")
+        dcpy.plots.linex(coords, zorder=10)
+        plt.axhline(0)
+
+    return coords
 
 def index_unindexed_dims(obj):
     """
