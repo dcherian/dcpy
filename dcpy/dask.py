@@ -145,3 +145,25 @@ def batch_to_zarr(ds, file, dim, batch_size, restart=False, **kwargs):
         ds.isel({dim: slice(t, t + batch_size)}).to_zarr(
             file, consolidated=True, mode="a", append_dim=dim, **kwargs
         )
+
+
+def map_copy(obj):
+    from xarray import DataArray
+    import numpy as np
+
+    if isinstance(obj, DataArray):
+        name = obj.name
+        dataset = obj._to_temp_dataset()
+    else:
+        dataset = obj.copy(deep=True)
+
+    for var in dataset.variables:
+        if dask.is_dask_collection(dataset[var]):
+            dataset[var].data = dataset[var].data.map_blocks(np.copy)
+
+    if isinstance(obj, DataArray):
+        result = obj._from_temp_dataset(dataset)
+    else:
+        result = dataset
+
+    return result
