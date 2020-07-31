@@ -136,7 +136,9 @@ def batch_to_zarr(ds, file, dim, batch_size, restart=False, **kwargs):
         print("Restarting...")
         opened = xr.open_zarr(file, consolidated=True)
         ds = ds.sel(time=slice(opened[dim][-1], None))
-        print(f"Last index = {opened[dim][-1].values}. Starting from {ds[dim][1].values}")
+        print(
+            f"Last index = {opened[dim][-1].values}. Starting from {ds[dim][1].values}"
+        )
         opened.close()
 
     for t in tqdm.tqdm(range(1, ds.sizes[dim], batch_size)):
