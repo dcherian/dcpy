@@ -401,6 +401,7 @@ def interp_zero_crossing(da, debug=False):
 
     return coords
 
+
 def index_unindexed_dims(obj):
     """
     Adds integer indexes to any unindexed dimensions in obj.
@@ -410,3 +411,10 @@ def index_unindexed_dims(obj):
     for dim in dims:
         obj = obj.assign_coords({dim: np.arange(obj.sizes[dim])})
     return obj
+
+
+def avg1(da, dim):
+
+    return da.isel({dim: slice(-1)}).copy(
+        data=(da.isel({dim: slice(-1)}).data + da.isel({dim: slice(1,)}).data) / 2
+    )

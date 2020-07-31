@@ -139,6 +139,7 @@ def test_pchip_interpolate(data, maybe_chunk, newz):
 # TODO: weird numpy size > 0 warning
 # TODO: test with datasets and coords with the interpolated dimension
 
+
 @pytest.mark.xfail
 def test_bin_to_new_coord():
     depth = xr.DataArray(np.arange(-20, 0, 1), dims=["depth"])

@@ -642,7 +642,7 @@ def Coherence(v1, v2, dt=1, nsmooth=5, decimate=True, **kwargs):
     Cxy = C
     phase = np.angle(C, deg=True)
     if nsmooth > 1:
-        siglevel = (1 - (0.05) ** (1 / (nsmooth - 1)))
+        siglevel = 1 - (0.05) ** (1 / (nsmooth - 1))
     else:
         siglevel = 1
 
