@@ -418,3 +418,24 @@ def avg1(da, dim):
     return da.isel({dim: slice(-1)}).copy(
         data=(da.isel({dim: slice(-1)}).data + da.isel({dim: slice(1,)}).data) / 2
     )
+
+
+def latlon_to_distance(lat, lon, central_lat, central_lon):
+    """ Returns distance relative to central_lat, central_lon """
+
+    lat0 = central_lat * np.pi / 180
+    lon0 = central_lon * np.pi / 180
+    lat = lat * np.pi / 180
+    lon = lon * np.pi / 180
+    r = 6378137
+
+    dlat = lat - lat0
+    dlon = lon - lon0
+
+    a = np.sin(dlat / 2) ** 2
+    b = np.cos(lat0) * np.cos(lat) * np.sin(dlon / 2) ** 2
+    d = 2 * r * np.arcsin(np.sqrt(a + b)).clip(max=1)
+
+    d.attrs["description"] = f"Distance from ({central_lat}, {central_lon})"
+    d.attrs["units"] = "m"
+    return d
