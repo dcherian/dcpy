@@ -49,6 +49,35 @@ def preprocess_nan_func(x, y, out):  # pragma: no cover
     return x, y
 
 
+def make_derivative(interpolator):
+    @guvectorize(
+        [
+            (int_[:], int_[:], double[:], double[:]),
+            (double[:], int_[:], double[:], double[:]),
+            (int_[:], double[:], double[:], double[:]),
+            (double[:], double[:], double[:], double[:]),
+        ],
+        "(n),(n),(m)->(m)",
+        forceobj=True,
+    )
+    def _derivative(x, y, x0, out):
+        """
+        Only first-order derivative
+        """
+        xy = preprocess_nan_func(x, y, out)
+        if xy is None:
+            out[:] = np.nan
+            return
+        x, y = xy
+
+        interpfn = interpolator(x, y)
+        out[:] = interpfn.derivative(n=1)(x0)
+        out[x0 > x.max()] = np.nan
+        out[x0 < x.min()] = np.nan
+
+    return _derivative
+
+
 def make_root_finder(interpolator):
     @guvectorize(
         [
@@ -242,9 +271,10 @@ def _roots(obj, dim, target, _root_finder):
 
 
 class Interpolator:
-    def __init__(self, interpolator, root_finder, obj, dim):
+    def __init__(self, interpolator, root_finder, derivative, obj, dim):
         self._interp_gufunc = interpolator
         self._roots_gufunc = root_finder
+        self._der_gufunc = derivative
         self.obj = obj
         self.dim = dim
 
@@ -274,7 +304,19 @@ class Interpolator:
                 f"Root finding not implemented for {str(self._interp_gufunc)} yet"
             )
 
-    def derivative(self):
+    def derivative(self, x0):
+        if self._der_gufunc is not None:
+            return _interpolator(
+                obj=self.obj,
+                dim=self.dim,
+                ix=x0,
+                interp_gufunc=self._der_gufunc,
+            )
+        else:
+            raise NotImplementedError(
+                f"Derviatives not implemented for {str(self._interp_gufunc)} yet"
+            )
+
         pass
 
 
@@ -313,10 +355,13 @@ def univ_spline(x, y, *args, **kwargs):
 
 _gufunc_spline = make_interpolator(univ_spline)
 _gufunc_spline_roots = make_root_finder(univ_spline)
+_gufunc_spline_der = make_derivative(univ_spline)
 
 
 def UnivariateSpline(obj, dim):
-    return Interpolator(_gufunc_spline, _gufunc_spline_roots, obj, dim)
+    return Interpolator(
+        _gufunc_spline, _gufunc_spline_roots, _gufunc_spline_der, obj, dim
+    )
 
 
 def pchip_fillna(obj, dim):
