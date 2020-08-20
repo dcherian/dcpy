@@ -1456,9 +1456,9 @@ def complex_demodulate(
     lfreq = np.abs(bw * dt / central_period)
     # print(str(lfreq) + 'cp' + cycles_per.lower())
 
-    if filt is "blackman":
+    if filt == "blackman":
         amp = blackman(product, int(round(bw * abs(central_period) / dt)))
-    elif filt is "butter":
+    elif filt == "butter":
         amp = LowPassButter(product.real, lfreq, order=1) + 1j * LowPassButter(
             product.imag, lfreq, order=1
         )
@@ -1467,9 +1467,9 @@ def complex_demodulate(
         recon = (amp * harmonic_ccw * 2).real
     else:
         product_ccw = harmonic_ccw * ts
-        if filt is "blackman":
+        if filt == "blackman":
             ampcw = blackman(product_ccw, int(round(bw * abs(central_period) / dt)))
-        elif filt is "butter":
+        elif filt == "butter":
             ampcw = LowPassButter(
                 product_ccw.real, lfreq, order=1
             ) + 1j * LowPassButter(product_ccw.imag, lfreq, order=1)

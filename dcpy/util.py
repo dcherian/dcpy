@@ -167,7 +167,7 @@ def calc95(input, kind="twosided"):
     import numpy as np
 
     input = np.sort(input)
-    if kind is "twosided":
+    if kind == "twosided":
         interval = input[
             [np.int(np.floor(0.025 * len(input))), np.int(np.ceil(0.975 * len(input)))]
         ]
@@ -219,7 +219,7 @@ def smooth(x, window_len=11, window="hanning", axis=-1, preserve_nan=True):
     if window_len < 3:
         return x
 
-    if window is "hann":
+    if window == "hann":
         window = "hanning"
 
     window_len = np.int(np.ceil(window_len))

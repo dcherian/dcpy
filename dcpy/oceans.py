@@ -377,12 +377,12 @@ def TSplot(
 
 def argo_mld_clim(kind="monthly", fname=None):
     if fname is None:
-        if kind is "monthly":
+        if kind == "monthly":
             fname = (
                 "~/datasets/argomld/Argo_mixedlayers_monthlyclim_03192017.nc"  # noqa
             )
 
-        if kind is "annual":
+        if kind == "annual":
             fname = "~/datasets/argomld/Argo_mixedlayers_all_03192017.nc"
 
     ds = xr.open_dataset(fname)
