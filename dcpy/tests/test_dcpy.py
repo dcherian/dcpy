@@ -38,7 +38,7 @@ def test_slab_model():
     f0 = coriolis(15)
     r = 0.15 * f0
     σ = np.linspace(-4 * f0, 4 * f0, 200)
-    That = np.exp(-(σ / -f0) ** 2)
+    That = np.exp(-((σ / -f0) ** 2))
 
     T = (τx + 1j * τy) / ρ0
     Z = (-r + 1j * f0 + σ) / (σ ** 2 - f0 ** 2 - r ** 2 - 2 * 1j * r * σ) * That / H

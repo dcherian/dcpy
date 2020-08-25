@@ -167,7 +167,7 @@ def calc95(input, kind="twosided"):
     import numpy as np
 
     input = np.sort(input)
-    if kind is "twosided":
+    if kind == "twosided":
         interval = input[
             [np.int(np.floor(0.025 * len(input))), np.int(np.ceil(0.975 * len(input)))]
         ]
@@ -219,7 +219,7 @@ def smooth(x, window_len=11, window="hanning", axis=-1, preserve_nan=True):
     if window_len < 3:
         return x
 
-    if window is "hann":
+    if window == "hann":
         window = "hanning"
 
     window_len = np.int(np.ceil(window_len))
@@ -401,6 +401,7 @@ def interp_zero_crossing(da, debug=False):
 
     return coords
 
+
 def index_unindexed_dims(obj):
     """
     Adds integer indexes to any unindexed dimensions in obj.
@@ -410,3 +411,31 @@ def index_unindexed_dims(obj):
     for dim in dims:
         obj = obj.assign_coords({dim: np.arange(obj.sizes[dim])})
     return obj
+
+
+def avg1(da, dim):
+
+    return da.isel({dim: slice(-1)}).copy(
+        data=(da.isel({dim: slice(-1)}).data + da.isel({dim: slice(1,)}).data) / 2
+    )
+
+
+def latlon_to_distance(lat, lon, central_lat, central_lon):
+    """ Returns distance relative to central_lat, central_lon """
+
+    lat0 = central_lat * np.pi / 180
+    lon0 = central_lon * np.pi / 180
+    lat = lat * np.pi / 180
+    lon = lon * np.pi / 180
+    r = 6378137
+
+    dlat = lat - lat0
+    dlon = lon - lon0
+
+    a = np.sin(dlat / 2) ** 2
+    b = np.cos(lat0) * np.cos(lat) * np.sin(dlon / 2) ** 2
+    d = 2 * r * np.arcsin(np.sqrt(a + b)).clip(max=1)
+
+    d.attrs["description"] = f"Distance from ({central_lat}, {central_lon})"
+    d.attrs["units"] = "m"
+    return d
