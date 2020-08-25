@@ -526,11 +526,11 @@ def read_argo_clim(dirname="/home/deepak/datasets/argoclim/", chunks=None):
     if chunks is None:
         chunks = {"LATITUDE": 20, "LONGITUDE": 60}
 
-    argoT = xr.open_dataset(
-        dirname + "RG_ArgoClim_Temperature_2016.nc", decode_times=False, chunks=chunks
+    argoT = xr.open_mfdataset(
+        dirname + "RG_ArgoClim_Temperature_*.nc", decode_times=False, chunks=chunks
     )
-    argoS = xr.open_dataset(
-        dirname + "RG_ArgoClim_Salinity_2016.nc", decode_times=False, chunks=chunks
+    argoS = xr.open_mfdataset(
+        dirname + "RG_ArgoClim_Salinity_*.nc", decode_times=False, chunks=chunks
     )
 
     argoS["S"] = argoS.ARGO_SALINITY_ANOMALY + argoS.ARGO_SALINITY_MEAN
@@ -557,6 +557,10 @@ def read_argo_clim(dirname="/home/deepak/datasets/argoclim/", chunks=None):
     argo = argo.assign_coords(
         time=pd.Timestamp(ref_date) + pd.to_timedelta(30 * argo.time.values, unit="D")
     )
+
+    argo.time.attrs["axis"] = "T"
+    argo["T"].attrs["standard_name"] = "sea_water_potential_temperature"
+    argo["S"].attrs["standard_name"] = "sea_water_salinity"
 
     return argo
 
