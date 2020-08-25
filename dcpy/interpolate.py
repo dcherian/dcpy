@@ -262,7 +262,7 @@ def pchip_roots(obj, dim, target):
         dask="parallelized",
         output_dtypes=[float],
     )
-    result = result.assign_coords({target.dims[0]: target})
+    # result = result.assign_coords({target.dims[0]: target})
     if "target" not in result.dims:
         result = result.expand_dims("target")
 
