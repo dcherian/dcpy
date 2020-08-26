@@ -326,7 +326,7 @@ _gufunc_pchip_roots = make_root_finder(_pchip)
 
 
 def PchipInterpolator(obj, dim):
-    return Interpolator(_gufunc_pchip, _gufunc_pchip_roots, obj, dim)
+    return Interpolator(_gufunc_pchip, _gufunc_pchip_roots, None, obj, dim)
 
 
 def pchip(obj, dim, ix, core_dim=None, *args, **kwargs):
