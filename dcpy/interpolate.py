@@ -263,7 +263,7 @@ def _roots(obj, dim, target, _root_finder):
         dask="parallelized",
         output_dtypes=[float],
     )
-    result = result.assign_coords({target.dims[0]: target})
+    # result = result.assign_coords({target.dims[0]: target})
     if "target" not in result.dims:
         result = result.expand_dims("target")
 
