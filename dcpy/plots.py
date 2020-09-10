@@ -4,8 +4,8 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-import xarray as xr
 
+import xarray as xr
 
 HORCBAR = {"orientation": "horizontal", "aspect": 40, "shrink": 0.8}
 

@@ -1,1 +1,1 @@
-from . import oceans, plots, ts, util, eos, facetgrid, dask, interpolate
+from . import dask, eos, facetgrid, interpolate, oceans, plots, ts, util

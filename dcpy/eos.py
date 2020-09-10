@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
+from numpy import pi
+
 import xarray as xr
 
-from .library import T90conv, T68conv, salrt, salrp, sals, seck, smow
-
-from numpy import pi
+from .library import T68conv, T90conv, salrp, salrt, sals, seck, smow
 
 # dbar to pascal.
 db2Pascal = 1e4
