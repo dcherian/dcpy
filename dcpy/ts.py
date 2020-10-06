@@ -9,10 +9,29 @@ from .plots import linex
 from .util import calc95
 
 
+def _is_datetime_like(da) -> bool:
+    import numpy as np
+
+    if np.issubdtype(da.dtype, np.datetime64) or np.issubdtype(
+        da.dtype, np.timedelta64
+    ):
+        return True
+
+    try:
+        import cftime
+
+        if isinstance(da.data[0], cftime.datetime):
+            return True
+    except ImportError:
+        pass
+
+    return False
+
+
 def _process_time(time, cycles_per="s"):
 
     time = time.copy()
-    dt = np.nanmedian(np.diff(time.values) / np.timedelta64(1, cycles_per))
+    dt = np.nanmedian(np.diff(time.values).astype(np.timedelta64) / np.timedelta64(1, cycles_per))
 
     time = np.cumsum(time.copy().diff(dim=time.dims[0]) / np.timedelta64(1, cycles_per))
 
@@ -234,7 +253,7 @@ def PlotSpectrum(
     processed_time = False
     if isinstance(var, xr.DataArray) and var.ndim == 1:
         maybe_time = var[var.dims[0]]
-        if np.issubdtype(maybe_time, np.datetime64):
+        if _is_datetime_like(maybe_time):
             dt, t = _process_time(maybe_time, cycles_per)
             processed_time = True
 
@@ -1442,7 +1461,7 @@ def complex_demodulate(
 
         t = ts[dim]
 
-    if np.issubdtype(t.dtype, np.datetime64):
+    if _is_datetime_like(t):
         dt, t = _process_time(t, cycles_per=cycles_per)
 
     if dim is None:
