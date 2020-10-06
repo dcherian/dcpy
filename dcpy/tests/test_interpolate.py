@@ -17,12 +17,16 @@ def data():
     return data
 
 
-@pytest.mark.parametrize("maybe_chunk", [False, True])
+@pytest.mark.parametrize(
+    "maybe_chunk, maybe_persist", [(False, False), (True, True), (True, False)]
+)
 @pytest.mark.parametrize("targets", [0, [0.0], [-30], [-30, 29.234]])
-def test_roots(data, targets, maybe_chunk):
+def test_roots(data, targets, maybe_chunk, maybe_persist):
 
     if maybe_chunk:
         data = data.chunk({"x": 1, "y": 2})
+    if maybe_persist:
+        data = data.persist()
 
     actual = pchip_roots(data, dim="z", target=targets)
     coord = xr.DataArray(np.array(targets, ndmin=1), dims="target")
