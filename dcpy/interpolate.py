@@ -94,7 +94,7 @@ def _interpolator(obj, dim, ix, core_dim=None, interp_gufunc=None, *args, **kwar
         output_core_dims=output_core_dims,
         dask="parallelized",
         output_dtypes=[float],
-        output_sizes={core_dim: ix_da.sizes[core_dim]},
+        dask_gufunc_kwargs=dict(output_sizes={core_dim: ix_da.sizes[core_dim]}),
         kwargs=kwargs,
     )
 
@@ -298,7 +298,7 @@ def bin_to_new_coord(data, old_coord, new_coord, edges, reduce_func=None):
         dask="parallelized",
         # vectorize=True,  # TODO: guvectorize instead
         output_dtypes=[float],
-        output_sizes={new_coord: len(edges)},
+        dask_gufunc_kwargs=dict(output_sizes={new_coord: len(edges)}),
         # kwargs={"func": reduce_func}  # TODO: add support for reduce_func
     ).isel({new_coord: slice(-1)})
     remapped[new_coord] = new_1d_coord
