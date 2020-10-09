@@ -20,6 +20,117 @@ import xarray as xr
 
 from . import interpolators
 
+from .interpolators import (
+    _gufunc_pchip,
+    _gufunc_pchip_roots,
+)
+
+
+
+# _pchip = partial(interpolate.PchipInterpolator, extrapolate=False, axis=-1)
+# _gufunc_pchip = interpolators.make_interpolator(_pchip)
+# _gufunc_pchip_roots = interpolators.make_root_finder(_pchip)
+
+#_gufunc_spline = interpolators.make_interpolator(interpolators.univ_spline)
+#_gufunc_spline_roots = interpolators.make_root_finder(interpolators.univ_spline)
+#_gufunc_spline_der = interpolators.make_derivative(interpolators.univ_spline)
+
+@guvectorize(
+    [
+        (int_[:], int_[:], double[:], double[:]),
+        (double[:], int_[:], double[:], double[:]),
+        (int_[:], double[:], double[:], double[:]),
+        (double[:], double[:], double[:], double[:]),
+    ],
+    "(n),(n),(m)->(m)",
+    forceobj=True,
+    cache=True,
+)
+def _gufunc_spline(x, y, ix, out):
+    xy = preprocess_nan_func(x, y, out)
+    min_points = 2  # TODO: make this a kwarg
+    if xy is None or len(x) < min_points:
+        out[:] = np.nan
+        return
+    x, y = xy
+    interpfn = univ_spline(x, y)
+    out[:] = interpfn(ix)
+
+    # disable extrapolation; needed for UnivariateSpline
+    out[ix < x.min()] = np.nan
+    out[ix > x.max()] = np.nan
+
+
+@guvectorize(
+    [
+        (int_[:], int_[:], double[:], double[:]),
+        (double[:], int_[:], double[:], double[:]),
+        (int_[:], double[:], double[:], double[:]),
+        (double[:], double[:], double[:], double[:]),
+    ],
+    "(n),(n),(m)->(m)",
+    forceobj=True,
+    cache=True,
+)
+def _gufunc_spline_roots(x, y, target, out):
+    xy = preprocess_nan_func(x, y, out)
+    if xy is None:
+        out[:] = np.nan
+        return
+    x, y = xy
+
+    # reshape to [target, ...]
+    target = np.reshape(
+        target,
+        [len(target)]
+        + [
+            1,
+        ]
+        * y.ndim,
+    )
+    y = y[np.newaxis, ...]
+
+    interpfn = univ_spline(x, y - target)
+    roots = interpfn.roots()
+    flattened = roots.ravel()
+    for idx, f in enumerate(flattened):
+        if f.size > 1:
+            warnings.warn(
+                "Found multiple roots. Picking the first one. This will depend on the ordering of `dim`",
+                UserWarning,
+            )
+            flattened[idx] = f[0]
+    good = flattened.nonzero()[0]
+    out[:] = np.where(
+        np.isin(np.arange(flattened.size), good), flattened, np.nan
+    ).reshape(roots.shape)
+
+
+@guvectorize(
+    [
+        (int_[:], int_[:], double[:], double[:]),
+        (double[:], int_[:], double[:], double[:]),
+        (int_[:], double[:], double[:], double[:]),
+        (double[:], double[:], double[:], double[:]),
+    ],
+    "(n),(n),(m)->(m)",
+    forceobj=True,
+)
+def _gufunc_spline_der(x, y, x0, out):
+    """
+    Only first-order derivative
+    """
+    xy = preprocess_nan_func(x, y, out)
+    if xy is None:
+        out[:] = np.nan
+        return
+    x, y = xy
+
+    interpfn = univ_spline(x, y)
+    out[:] = interpfn.derivative(n=1)(x0)
+    out[x0 > x.max()] = np.nan
+    out[x0 < x.min()] = np.nan
+
 
 def is_scalar(value: Any, include_0d: bool = True) -> bool:
     """Whether to treat a value as a scalar.
@@ -209,9 +320,7 @@ class Interpolator:
 
 
 def PchipInterpolator(obj, dim):
-    return Interpolator(
-        interpolators._gufunc_pchip, interpolators._gufunc_pchip_roots, None, obj, dim
-    )
+    return Interpolator(_gufunc_pchip, _gufunc_pchip_roots, None, obj, dim)
 
 
 def pchip(obj, dim, ix, core_dim=None, *args, **kwargs):
@@ -226,9 +335,9 @@ def pchip_roots(obj, dim, target=0.0):
 
 def UnivariateSpline(obj, dim):
     return Interpolator(
-        interpolators._gufunc_spline,
-        interpolators._gufunc_spline_roots,
-        interpolators._gufunc_spline_der,
+        _gufunc_spline,
+        _gufunc_spline_roots,
+        _gufunc_spline_der,
         obj,
         dim,
     )
@@ -324,11 +433,21 @@ def _gufunc_pchip_roots_old(x, y, target, out):
     x, y = xy
 
     # reshape to [target, ...]
-    target = np.reshape(target, [len(target)] + [1,] * y.ndim)
+    target = np.reshape(
+        target,
+        [len(target)]
+        + [
+            1,
+        ]
+        * y.ndim,
+    )
     y = y[np.newaxis, ...]
 
     interpolator = interpolate.PchipInterpolator(
-        x, y - target, extrapolate=False, axis=-1,
+        x,
+        y - target,
+        extrapolate=False,
+        axis=-1,
     )
     roots = interpolator.roots()
     flattened = roots.ravel()

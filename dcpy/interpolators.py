@@ -4,6 +4,7 @@ from functools import partial
 import numpy as np
 import scipy as sp
 from numba import double, guvectorize, int_, njit
+
 from scipy import interpolate
 
 
@@ -141,10 +142,271 @@ def univ_spline(x, y, *args, **kwargs):
     return interpolate.UnivariateSpline(x, y, w=w, *args, **kwargs)
 
 
-_pchip = partial(interpolate.PchipInterpolator, extrapolate=False, axis=-1)
-_gufunc_pchip = make_interpolator(_pchip)
-_gufunc_pchip_roots = make_root_finder(_pchip)
+from functools import partial
 
-_gufunc_spline = make_interpolator(univ_spline)
-_gufunc_spline_roots = make_root_finder(univ_spline)
-_gufunc_spline_der = make_derivative(univ_spline)
+_pchip = partial(interpolate.PchipInterpolator, extrapolate=False, axis=-1)
+# _gufunc_pchip = make_interpolator(_pchip)
+
+
+@guvectorize(
+    [
+        (int_[:], int_[:], double[:], double[:]),
+        (double[:], int_[:], double[:], double[:]),
+        (int_[:], double[:], double[:], double[:]),
+        (double[:], double[:], double[:], double[:]),
+    ],
+    "(n),(n),(m)->(m)",
+    forceobj=True,
+    cache=True,
+)
+def _gufunc_pchip(x, y, ix, out):
+    xy = preprocess_nan_func(x, y, out)
+    min_points = 2  # TODO: make this a kwarg
+    if xy is None or len(x) < min_points:
+        out[:] = np.nan
+        return
+    x, y = xy
+    interpfn = _pchip(x, y)
+    out[:] = interpfn(ix)
+
+    # disable extrapolation; needed for UnivariateSpline
+    out[ix < x.min()] = np.nan
+    out[ix > x.max()] = np.nan
+
+
+@guvectorize(
+    [
+        (int_[:], int_[:], double[:], double[:]),
+        (double[:], int_[:], double[:], double[:]),
+        (int_[:], double[:], double[:], double[:]),
+        (double[:], double[:], double[:], double[:]),
+    ],
+    "(n),(n),(m)->(m)",
+    forceobj=True,
+    cache=True,
+)
+def _gufunc_pchip_roots(x, y, target, out):
+    xy = preprocess_nan_func(x, y, out)
+    if xy is None:
+        out[:] = np.nan
+        return
+    x, y = xy
+
+    # reshape to [target, ...]
+    target = np.reshape(
+        target,
+        [len(target)]
+        + [
+            1,
+        ]
+        * y.ndim,
+    )
+    y = y[np.newaxis, ...]
+
+    interpfn = _pchip(x, y - target)
+    roots = interpfn.roots()
+    flattened = roots.ravel()
+    for idx, f in enumerate(flattened):
+        if f.size > 1:
+            warnings.warn(
+                "Found multiple roots. Picking the first one. This will depend on the ordering of `dim`",
+                UserWarning,
+            )
+            flattened[idx] = f[0]
+    good = flattened.nonzero()[0]
+    out[:] = np.where(
+        np.isin(np.arange(flattened.size), good), flattened, np.nan
+    ).reshape(roots.shape)
+
+
+@guvectorize(
+    [
+        (int_[:], int_[:], double[:], double[:]),
+        (double[:], int_[:], double[:], double[:]),
+        (int_[:], double[:], double[:], double[:]),
+        (double[:], double[:], double[:], double[:]),
+    ],
+    "(n),(n),(m)->(m)",
+    forceobj=True,
+    cache=True,
+)
+def _gufunc_spline(x, y, ix, out):
+    xy = preprocess_nan_func(x, y, out)
+    min_points = 2  # TODO: make this a kwarg
+    if xy is None or len(x) < min_points:
+        out[:] = np.nan
+        return
+    x, y = xy
+    interpfn = univ_spline(x, y)
+    out[:] = interpfn(ix)
+
+    # disable extrapolation; needed for UnivariateSpline
+    out[ix < x.min()] = np.nan
+    out[ix > x.max()] = np.nan
+
+
+@guvectorize(
+    [
+        (int_[:], int_[:], double[:], double[:]),
+        (double[:], int_[:], double[:], double[:]),
+        (int_[:], double[:], double[:], double[:]),
+        (double[:], double[:], double[:], double[:]),
+    ],
+    "(n),(n),(m)->(m)",
+    forceobj=True,
+    cache=True,
+)
+def _gufunc_spline_roots(x, y, target, out):
+    xy = preprocess_nan_func(x, y, out)
+    if xy is None:
+        out[:] = np.nan
+        return
+    x, y = xy
+
+    # reshape to [target, ...]
+    target = np.reshape(
+        target,
+        [len(target)]
+        + [
+            1,
+        ]
+        * y.ndim,
+    )
+    y = y[np.newaxis, ...]
+
+    interpfn = univ_spline(x, y - target)
+    roots = interpfn.roots()
+    flattened = roots.ravel()
+    for idx, f in enumerate(flattened):
+        if f.size > 1:
+            warnings.warn(
+                "Found multiple roots. Picking the first one. This will depend on the ordering of `dim`",
+                UserWarning,
+            )
+            flattened[idx] = f[0]
+    good = flattened.nonzero()[0]
+    out[:] = np.where(
+        np.isin(np.arange(flattened.size), good), flattened, np.nan
+    ).reshape(roots.shape)
+
+
+@guvectorize(
+    [
+        (int_[:], int_[:], double[:], double[:]),
+        (double[:], int_[:], double[:], double[:]),
+        (int_[:], double[:], double[:], double[:]),
+        (double[:], double[:], double[:], double[:]),
+    ],
+    "(n),(n),(m)->(m)",
+    forceobj=True,
+)
+def _gufunc_spline_der(x, y, x0, out):
+    """
+    Only first-order derivative
+    """
+    xy = preprocess_nan_func(x, y, out)
+    if xy is None:
+        out[:] = np.nan
+        return
+    x, y = xy
+
+    interpfn = univ_spline(x, y)
+    out[:] = interpfn.derivative(n=1)(x0)
+    out[x0 > x.max()] = np.nan
+    out[x0 < x.min()] = np.nan
+
+@guvectorize(
+    [
+        (int_[:], int_[:], double[:], double[:]),
+        (double[:], int_[:], double[:], double[:]),
+        (int_[:], double[:], double[:], double[:]),
+        (double[:], double[:], double[:], double[:]),
+    ],
+    "(n),(n),(m)->(m)",
+    forceobj=True,
+    cache=True,
+)
+def _gufunc_spline(x, y, ix, out):
+    xy = preprocess_nan_func(x, y, out)
+    min_points = 2  # TODO: make this a kwarg
+    if xy is None or len(x) < min_points:
+        out[:] = np.nan
+        return
+    x, y = xy
+    interpfn = univ_spline(x, y)
+    out[:] = interpfn(ix)
+
+    # disable extrapolation; needed for UnivariateSpline
+    out[ix < x.min()] = np.nan
+    out[ix > x.max()] = np.nan
+
+
+@guvectorize(
+    [
+        (int_[:], int_[:], double[:], double[:]),
+        (double[:], int_[:], double[:], double[:]),
+        (int_[:], double[:], double[:], double[:]),
+        (double[:], double[:], double[:], double[:]),
+    ],
+    "(n),(n),(m)->(m)",
+    forceobj=True,
+    cache=True,
+)
+def _gufunc_spline_roots(x, y, target, out):
+    xy = preprocess_nan_func(x, y, out)
+    if xy is None:
+        out[:] = np.nan
+        return
+    x, y = xy
+
+    # reshape to [target, ...]
+    target = np.reshape(
+        target,
+        [len(target)]
+        + [
+            1,
+        ]
+        * y.ndim,
+    )
+    y = y[np.newaxis, ...]
+
+    interpfn = univ_spline(x, y - target)
+    roots = interpfn.roots()
+    flattened = roots.ravel()
+    for idx, f in enumerate(flattened):
+        if f.size > 1:
+            warnings.warn(
+                "Found multiple roots. Picking the first one. This will depend on the ordering of `dim`",
+                UserWarning,
+            )
+            flattened[idx] = f[0]
+    good = flattened.nonzero()[0]
+    out[:] = np.where(
+        np.isin(np.arange(flattened.size), good), flattened, np.nan
+    ).reshape(roots.shape)
+
+
+@guvectorize(
+    [
+        (int_[:], int_[:], double[:], double[:]),
+        (double[:], int_[:], double[:], double[:]),
+        (int_[:], double[:], double[:], double[:]),
+        (double[:], double[:], double[:], double[:]),
+    ],
+    "(n),(n),(m)->(m)",
+    forceobj=True,
+)
+def _gufunc_spline_der(x, y, x0, out):
+    """
+    Only first-order derivative
+    """
+    xy = preprocess_nan_func(x, y, out)
+    if xy is None:
+        out[:] = np.nan
+        return
+    x, y = xy
+
+    interpfn = univ_spline(x, y)
+    out[:] = interpfn.derivative(n=1)(x0)
+    out[x0 > x.max()] = np.nan
+    out[x0 < x.min()] = np.nan
