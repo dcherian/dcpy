@@ -304,3 +304,85 @@ def bin_to_new_coord(data, old_coord, new_coord, edges, reduce_func=None):
     remapped[new_coord] = new_1d_coord
 
     return remapped
+
+
+@guvectorize(
+    [
+        (int_[:], int_[:], double[:], double[:]),
+        (double[:], int_[:], double[:], double[:]),
+        (int_[:], double[:], double[:], double[:]),
+        (double[:], double[:], double[:], double[:]),
+    ],
+    "(n),(n),(m)->(m)",
+    forceobj=True,
+)
+def _gufunc_pchip_roots_old(x, y, target, out):
+    xy = preprocess_nan_func(x, y, out)
+    if xy is None:
+        out[:] = np.nan
+        return
+    x, y = xy
+
+    # reshape to [target, ...]
+    target = np.reshape(target, [len(target)] + [1,] * y.ndim)
+    y = y[np.newaxis, ...]
+
+    interpolator = interpolate.PchipInterpolator(
+        x, y - target, extrapolate=False, axis=-1,
+    )
+    roots = interpolator.roots()
+    flattened = roots.ravel()
+    for idx, f in enumerate(flattened):
+        if f.size > 1:
+            warnings.warn(
+                "Found multiple roots. Picking the first one. This will depend on the ordering of `dim`",
+                UserWarning,
+            )
+            flattened[idx] = f[0]
+    good = flattened.nonzero()[0]
+    out[:] = np.where(
+        np.isin(np.arange(flattened.size), good), flattened, np.nan
+    ).reshape(roots.shape)
+
+
+def pchip_roots_old(obj, dim, target):
+    """
+    Find locations where `obj == target` along dimension `dim`.
+    Parameters
+    ----------
+    obj : xarray.Dataset or xarray.DataArray
+        The object to interpolate.
+    dim : str
+        The axis to interpolate along.
+    target : target values to locate
+        Locates values by constructing PchipInterpolant and solving for roots.
+    Returns
+    -------
+    new_xobj : xarray.DataArray or xarray.Dataset
+    """
+
+    if is_scalar(target):
+        target = np.array(target, ndmin=1)
+
+    if isinstance(target, (np.ndarray, list)):
+        target = xr.DataArray(target, dims="target")
+
+    assert target.ndim == 1
+
+    input_core_dims = [(dim,), (dim,), target.dims]
+
+    result = xr.apply_ufunc(
+        _gufunc_pchip_roots_old,
+        obj[dim],
+        obj,
+        target,
+        input_core_dims=input_core_dims,
+        output_core_dims=[target.dims],
+        dask="parallelized",
+        output_dtypes=[float],
+    )
+    # result = result.assign_coords({target.dims[0]: target})
+    if "target" not in result.dims:
+        result = result.expand_dims("target")
+
+    return result
