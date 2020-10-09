@@ -265,7 +265,7 @@ def contour_label_spines(cs, prefix="", rotation=None, **kwargs):
         t.set_rotation(rotation)
 
     # need to set these up first
-    clabels = cs.ax.clabel(cs, inline=False, **kwargs)
+    clabels = cs.axes.clabel(cs, inline=False, **kwargs)
 
     [txt.set_visible(False) for txt in clabels]
 
@@ -278,7 +278,7 @@ def contour_label_spines(cs, prefix="", rotation=None, **kwargs):
         # This is a very helpful function!
         cs.add_label_near(x, y, inline=False, inline_spacing=0)
 
-    [_edit_text_labels(t, cs.ax, prefix, rotation) for t in cs.labelTexts]
+    [_edit_text_labels(t, cs.axes, prefix, rotation) for t in cs.labelTexts]
 
     return clabels
 
