@@ -314,7 +314,7 @@ def TSplot(
     if rho_levels is not None:
         rho_levels = np.asarray(rho_levels)
         if np.all(rho_levels > 1000):
-            rho_levels -= 1000
+            rho_levels = rho_levels - 1000
         if not (rho_levels.size > 0):
             rho_levels = 7
 
