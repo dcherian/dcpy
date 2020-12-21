@@ -294,7 +294,7 @@ def TSplot(
             temp,
             s=size if size is not None else 12,
             c=color if color is not None else "teal",
-            **plot_kwargs
+            **plot_kwargs,
         )
 
     # defaults.pop('alpha')
@@ -681,17 +681,17 @@ def read_oscar(dirname="/home/deepak/work/datasets/oscar/"):
     return oscar
 
 
-def read_mimoc():
+def read_mimoc(dirname="/home/deepak/datasets/mimoc/", year=2014):
 
-    mimoc = xr.open_mfdataset(
-        "/home/deepak/datasets/mimoc/MIMOC_ML_*.nc", concat_dim="month"
-    )
+    mimoc = xr.open_mfdataset(f"{dirname}/MIMOC_ML_*.nc", concat_dim="month", combine="nested")
     mimoc["LATITUDE"] = mimoc.LATITUDE.isel(month=1)
     mimoc["LONGITUDE"] = mimoc.LONGITUDE.isel(month=1)
     mimoc = mimoc.swap_dims({"LAT": "LATITUDE", "LONG": "LONGITUDE"}).rename(
-        {"LATITUDE": "lat", "LONGITUDE": "lon"}
+        {"LATITUDE": "latitude", "LONGITUDE": "longitude"}
     )
-    mimoc["month"] = pd.date_range("2014-01-01", "2014-12-31", freq="SM")[::2]
+    mimoc["longitude"].attrs.update({"units": "degrees_east", "axis": "X"})
+    mimoc["latitude"].attrs.update({"units": "degrees_north", "axis": "Y"})
+    mimoc["month"] = pd.date_range(f"{year}-01-01", f"{year}-12-31", freq="SM")[::2]
     mimoc = mimoc.rename({"month": "time"})
 
     return mimoc
