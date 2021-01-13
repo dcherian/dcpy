@@ -23,6 +23,8 @@ from . import interpolators
 from .interpolators import (
     _gufunc_pchip,
     _gufunc_pchip_roots,
+    preprocess_nan_func,
+    univ_spline,
 )
 
 

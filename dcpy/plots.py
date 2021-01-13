@@ -127,7 +127,7 @@ def liney(var, ax=None, label=None, color="gray", linestyle="--", zorder=-1, **k
     var = np.array(var, ndmin=1)
     for idx, vv in enumerate(var):
         for aa in ax:
-            aa.axhline(vv, color=color, linestyle=linestyle, zorder=zorder, **kwargs)
+            aa.axhline(vv, color=color, linestyle=linestyle, zorder=zorder, label=label,**kwargs)
             if label is not None:
                 aa.text(
                     1,
