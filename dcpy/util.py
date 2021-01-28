@@ -440,3 +440,27 @@ def latlon_to_distance(lat, lon, central_lat, central_lon):
     d.attrs["description"] = f"Distance from ({central_lat}, {central_lon})"
     d.attrs["units"] = "m"
     return d
+
+
+def infer_percentile(data, dim, value, debug=False):
+    """
+    Infers percentile of `value` in `data` along dimension `dim`.
+    """
+
+    data = data.compute()
+
+    if data.isnull().all():
+        inferred_q = data.isel({dim: 0}, drop=True) * np.nan
+    else:
+        closest = np.abs(data - value).fillna(1e20).argmin(dim)
+        N = data.notnull().sum(dim)
+        inferred_q = data.rank(dim).isel({dim: closest}, drop=True) / N
+
+        inferred_q = inferred_q.where(data.min(dim) < value, np.nan)
+        inferred_q = inferred_q.where(data.max(dim) > value, np.nan)
+
+    if debug:
+        actual = data.quantile(q=inferred_q.data, dim=dim).values
+        print(f"inferred_q: {inferred_q.data} | actual: {actual} vs expect:{value}")
+
+    return inferred_q.reset_coords(drop=True)
