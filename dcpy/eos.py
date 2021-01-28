@@ -702,7 +702,14 @@ def pden(s, t, p, pr=0):
     """
 
     pt = ptmp(s, t, p, pr)
-    return dens(s, pt, pr)
+    pden = dens(s, pt, pr)
+    if hasattr(pden, "attrs"):
+        pden.attrs["standard_name"] = "sea_water_potential_density"
+        pden.attrs["units"] = "kg/m3"
+    if isinstance(pden, xr.DataArray):
+        pden.coords["reference_pressure"] = pr
+        pden.reference_pressure.attrs["units"] = "dbar"
+    return pden
 
 
 def pres(depth, lat):
@@ -738,7 +745,12 @@ def pres(depth, lat):
 
     X = np.sin(np.abs(lat * deg2rad))
     C1 = 5.92e-3 + X ** 2 * 5.25e-3
-    return ((1 - C1) - (((1 - C1) ** 2) - (8.84e-6 * depth)) ** 0.5) / 4.42e-6
+    pres = ((1 - C1) - (((1 - C1) ** 2) - (8.84e-6 * depth)) ** 0.5) / 4.42e-6
+
+    if hasattr(pres, "attrs"):
+        pres.attrs["standard_name"] = "pressure"
+        pres.attrs["units"] = "dbar"
+    return pres
 
 
 def ptmp(s, t, p, pr=0):
@@ -819,7 +831,12 @@ def ptmp(s, t, p, pr=0):
 
     # Theta4.
     del_th = del_P * adtg(s, T90conv(th), p + del_P)
-    return T90conv(th + (del_th - 2 * q) / 6)
+    ptmp = T90conv(th + (del_th - 2 * q) / 6)
+
+    if hasattr(ptmp, "attrs"):
+        ptmp.attrs["standard_name"] = "sea_water_potential_temperature"
+        ptmp.attrs["units"] = "degC"
+    return ptmp
 
 
 def salt(r, t, p):
