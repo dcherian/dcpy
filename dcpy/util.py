@@ -87,7 +87,7 @@ def split_to_dataset(obj, dim, maxlen):
 
 
 def ExtractSeason(time, var, season):
-    """ Given a season, return data only for the months in that season
+    """Given a season, return data only for the months in that season
     season can be one of SW, NE, SW->NE, NE→SW or any 3 letter
     month abbreviation.
     """
@@ -417,7 +417,17 @@ def index_unindexed_dims(obj):
 def avg1(da, dim):
 
     return da.isel({dim: slice(-1)}).copy(
-        data=(da.isel({dim: slice(-1)}).data + da.isel({dim: slice(1,)}).data) / 2
+        data=(
+            da.isel({dim: slice(-1)}).data
+            + da.isel(
+                {
+                    dim: slice(
+                        1,
+                    )
+                }
+            ).data
+        )
+        / 2
     )
 
 
