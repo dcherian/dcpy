@@ -256,11 +256,15 @@ def TSplot(
         ax = axes["ts"]
     axes["ts"] = ax
 
-    nanmask = np.logical_or(np.isnan(S.values), np.isnan(T.values))
+    nanmask = np.isnan(S.values) | np.isnan(T.values)
     if size is not None:
-        nanmask = np.logical_or(nanmask, np.isnan(size))
+        nanmask = nanmask | np.isnan(size)
     if color is not None and not isinstance(color, str):
-        nanmask = np.logical_or(nanmask, np.isnan(color))
+        nanmask = nanmask | np.isnan(color)
+    if len(np.atleast_1d(Sbins)) > 1:
+        nanmask = nanmask | (S.values < np.min(Sbins)) | (S.values > np.max(Sbins))
+    if len(np.atleast_1d(Tbins)) > 1:
+        nanmask = nanmask | (T.values < np.min(Tbins)) | (T.values > np.max(Tbins))
 
     salt = _flatten_data(S.where(~nanmask))
     temp = _flatten_data(T.where(~nanmask))
@@ -309,7 +313,8 @@ def TSplot(
     Svec = np.linspace(Slim[0], Slim[1], 40)
     [Smat, Tmat] = np.meshgrid(Svec, Tvec)
 
-    ρ = sw.pden(Smat, Tmat, Pref) - 1000
+    # background ρ contours are T, S at the reference level
+    ρ = sw.pden(Smat, Tmat, Pref, Pref) - 1000
 
     if rho_levels is not None:
         rho_levels = np.asarray(rho_levels)
