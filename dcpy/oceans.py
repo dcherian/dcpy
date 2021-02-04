@@ -22,8 +22,8 @@ def _flatten_data(data):
 
 
 def dataset_center_pacific(da, name=None):
-    """ Takes an input DataArray and rolls the longitude
-        so that all 3 basins are covered. Longitude goes from 20 to 380. """
+    """Takes an input DataArray and rolls the longitude
+    so that all 3 basins are covered. Longitude goes from 20 to 380."""
 
     if name is None:
         name = "longitude" if "longitude" in da.coords else "lon"
@@ -47,14 +47,14 @@ def coriolis(lat):
 
 
 def ReadWoa(lon, lat, time="annual", depth=None, return_xr=False):
-    """ Given lon, lat and type, return WOA data.
-        Input:
-              lon : +ve East
-              lat : +ve North
-              time: 'annual' or 'seasonal'
-              depth: float (m)
-        Output:
-              Returns a dictionary with T, S, depth
+    """Given lon, lat and type, return WOA data.
+    Input:
+          lon : +ve East
+          lat : +ve North
+          time: 'annual' or 'seasonal'
+          depth: float (m)
+    Output:
+          Returns a dictionary with T, S, depth
     """
 
     woa = dict()
@@ -688,7 +688,9 @@ def read_oscar(dirname="/home/deepak/work/datasets/oscar/"):
 
 def read_mimoc(dirname="/home/deepak/datasets/mimoc/", year=2014):
 
-    mimoc = xr.open_mfdataset(f"{dirname}/MIMOC_ML_*.nc", concat_dim="month", combine="nested")
+    mimoc = xr.open_mfdataset(
+        f"{dirname}/MIMOC_ML_*.nc", concat_dim="month", combine="nested"
+    )
     mimoc["LATITUDE"] = mimoc.LATITUDE.isel(month=1)
     mimoc["LONGITUDE"] = mimoc.LONGITUDE.isel(month=1)
     mimoc = mimoc.swap_dims({"LAT": "LATITUDE", "LONG": "LONGITUDE"}).rename(
@@ -741,7 +743,7 @@ def read_nio():
 
 
 def sdif(T):
-    """ Fickian diffusivity of salt in seawater.
+    """Fickian diffusivity of salt in seawater.
     Input
     -----
     T : float,
