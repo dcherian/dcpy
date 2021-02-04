@@ -431,7 +431,7 @@ def avg1(da, dim):
     )
 
 
-def latlon_to_distance(lat, lon, central_lat, central_lon):
+def latlon_to_distance(lat, lon, *, central_lat, central_lon):
     """ Returns distance relative to central_lat, central_lon """
 
     lat0 = central_lat * np.pi / 180
@@ -447,9 +447,23 @@ def latlon_to_distance(lat, lon, central_lat, central_lon):
     b = np.cos(lat0) * np.cos(lat) * np.sin(dlon / 2) ** 2
     d = 2 * r * np.arcsin(np.sqrt(a + b)).clip(max=1)
 
-    d.attrs["description"] = f"Distance from ({central_lat}, {central_lon})"
+    d.attrs["long_name"] = f"Distance from ({central_lon}°, {central_lat}°)"
     d.attrs["units"] = "m"
     return d
+
+
+def latlon_to_xy(lat, lon):
+    R = 6371000  # m
+    x = R * np.cos(lat * np.pi / 180) * np.cos(lon * np.pi / 180)
+    y = R * np.cos(lat * np.pi / 180) * np.sin(lon * np.pi / 180)
+
+    x.attrs["axis"] = "X"
+    y.attrs["axis"] = "Y"
+
+    x.attrs["units"] = "m"
+    y.attrs["units"] = "m"
+
+    return x, y
 
 
 def infer_percentile(data, dim, value, debug=False):
