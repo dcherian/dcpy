@@ -1,3 +1,4 @@
+import cf_xarray
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import netCDF4 as nc
@@ -808,3 +809,40 @@ def visc(S, T, P):
     )
 
     return visc
+
+
+def neutral_density(ds):
+    """ Xarray wrapper for Eric Firing's netural density wrapper"""
+
+    import pygamma
+
+    def gamma_n_wrapper(*args):
+        g = pygamma.gamma_n(*args)[0]
+        g[g < 0.1] = np.nan  # bad values are 0?
+        return g
+
+    if ds.salt.ndim > 2:
+        # pygamma only accepts 2D at the most.
+        # and depth must be the second dimension
+        stacked = True
+        ds = ds.cf.stack(latlon=["latitude", "longitude"]).transpose("latlon", ...)
+
+    gamma = xr.apply_ufunc(
+        gamma_n_wrapper,
+        ds.salt,
+        ds.temp,
+        ds.pres,
+        ds.cf["longitude"],
+        ds.cf["latitude"],
+        input_core_dims=[["depth"], ["depth"], ["depth"], [], []],
+        output_core_dims=[["depth"]],
+        dask="parallelized",
+        output_dtypes=[ds.salt.dtype],
+    )
+    gamma.attrs["standard_name"] = "neutral_density"
+    gamma.attrs["units"] = "kg/m3"
+    gamma.attrs["long_name"] = "$γ_n$"
+
+    if stacked:
+        gamma = gamma.unstack()
+    return gamma
