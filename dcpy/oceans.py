@@ -846,3 +846,67 @@ def neutral_density(ds):
     if stacked:
         gamma = gamma.unstack()
     return gamma
+
+
+def read_osu_microstructure_mat(fname, coords=("depth", "time"), rename=True):
+    """ Read the OSU Ocean Mixing Group microstructure mat files to xarray Dataset."""
+    import warnings
+
+    from scipy.io import loadmat
+
+    mat = loadmat(fname)
+    structs = [name for name in mat.keys() if "__" not in name]
+    dsets = []
+
+    assert len(structs) == 1
+    for sname in structs:
+        varnames = mat[sname].dtype.names
+        print(f"found variables named {varnames!r}")
+
+        ds = xr.Dataset()
+        shapes = {mat[sname][coord][0, 0].squeeze().shape[0]: coord for coord in coords}
+        print(f"Using coordinate vars with shapes: {shapes}")
+
+        for var in varnames:
+            arr = mat[sname][var][0, 0]
+
+            if np.issubdtype(arr.dtype, np.str_):
+                print(f"Setting {var} as attr.")
+                ds.attrs[var] = str(arr.ravel())
+                continue
+
+            if arr.dtype.names:
+                warnings.warn(
+                    f"Skipping substructure {var} with fields {arr.dtype.names}",
+                    UserWarning,
+                )
+                continue
+
+            dims = [shapes[s] for s in arr.shape if s > 1]
+            ds[var] = (dims, arr.squeeze())
+
+    renamer = {
+        "jq": "Jq",
+        "nsqr": "N2",
+        "nsq": "N2",
+        "krho": "Krho",
+        "sal": "salt",
+        "S": "salt",
+        "EPS": "eps",
+        "U": "u",
+        "V": "v",
+        "P": "pres",
+        "DTDZ": "dTdz",
+        "EPSILON": "eps",
+        "CHI": "chi",
+        "SIGMA": "pden",
+    }
+
+    if rename:
+        if "THETA" in ds:
+            renamer["THETA"] = "theta"
+        else:
+            renamer["T"] = "theta"
+        ds = ds.rename({k: v for k, v in renamer.items() if k in ds})
+
+    return ds
