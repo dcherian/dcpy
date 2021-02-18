@@ -8,7 +8,7 @@ import seawater as sw
 
 import xarray as xr
 
-from . import plots
+from . import plots, util
 
 
 def _flatten_data(data):
@@ -909,5 +909,19 @@ def read_osu_microstructure_mat(fname, coords=("depth", "time"), rename=True):
         else:
             renamer["T"] = "theta"
         ds = ds.rename({k: v for k, v in renamer.items() if k in ds})
+
+    attrs = {
+        "T": ("sea_water_temperature", "celsius"),
+        "theta": ("sea_water_potential_temperature", "celsius"),
+        "pres": ("sea_water_pressure", "dbar"),
+        "salt": ("sea_water_salinity", "psu"),
+        "lon": ("longitude", "degrees_east"),
+        "lat": ("latitude", "degrees_north"),
+    }
+    ds["time"] = util.datenum2datetime(ds.time.data)
+    ds["depth"].attrs["positive"] = "down"
+
+    for var in set(attrs) & set(ds.variables):
+        ds[var].attrs.update(zip(["standard_name", "units"], attrs[var]))
 
     return ds
