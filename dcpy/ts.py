@@ -31,7 +31,9 @@ def _is_datetime_like(da) -> bool:
 def _process_time(time, cycles_per="s"):
 
     time = time.copy()
-    dt = np.nanmedian(np.diff(time.values).astype(np.timedelta64) / np.timedelta64(1, cycles_per))
+    dt = np.nanmedian(
+        np.diff(time.values).astype(np.timedelta64) / np.timedelta64(1, cycles_per)
+    )
 
     time = np.cumsum(time.copy().diff(dim=time.dims[0]) / np.timedelta64(1, cycles_per))
 
@@ -111,12 +113,12 @@ def FindLargestSegment(input):
 
 def FindSegments(var):
     """
-      Finds and return valid index ranges for the input time series.
-      Input:
-            var - input time series
-      Output:
-            start - starting indices of valid ranges
-            stop  - ending indices of valid ranges
+    Finds and return valid index ranges for the input time series.
+    Input:
+          var - input time series
+    Output:
+          start - starting indices of valid ranges
+          stop  - ending indices of valid ranges
     """
 
     NotNans = np.double(~np.isnan(var))
@@ -141,12 +143,12 @@ def FindSegments(var):
 
 def FindGaps(var):
     """
-      Finds and returns index ranges for gaps in the input time series.
-      Input:
-            var - input time series
-      Output:
-            start - starting indices of gap (NaN)
-            stop  - ending indices of gap (NaN)
+    Finds and returns index ranges for gaps in the input time series.
+    Input:
+          var - input time series
+    Output:
+          start - starting indices of gap (NaN)
+          stop  - ending indices of gap (NaN)
     """
 
     NotNans = np.double(~np.isnan(var))
@@ -444,10 +446,10 @@ def AliasFreq(f0, dt):
 
 
 def TidalAliases(dt, kind="freq"):
-    """ Returns alias frequencies of tides as a dictionary.
+    """Returns alias frequencies of tides as a dictionary.
 
-        Input:
-              dt = sampling time interval (days)
+    Input:
+          dt = sampling time interval (days)
 
     """
 
@@ -490,27 +492,27 @@ def SpectralDensity(
     breakpts=[],
     decimate=True,
 ):
-    """ Calculates spectral density for longest valid segment
-        Direct translation of Tom's spectrum_band_avg.
-        Always applies a Hann window if not multitaper.
-        Input:
-            input : variable whose spectral density you want
-            dt : (optional) Δtime
-            nsmooth : (optional) number of frequency bands to average over
-                      OR time-bandwidth product for multitaper.
-            SubsetLength : (optional) Max length of data segment.
-                            Spectra from multiple segments
-                            are averaged.
-            multitaper : Use multitaper method (default False)
-            breakpts : List of breakpoints at which to change nsmooth
-            fillgaps : (logical) Fill gaps < maxlen in input
-            maxlen : Maximum length of gaps to fill (None for all gaps)
+    """Calculates spectral density for longest valid segment
+    Direct translation of Tom's spectrum_band_avg.
+    Always applies a Hann window if not multitaper.
+    Input:
+        input : variable whose spectral density you want
+        dt : (optional) Δtime
+        nsmooth : (optional) number of frequency bands to average over
+                  OR time-bandwidth product for multitaper.
+        SubsetLength : (optional) Max length of data segment.
+                        Spectra from multiple segments
+                        are averaged.
+        multitaper : Use multitaper method (default False)
+        breakpts : List of breakpoints at which to change nsmooth
+        fillgaps : (logical) Fill gaps < maxlen in input
+        maxlen : Maximum length of gaps to fill (None for all gaps)
 
-        Returns:
-            S : estimated spectral density
-            f : frequency bands (1/period)
-                [sin(2π/10) will have a peak at 1/10]
-         conf : 95% confidence interval for 2*nsmooth dof
+    Returns:
+        S : estimated spectral density
+        f : frequency bands (1/period)
+            [sin(2π/10) will have a peak at 1/10]
+     conf : 95% confidence interval for 2*nsmooth dof
     """
     import dcpy.util
     import numpy as np
@@ -683,8 +685,8 @@ def Coherence(v1, v2, dt=1, nsmooth=5, decimate=True, **kwargs):
 
 def MultiTaperCoherence(y0, y1, dt=1, tbp=5, ntapers=None):
     """
-        Call out to mt_coherence from mtspec.
-        Phase is φ(y0) - φ(y1)
+    Call out to mt_coherence from mtspec.
+    Phase is φ(y0) - φ(y1)
     """
 
     from mtspec import mt_coherence
@@ -994,10 +996,10 @@ def HighPassButter(input, freq, order=1):
 
 
 def EstimateImpulseResponseLength(b, a, eps=1e-2):
-    """ From scipy filtfilt docs.
-        Input:
-             b, a : filter params
-             eps  : How low must the signal drop to? (default 1e-2)
+    """From scipy filtfilt docs.
+    Input:
+         b, a : filter params
+         eps  : How low must the signal drop to? (default 1e-2)
     """
 
     z, p, k = signal.tf2zpk(b, a)
@@ -1115,14 +1117,14 @@ def apply_along_dim_1d(invar, dim, func, args=(), **kwargs):
 
 
 def FillGaps(y, x=None, maxlen=None):
-    """ TODO: use pandas.fillna
-        Use linear interpolation to fill gaps < maxlen
-        Input:
-            y : value vector with gaps
-            x : [optional] x (time) vector
-            maxlen : max length of gaps to be filled
-        Output:
-            interpolated array
+    """TODO: use pandas.fillna
+    Use linear interpolation to fill gaps < maxlen
+    Input:
+        y : value vector with gaps
+        x : [optional] x (time) vector
+        maxlen : max length of gaps to be filled
+    Output:
+        interpolated array
     """
 
     import numpy as np
@@ -1574,6 +1576,6 @@ def find_peaks(data, dim, debug=True):
         plt.figure()
         data.isel(period=1).plot.line(x=dim)
         idx = squashed.isel(period=1).dropna("latitude").astype(np.int32)
-        dcpy.plots.linex(data[dim][idx])
+        linex(data[dim][idx])
 
     return squashed

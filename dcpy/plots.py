@@ -127,7 +127,14 @@ def liney(var, ax=None, label=None, color="gray", linestyle="--", zorder=-1, **k
     var = np.array(var, ndmin=1)
     for idx, vv in enumerate(var):
         for aa in ax:
-            aa.axhline(vv, color=color, linestyle=linestyle, zorder=zorder, label=label,**kwargs)
+            aa.axhline(
+                vv,
+                color=color,
+                linestyle=linestyle,
+                zorder=zorder,
+                label=label,
+                **kwargs,
+            )
             if label is not None:
                 aa.text(
                     1,
@@ -731,7 +738,7 @@ def trim_map(ax, xlim, ylim):
 # subset.plot(cmap=mpl.cm.Greys)
 # from https://rnovitsky.blogspot.com/2010/04/using-hillshade-image-as-intensity.html?m=1
 def hillshade(data, scale=10.0, azdeg=165.0, altdeg=45.0):
-    """ convert data to hillshade based on matplotlib.colors.LightSource class.
+    """convert data to hillshade based on matplotlib.colors.LightSource class.
     input:
          data - a 2-d array of data
          scale - scaling value of the data. higher number = lower gradient
@@ -755,7 +762,7 @@ def hillshade(data, scale=10.0, azdeg=165.0, altdeg=45.0):
 
 
 def set_shade(a, intensity=None, cmap=mpl.cm.jet, scale=10.0, azdeg=165.0, altdeg=45.0):
-    """ sets shading for data array based on intensity layer
+    """sets shading for data array based on intensity layer
     or the data's value itself.
     inputs:
     a - a 2-d array or masked array

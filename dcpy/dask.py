@@ -7,7 +7,7 @@ import xarray as xr
 
 
 def ntasks(obj, optimize=False):
-    """ Returns length of dask graph.
+    """Returns length of dask graph.
 
     Parameters
     ----------
@@ -52,7 +52,7 @@ def get_one_chunk(dataset):
 
 
 def split_blocks(dataset, factor=1):
-    """ Splits xarray datasets into its chunks; where each chunk is a dataset
+    """Splits xarray datasets into its chunks; where each chunk is a dataset
 
     Parameters
     ----------

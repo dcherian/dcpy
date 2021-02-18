@@ -28,14 +28,14 @@ from .interpolators import (
 )
 
 
-
 # _pchip = partial(interpolate.PchipInterpolator, extrapolate=False, axis=-1)
 # _gufunc_pchip = interpolators.make_interpolator(_pchip)
 # _gufunc_pchip_roots = interpolators.make_root_finder(_pchip)
 
-#_gufunc_spline = interpolators.make_interpolator(interpolators.univ_spline)
-#_gufunc_spline_roots = interpolators.make_root_finder(interpolators.univ_spline)
-#_gufunc_spline_der = interpolators.make_derivative(interpolators.univ_spline)
+# _gufunc_spline = interpolators.make_interpolator(interpolators.univ_spline)
+# _gufunc_spline_roots = interpolators.make_root_finder(interpolators.univ_spline)
+# _gufunc_spline_der = interpolators.make_derivative(interpolators.univ_spline)
+
 
 @guvectorize(
     [

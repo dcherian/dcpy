@@ -315,6 +315,7 @@ def _gufunc_spline_der(x, y, x0, out):
     out[x0 > x.max()] = np.nan
     out[x0 < x.min()] = np.nan
 
+
 @guvectorize(
     [
         (int_[:], int_[:], double[:], double[:]),
