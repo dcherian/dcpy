@@ -826,12 +826,13 @@ def neutral_density(ds):
         # and depth must be the second dimension
         stacked = True
         ds = ds.cf.stack(latlon=["latitude", "longitude"]).transpose("latlon", ...)
-
+    else:
+        stacked = False
     gamma = xr.apply_ufunc(
         gamma_n_wrapper,
-        ds.salt,
-        ds.temp,
-        ds.pres,
+        ds.cf["sea_water_salinity"],
+        ds.cf["sea_water_temperature"],
+        ds.cf["sea_water_pressure"],
         ds.cf["longitude"],
         ds.cf["latitude"],
         input_core_dims=[["depth"], ["depth"], ["depth"], [], []],
