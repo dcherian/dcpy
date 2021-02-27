@@ -849,11 +849,33 @@ def neutral_density(ds):
     return gamma
 
 
-def read_osu_microstructure_mat(fname, coords=("depth", "time"), rename=True):
-    """ Read the OSU Ocean Mixing Group microstructure mat files to xarray Dataset."""
+def read_osu_microstructure_mat(
+    fname, coords=("depth", "time"), rename=True, rename_vars=None
+):
+    """Read the OSU Ocean Mixing Group microstructure mat files to xarray Dataset.
+
+    Parameters
+    ----------
+    fname: str
+        File name
+    coords: Tuple[str]
+        List of variables to consider as dimension coordinates
+    rename: bool, optional
+        Rename variables to "standard names".
+    rename_vars: dict, optional
+        Dict to rename variables. Useful for nD dimension coordinate variables
+        (usually depth)
+
+    Returns
+    -------
+    xarray.DataArray
+    """
     import warnings
 
     from scipy.io import loadmat
+
+    if rename_vars is None:
+        rename_vars = {}
 
     mat = loadmat(fname)
     structs = [name for name in mat.keys() if "__" not in name]
@@ -871,7 +893,7 @@ def read_osu_microstructure_mat(fname, coords=("depth", "time"), rename=True):
         for var in varnames:
             arr = mat[sname][var][0, 0]
 
-            if np.issubdtype(arr.dtype, np.str_):
+            if np.issubdtype(arr.dtype, np.str_) or np.issubdtype(arr.dtype, np.object):
                 print(f"Setting {var} as attr.")
                 ds.attrs[var] = str(arr.ravel())
                 continue
@@ -884,7 +906,7 @@ def read_osu_microstructure_mat(fname, coords=("depth", "time"), rename=True):
                 continue
 
             dims = [shapes[s] for s in arr.shape if s > 1]
-            ds[var] = (dims, arr.squeeze())
+            ds[rename_vars.get(var, var)] = (dims, arr.squeeze())
 
     renamer = {
         "jq": "Jq",
@@ -911,17 +933,23 @@ def read_osu_microstructure_mat(fname, coords=("depth", "time"), rename=True):
         ds = ds.rename({k: v for k, v in renamer.items() if k in ds})
 
     attrs = {
-        "T": ("sea_water_temperature", "celsius"),
-        "theta": ("sea_water_potential_temperature", "celsius"),
-        "pres": ("sea_water_pressure", "dbar"),
-        "salt": ("sea_water_salinity", "psu"),
-        "lon": ("longitude", "degrees_east"),
-        "lat": ("latitude", "degrees_north"),
+        "T": {"standard_name": "sea_water_temperature", "units": "celsius"},
+        "theta": {
+            "standard_name": "sea_water_potential_temperature",
+            "units": "celsius",
+        },
+        "pres": {"standard_name": "sea_water_pressure", "units": "dbar"},
+        "salt": {"standard_name": "sea_water_salinity", "units": "psu"},
+        "lon": {"standard_name": "longitude", "units": "degrees_east"},
+        "lat": {"standard_name": "latitude", "units": "degrees_north"},
+        "eps": {"long_name": "$ε$", "units": "W/kg"},
+        "chi": {"long_name": "$χ$", "units": "°C²/s"},
     }
     ds["time"] = util.datenum2datetime(ds.time.data)
-    ds["depth"].attrs["positive"] = "down"
+    if "depth" in ds:
+        ds["depth"].attrs["positive"] = "down"
 
     for var in set(attrs) & set(ds.variables):
-        ds[var].attrs.update(zip(["standard_name", "units"], attrs[var]))
+        ds[var].attrs.update(attrs[var])
 
     return ds
