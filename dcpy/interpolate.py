@@ -407,7 +407,6 @@ def bin_to_new_coord(data, old_coord, new_coord, edges, reduce_func=None):
         output_core_dims=[[new_coord]],
         exclude_dims=set((old_coord,)),
         dask="parallelized",
-        # vectorize=True,  # TODO: guvectorize instead
         output_dtypes=[float],
         dask_gufunc_kwargs=dict(output_sizes={new_coord: len(edges)}),
         # kwargs={"func": reduce_func}  # TODO: add support for reduce_func
