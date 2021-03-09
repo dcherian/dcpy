@@ -33,19 +33,20 @@ def visualize_one_block(dataset, **kwargs):
         dataset = dataset._to_temp_dataset()
 
     keys = []
-    for _, variable in dataset.variables.items():
-        if isinstance(variable.data, dask.array.Array):
-            block = variable.data.blocks[(0,) * variable.ndim]
-            keys.append((block.name,) + (0,) * variable.ndim)
-            if graph is None:
-                graph = block.dask
-            else:
-                graph.merge(block.dask)
+    block = get_one_block(dataset.unify_chunks())
+    graph = block.__dask_graph__()
 
+    for name, variable in block.variables.items():
+        if isinstance(variable.data, dask.array.Array):
+            key = (variable.data.name,) + (0,) * variable.ndim
+            keys.append(key)
+
+    if graph is None:
+        raise ValueError("No dask variables!")
     return dask.visualize(graph.cull(set(keys)), **kwargs)
 
 
-def get_one_chunk(dataset):
+def get_one_block(dataset):
     if isinstance(dataset, xr.DataArray):
         array = dataset
         dataset = dataset._to_temp_dataset()
