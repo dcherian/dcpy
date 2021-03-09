@@ -24,12 +24,25 @@ def ntasks(obj, optimize=False):
         return len(obj.__dask_graph__())
 
 
-def visualize_one_chunk(dataset):
-    return dask.visualize(
-        dask.optimize(get_one_chunk(dataset))[0].__dask_graph__(),
-        rankdir="LR",
-        # optimize_graph=True,
-    )
+def visualize_one_block(dataset, **kwargs):
+    """
+    Visualize one block of a Dataset or DataArray.
+    """
+    graph = None
+    if isinstance(dataset, xr.DataArray):
+        dataset = dataset._to_temp_dataset()
+
+    keys = []
+    for _, variable in dataset.variables.items():
+        if isinstance(variable.data, dask.array.Array):
+            block = variable.data.blocks[(0,) * variable.ndim]
+            keys.append((block.name,) + (0,) * variable.ndim)
+            if graph is None:
+                graph = block.dask
+            else:
+                graph.merge(block.dask)
+
+    return dask.visualize(graph.cull(set(keys)), **kwargs)
 
 
 def get_one_chunk(dataset):
