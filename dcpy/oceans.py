@@ -906,7 +906,11 @@ def read_osu_microstructure_mat(
                 continue
 
             dims = [shapes[s] for s in arr.shape if s > 1]
-            ds[rename_vars.get(var, var)] = (dims, arr.squeeze())
+            ds[rename_vars.get(var, var)] = (
+                dims,
+                arr.squeeze(),
+                {"coordinates": " ".join(dims)},
+            )
 
     renamer = {
         "jq": "Jq",
@@ -923,6 +927,7 @@ def read_osu_microstructure_mat(
         "EPSILON": "eps",
         "CHI": "chi",
         "SIGMA": "pden",
+        "SIGT": "pden",
     }
 
     if rename:
@@ -930,6 +935,8 @@ def read_osu_microstructure_mat(
             renamer["THETA"] = "theta"
         else:
             renamer["T"] = "theta"
+        if "SIGT" in ds:
+            ds["SIGT"] += 1000
         ds = ds.rename({k: v for k, v in renamer.items() if k in ds})
 
     attrs = {
@@ -947,7 +954,7 @@ def read_osu_microstructure_mat(
     }
     ds["time"] = util.datenum2datetime(ds.time.data)
     if "depth" in ds:
-        ds["depth"].attrs["positive"] = "down"
+        ds["depth"].attrs.update({"positive": "down", "axis": "Z"})
 
     for var in set(attrs) & set(ds.variables):
         ds[var].attrs.update(attrs[var])
