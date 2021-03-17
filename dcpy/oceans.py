@@ -960,3 +960,22 @@ def read_osu_microstructure_mat(
         ds[var].attrs.update(attrs[var])
 
     return ds
+
+
+def read_cchdo_chipod_file(file, chunks=None):
+    if chunks is None:
+        chunks = {"time": 10000}
+
+    chi = (
+        xr.open_dataset(file, decode_cf=False, chunks=chunks)
+        .swap_dims({"timeSeries": "depth"})
+        .rename({"Kt": "KT", "Nsqr": "N2"})
+    )
+    for var in chi.variables:
+        if "FillValue" in chi[var].attrs:
+            chi[var].attrs["_FillValue"] = int(chi[var].attrs["FillValue"])
+    chi = xr.decode_cf(chi)
+    chi["T"] -= 273
+    chi.T.attrs["units"] = "C"
+    chi = chi.drop_vars(["mooring", "crs", "chipod"])
+    return chi
