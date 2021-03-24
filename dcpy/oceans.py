@@ -816,8 +816,12 @@ def neutral_density(ds):
 
     import pygamma
 
-    def gamma_n_wrapper(*args):
-        g = pygamma.gamma_n(*args)[0]
+    def gamma_n_wrapper(s, t, p, lon, lat):
+        if np.isscalar(lat):
+            lat = lat * np.ones_like(s[..., 0])
+        if np.isscalar(lon):
+            lon = lon * np.ones_like(s[..., 0])
+        g = pygamma.gamma_n(s, t, p, lon, lat)[0]
         g[g < 0.1] = np.nan  # bad values are 0?
         return g
 
