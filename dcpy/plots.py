@@ -101,16 +101,11 @@ def linex(var, ax=None, label=None, color="gray", linestyle="--", zorder=-1, **k
     var = np.array(var, ndmin=1)
     for idx, vv in enumerate(var):
         for aa in ax:
-            aa.axvline(vv, color=color, linestyle=linestyle, zorder=zorder, **kwargs)
+            hdl = aa.axvline(
+                vv, color=color, linestyle=linestyle, zorder=zorder, **kwargs
+            )
             if label is not None:
-                aa.text(
-                    vv,
-                    1,
-                    " " + label[idx],
-                    ha="center",
-                    va="bottom",
-                    transform=aa.get_xaxis_transform("grid"),
-                )
+                annotate_end(hdl, label)
 
 
 def liney(var, ax=None, label=None, color="gray", linestyle="--", zorder=-1, **kwargs):
@@ -127,7 +122,7 @@ def liney(var, ax=None, label=None, color="gray", linestyle="--", zorder=-1, **k
     var = np.array(var, ndmin=1)
     for idx, vv in enumerate(var):
         for aa in ax:
-            aa.axhline(
+            hdl = aa.axhline(
                 vv,
                 color=color,
                 linestyle=linestyle,
@@ -136,14 +131,7 @@ def liney(var, ax=None, label=None, color="gray", linestyle="--", zorder=-1, **k
                 **kwargs,
             )
             if label is not None:
-                aa.text(
-                    1,
-                    vv,
-                    " " + label[idx],
-                    ha="left",
-                    va="center",
-                    transform=aa.get_yaxis_transform("grid"),
-                )
+                annotate_end(hdl, label)
 
 
 def hist(var, log=False, bins=100, alpha=0.5, normed=True, mark95=False, **kwargs):
@@ -215,9 +203,10 @@ def adjust_yaxis(ax, ydif, v):
 def annotate_end(hdl, label, **kwargs):
     ax = hdl.axes
 
-    y = hdl.get_ydata()
-    x = hdl.get_xdata()
+    y = np.array(hdl.get_ydata())
+    x = np.array(hdl.get_xdata())
     color = hdl.get_color()
+    transform = hdl.get_transform()
 
     defaults = {"ha": "left", "clip_on": False, "color": color}
     defaults.update(**kwargs)
@@ -227,8 +216,18 @@ def annotate_end(hdl, label, **kwargs):
     else:
         mask = np.isnan(x) | np.isnan(y)
 
-    point = ax.plot(x[~mask][-1], y[~mask][-1], "o", ms=4, color=color, clip_on=False)
-    text = ax.text(x[~mask][-1], y[~mask][-1], "  " + label, **defaults)
+    point = ax.plot(
+        x[~mask][-1],
+        y[~mask][-1],
+        "o",
+        ms=4,
+        color=color,
+        clip_on=False,
+        transform=transform,
+    )
+    text = ax.text(
+        x[~mask][-1], y[~mask][-1], "  " + label, **defaults, transform=transform
+    )
 
     return point, text
 
