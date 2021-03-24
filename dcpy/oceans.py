@@ -8,7 +8,7 @@ import seawater as sw
 
 import xarray as xr
 
-from . import plots, util
+from . import eos, plots, util
 
 
 def _flatten_data(data):
@@ -854,7 +854,7 @@ def neutral_density(ds):
 
 
 def read_osu_microstructure_mat(
-    fname, coords=("depth", "time"), rename=True, rename_vars=None
+    fname, coords=("depth", "time"), rename=True, rename_vars=None, no_TS=False
 ):
     """Read the OSU Ocean Mixing Group microstructure mat files to xarray Dataset.
 
@@ -869,6 +869,9 @@ def read_osu_microstructure_mat(
     rename_vars: dict, optional
         Dict to rename variables. Useful for nD dimension coordinate variables
         (usually depth)
+    no_TS: bool, optional
+        If True, skips getting sea_water_temperature and sea_water_potential_temperature
+        use with velocity files
 
     Returns
     -------
@@ -942,6 +945,20 @@ def read_osu_microstructure_mat(
         if "SIGT" in ds:
             ds["SIGT"] += 1000
         ds = ds.rename({k: v for k, v in renamer.items() if k in ds})
+
+    if "pres" not in ds:
+        if "lat" in ds:
+            lat = ds.lat.mean()
+            lat.attrs.clear()
+        else:
+            lat = 0
+        ds["pres"] = eos.pres(ds.depth, lat=lat)
+
+    if not no_TS:
+        if "theta" not in ds:
+            ds["theta"] = eos.ptmp(ds.salt, ds.T, ds.pres)
+        if "T" not in ds:
+            ds["T"] = eos.temp(ds.salt, ds.theta, ds.pres)
 
     attrs = {
         "T": {"standard_name": "sea_water_temperature", "units": "celsius"},
