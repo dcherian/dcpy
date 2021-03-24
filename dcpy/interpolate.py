@@ -351,13 +351,15 @@ def pchip_fillna(obj, dim):
 
 @guvectorize(
     [(double[:], double[:], double[:], double[:])],
-    "(n), (n), (m) -> (m)",
+    "(n), (n), (m) -> (m), (m)",
     nopython=True,
 )
-def remap(values, zeuc, edges, out=None):
+def remap(values, zeuc, edges, out=None, count=None):
     func = np.nanmean
 
     out[:] = np.nan
+    count[:] = 0
+
     idx = np.digitize(zeuc, edges)
     idx = np.where(~np.isnan(zeuc), idx, np.nan)
 
@@ -374,6 +376,7 @@ def remap(values, zeuc, edges, out=None):
             mask = (idx == ii) & (zeuc >= minz) & (zeuc <= maxz)
             if np.any(mask):
                 out[np.int(ii) - 1] = func(values[mask])
+                count[np.int(ii) - 1] = np.sum(mask)
 
 
 def bin_to_new_coord(data, old_coord, new_coord, edges, reduce_func=None):
@@ -398,7 +401,7 @@ def bin_to_new_coord(data, old_coord, new_coord, edges, reduce_func=None):
 
     new_1d_coord = xr.DataArray((edges[:-1] + edges[1:]) / 2, dims=(new_coord,))
 
-    remapped = xr.apply_ufunc(
+    remapped, counts = xr.apply_ufunc(
         remap,
         data,
         data[new_coord],
@@ -412,6 +415,8 @@ def bin_to_new_coord(data, old_coord, new_coord, edges, reduce_func=None):
         # kwargs={"func": reduce_func}  # TODO: add support for reduce_func
     ).isel({new_coord: slice(-1)})
     remapped[new_coord] = new_1d_coord
+    remapped.coords["counts"] = counts
+    remapped.counts.attrs["description"] = "number of values in the bin"
 
     return remapped
 
