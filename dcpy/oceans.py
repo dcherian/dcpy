@@ -825,24 +825,28 @@ def neutral_density(ds):
         g[g < 0.1] = np.nan  # bad values are 0?
         return g
 
-    if ds.salt.ndim > 2:
+    lat = ds.cf.coordinates["latitude"][0]
+    lon = ds.cf.coordinates["longitude"][0]
+    if ds.cf["sea_water_salinity"].ndim > 2:
         # pygamma only accepts 2D at the most.
         # and depth must be the second dimension
         stacked = True
         ds = ds.cf.stack(latlon=["latitude", "longitude"]).transpose("latlon", ...)
     else:
         stacked = False
+
+    Z = ds.cf["sea_water_pressure"].cf.axes["Z"][0]
     gamma = xr.apply_ufunc(
         gamma_n_wrapper,
         ds.cf["sea_water_salinity"],
         ds.cf["sea_water_temperature"],
         ds.cf["sea_water_pressure"],
-        ds.cf["longitude"],
-        ds.cf["latitude"],
-        input_core_dims=[["depth"], ["depth"], ["depth"], [], []],
-        output_core_dims=[["depth"]],
+        ds[lon],
+        ds[lat],
+        input_core_dims=[[Z], [Z], [Z], [], []],
+        output_core_dims=[[Z]],
         dask="parallelized",
-        output_dtypes=[ds.salt.dtype],
+        output_dtypes=[ds.cf["sea_water_salinity"].dtype],
     )
     gamma.attrs["standard_name"] = "neutral_density"
     gamma.attrs["units"] = "kg/m3"
@@ -952,7 +956,8 @@ def read_osu_microstructure_mat(
             lat.attrs.clear()
         else:
             lat = 0
-        ds["pres"] = eos.pres(ds.depth, lat=lat)
+        if "depth" in ds:
+            ds["pres"] = eos.pres(ds.depth, lat=lat)
 
     if not no_TS:
         if "theta" not in ds:
