@@ -1000,7 +1000,7 @@ def cbar_inset_axes(ax):
     return cax
 
 
-def add_contour_legend(cs, label, **kwargs):
+def add_contour_legend(cs, label, numel=None,  **kwargs):
     """ Adds a separate legend for a contour. Call this before adding the final legend. """
 
     ax = cs.ax
@@ -1008,4 +1008,5 @@ def add_contour_legend(cs, label, **kwargs):
         raise ValueError(
             "'$' found in label. mpl adds this automatically and will raise an error if present."
         )
-    ax.add_artist(ax.legend(*cs.legend_elements(label), **kwargs))
+    elements = tuple(a[:numel] for a in cs.legend_elements(label))
+    ax.add_artist(ax.legend(*elements, **kwargs))
