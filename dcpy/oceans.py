@@ -244,7 +244,7 @@ def TSplot(
     if ax is None:
         f = plt.figure(constrained_layout=True)
         if plot_distrib:
-            gs = mpl.gridspec.GridSpec(3, 3, figure=f)
+            gs = mpl.gridspec.GridSpec(5, 5, figure=f)
 
             axes["ts"] = f.add_subplot(gs[1:, :-1])
             axes["s"] = f.add_subplot(gs[0, :-1], sharex=axes["ts"])
@@ -284,22 +284,23 @@ def TSplot(
     #     np.logical_or(temp > outlierT[1], temp < outlierT[0]))
 
     if hexbin:
-        plot_kwargs.setdefault("cmap", mpl.cm.Blues)
-        plot_kwargs.setdefault("mincnt", 1)
-        plot_kwargs["C"] = color
 
-        handles["ts"] = ax.hexbin(salt, temp, **plot_kwargs)
+        hexbin_defaults = {"cmap": mpl.cm.Blues, "mincnt": 1}
+        if not isinstance(color, str):
+            hexbin_defaults["C"] = color
+        hexbin_defaults.update(plot_kwargs)
+
+        handles["ts"] = ax.hexbin(salt, temp, gridsize=(Sbins, Tbins), **hexbin_defaults)
         # ax.plot(salt[outliermask], temp[outliermask], '.', 'gray')
 
     else:
         scatter_defaults.update(plot_kwargs)
-        plot_kwargs = scatter_defaults
         handles["ts"] = ax.scatter(
             salt,
             temp,
             s=size if size is not None else 12,
-            c=color if color is not None else "teal",
-            **plot_kwargs,
+            c=color,
+            **scatter_defaults,
         )
 
     # defaults.pop('alpha')
@@ -307,17 +308,17 @@ def TSplot(
     #                 s=flatten_data(size), c=[[0, 0, 0, 0]],
     #                 **defaults)
 
-    Slim = ax.get_xlim()
-    Tlim = ax.get_ylim()
-
-    Tvec = np.linspace(Tlim[0], Tlim[1], 40)
-    Svec = np.linspace(Slim[0], Slim[1], 40)
-    [Smat, Tmat] = np.meshgrid(Svec, Tvec)
-
-    # background ρ contours are T, S at the reference level
-    ρ = sw.pden(Smat, Tmat, Pref, Pref) - 1000
-
     if rho_levels is not None:
+        Slim = ax.get_xlim()
+        Tlim = ax.get_ylim()
+
+        Tvec = np.linspace(Tlim[0], Tlim[1], 40)
+        Svec = np.linspace(Slim[0], Slim[1], 40)
+        [Smat, Tmat] = np.meshgrid(Svec, Tvec)
+
+        # background ρ contours are T, S at the reference level
+        ρ = sw.pden(Smat, Tmat, Pref, Pref) - 1000
+
         rho_levels = np.asarray(rho_levels)
         if np.all(rho_levels > 1000):
             rho_levels = rho_levels - 1000
@@ -332,12 +333,14 @@ def TSplot(
             levels=rho_levels,
             linestyles="solid",
             zorder=-1,
+            linewidths=0.5,
         )
 
         ax.set_xlim([Smat.min(), Smat.max()])
         ax.set_ylim([Tmat.min(), Tmat.max()])
 
     if plot_distrib:
+        print(color)
         hist_args = dict(color=color, density=True, histtype="step")
         handles["Thist"] = axes["t"].hist(
             temp, orientation="horizontal", bins=Tbins, **hist_args
@@ -827,15 +830,16 @@ def neutral_density(ds):
 
     lat = ds.cf.coordinates["latitude"][0]
     lon = ds.cf.coordinates["longitude"][0]
-    if ds.cf["sea_water_salinity"].ndim > 2:
-        # pygamma only accepts 2D at the most.
-        # and depth must be the second dimension
-        stacked = True
-        ds = ds.cf.stack(latlon=["latitude", "longitude"]).transpose("latlon", ...)
-    else:
-        stacked = False
+    # if ds.cf["sea_water_salinity"].ndim > 2:
+    # pygamma only accepts 2D at the most.
+    # and depth must be the second dimension
+    #     stacked = True
+    #     ds = ds.cf.stack(latlon=["latitude", "longitude"]).transpose("latlon", ...)
+    # else:
+    #     stacked = False
 
     Z = ds.cf["sea_water_pressure"].cf.axes["Z"][0]
+
     gamma = xr.apply_ufunc(
         gamma_n_wrapper,
         ds.cf["sea_water_salinity"],
@@ -846,14 +850,15 @@ def neutral_density(ds):
         input_core_dims=[[Z], [Z], [Z], [], []],
         output_core_dims=[[Z]],
         dask="parallelized",
+        vectorize=True,
         output_dtypes=[ds.cf["sea_water_salinity"].dtype],
     )
     gamma.attrs["standard_name"] = "neutral_density"
     gamma.attrs["units"] = "kg/m3"
     gamma.attrs["long_name"] = "$γ_n$"
 
-    if stacked:
-        gamma = gamma.unstack()
+    # if stacked:
+    #    gamma = gamma.unstack()
     return gamma
 
 
