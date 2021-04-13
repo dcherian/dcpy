@@ -488,3 +488,9 @@ def infer_percentile(data, dim, value, debug=False):
         print(f"inferred_q: {inferred_q.data} | actual: {actual} vs expect:{value}")
 
     return inferred_q.reset_coords(drop=True)
+
+
+def slice_like(this, other):
+    dims = set(this.dims) & set(other.dims)
+    slicer = {dim: slice(other[dim][0], other[dim][-1]) for dim in dims}
+    return this.sel(slicer)
