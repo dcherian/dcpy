@@ -350,7 +350,7 @@ def pchip_fillna(obj, dim):
 
 
 @guvectorize(
-    [(double[:], double[:], double[:], double[:])],
+    [(double[:], double[:], double[:], double[:], int_[:])],
     "(n), (n), (m) -> (m), (m)",
     nopython=True,
 )
