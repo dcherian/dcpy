@@ -119,6 +119,12 @@ class facetgrid:
             for index, cc in enumerate(col):
                 self.col_axes[cc] = self.axes[:, index]
 
+        axes_dict = {}
+        for idx, row in enumerate(self.row_locs):
+            axes_dict[row] = dict(zip(self.col_locs, self.axes[idx, :]))
+        self.axes_dict = axes_dict
+
+
     def _parse_x_y(self, x, y):
         x = self.x if (x is None and self.x is not None) else x
         y = self.y if (y is None and self.y is not None) else y
