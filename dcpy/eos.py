@@ -748,7 +748,7 @@ def pres(depth, lat):
     pres = ((1 - C1) - (((1 - C1) ** 2) - (8.84e-6 * depth)) ** 0.5) / 4.42e-6
 
     if hasattr(pres, "attrs"):
-        pres.attrs["standard_name"] = "pressure"
+        pres.attrs["standard_name"] = "sea_water_pressure"
         pres.attrs["units"] = "dbar"
     return pres
 
@@ -1054,4 +1054,8 @@ def temp(s, pt, p, pr=0):
 
     """
     # Carry out inverse calculation by swapping p0 & pr.
-    return ptmp(s, pt, pr, p)
+    temp =  ptmp(s, pt, pr, p)
+    if isinstance(temp, xr.DataArray):
+        temp.attrs["standard_name"] = "sea_water_temperature"
+        temp.attrs["description"] = "ITS-90"
+    return temp
