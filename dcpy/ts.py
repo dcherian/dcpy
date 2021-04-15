@@ -121,21 +121,24 @@ def FindSegments(var):
           stop  - ending indices of valid ranges
     """
 
-    NotNans = np.double(~np.isnan(var))
+    if var.dtype.kind == "b":
+        NotNans = np.int32(var)
+    else:
+        NotNans = np.int32(~np.isnan(var))
+
     edges = np.diff(NotNans)
     start = np.where(edges == 1)[0]
     stop = np.where(edges == -1)[0]
-
     if start.size == 0 and stop.size == 0:
         start = np.array([0])
         stop = np.array([len(var) - 1])
 
     else:
         start = start + 1
-        if ~np.isnan(var[0]):
+        if NotNans[0]:
             start = np.insert(start, 0, 0)
 
-        if ~np.isnan(var[-1]):
+        if NotNans[-1]:
             stop = np.append(stop, len(var) - 1)
 
     return start, stop
