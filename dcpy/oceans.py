@@ -340,7 +340,6 @@ def TSplot(
         ax.set_ylim([Tmat.min(), Tmat.max()])
 
     if plot_distrib:
-        print(color)
         hist_args = dict(color=color, density=True, histtype="step")
         handles["Thist"] = axes["t"].hist(
             temp, orientation="horizontal", bins=Tbins, **hist_args

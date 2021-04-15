@@ -1000,7 +1000,7 @@ def cbar_inset_axes(ax):
     return cax
 
 
-def add_contour_legend(cs, label, numel=None,  **kwargs):
+def add_contour_legend(cs, label, numel=None, **kwargs):
     """ Adds a separate legend for a contour. Call this before adding the final legend. """
 
     ax = cs.ax
