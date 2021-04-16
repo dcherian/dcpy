@@ -181,6 +181,8 @@ def TSplot(
     plot_kwargs=None,
     hexbin=True,
     fontsize=9,
+    kind=None,
+    equalize=True,
 ):
     """
     T-S plot. The default is to scatter, but hex-binning is also an option.
@@ -225,6 +227,12 @@ def TSplot(
     """
 
     # colormap = cmo.cm.matter
+    #
+    if kind is None:
+        if hexbin is True:
+            kind = "hexbin"
+        elif hexbin is False:
+            kind = "scatter"
 
     if plot_kwargs is None:
         plot_kwargs = {}
@@ -283,17 +291,36 @@ def TSplot(
     #     np.logical_or(salt > outlierS[1], salt < outlierS[0]),
     #     np.logical_or(temp > outlierT[1], temp < outlierT[0]))
 
-    if hexbin:
+    if kind == "hexbin":
 
         hexbin_defaults = {"cmap": mpl.cm.Blues, "mincnt": 1}
         if not isinstance(color, str):
             hexbin_defaults["C"] = color
         hexbin_defaults.update(plot_kwargs)
 
-        handles["ts"] = ax.hexbin(salt, temp, gridsize=(Sbins, Tbins), **hexbin_defaults)
+        handles["ts"] = ax.hexbin(
+            salt, temp, gridsize=(Sbins, Tbins), **hexbin_defaults
+        )
         # ax.plot(salt[outliermask], temp[outliermask], '.', 'gray')
+        #
+    elif kind == "hist":
+        from xhistogram.core import histogram
 
-    else:
+        if isinstance(Sbins, int):
+            Sbins = np.linspace(S.data.min(), S.data.max(), Sbins)
+        if isinstance(Tbins, int):
+            Tbins = np.linspace(T.data.min(), T.data.max(), Tbins)
+        hist = histogram(salt, temp, bins=(Sbins, Tbins))
+        if equalize:
+            from skimage.exposure import equalize_adapthist
+
+            hist = equalize_adapthist(hist.data)
+        hist = hist.astype(float)
+        # print(np.percentile(hist.ravel(), 10))
+        hist[hist < np.percentile(hist[hist > 0].ravel(), 10)] = np.nan
+        handles["ts"] = ax.pcolormesh(Sbins, Tbins, hist.T, **plot_kwargs)
+
+    elif kind == "scatter":
         scatter_defaults.update(plot_kwargs)
         handles["ts"] = ax.scatter(
             salt,
