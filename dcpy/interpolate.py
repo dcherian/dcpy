@@ -407,16 +407,17 @@ def bin_to_new_coord(data, old_coord, new_coord, edges, reduce_func=None):
         data[new_coord],
         edges,
         input_core_dims=[[old_coord], [old_coord], ["__temp_dim__"]],
-        output_core_dims=[[new_coord]],
+        output_core_dims=[[new_coord], [new_coord]],
         exclude_dims=set((old_coord,)),
         dask="parallelized",
-        output_dtypes=[float],
+        output_dtypes=[float, int],
         dask_gufunc_kwargs=dict(output_sizes={new_coord: len(edges)}),
         # kwargs={"func": reduce_func}  # TODO: add support for reduce_func
-    ).isel({new_coord: slice(-1)})
-    remapped[new_coord] = new_1d_coord
+    )
     remapped.coords["counts"] = counts
     remapped.counts.attrs["description"] = "number of values in the bin"
+    remapped = remapped.isel({new_coord: slice(-1)})
+    remapped[new_coord] = new_1d_coord
 
     return remapped
 
