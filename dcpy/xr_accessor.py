@@ -2,7 +2,7 @@ import xarray as xr
 
 
 @xr.register_dataarray_accessor("dc")
-class DcAccessor(object):
+class DcAccessor:
     def __init__(self, xarray_obj):
         self._obj = xarray_obj
 

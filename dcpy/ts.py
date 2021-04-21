@@ -873,7 +873,7 @@ def PlotCoherence(y0, y1, dt=1, nsmooth=5, multitaper=False, scale=1, decimate=F
     ax[1].plot(f, Cxy)
     dcpy.plots.liney(siglevel, ax=ax[1])
     ax[1].set_title(
-        "{0:.2f}% above 95% significance".format(sum(Cxy > siglevel) / len(Cxy) * 100)
+        f"{sum(Cxy > siglevel) / len(Cxy) * 100:.2f}% above 95% significance"
     )
     ax[1].set_ylim([0, 1])
     ax[1].set_ylabel("Squared Coherence")

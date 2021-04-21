@@ -672,13 +672,13 @@ def pow10Formatter(x, pos):
     Format color bar labels to show scientific label
     """
 
-    a, b = "{:.1e}".format(x).split("e")
+    a, b = f"{x:.1e}".split("e")
     b = int(b)
 
     if int(np.float(a)) != 1:
-        return r"${} \times 10^{{{}}}$".format(a, b)
+        return fr"${a} \times 10^{{{b}}}$"
     else:
-        return r"$10^{{{}}}$".format(b)
+        return fr"$10^{{{b}}}$"
 
 
 def rain_colormap(subset=slice(None, None)):

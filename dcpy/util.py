@@ -38,7 +38,7 @@ def to_uniform_grid(data, coord, dim, new_coord):
         )
         return f(newy)
 
-    dim = set([dim])
+    dim = {dim}
 
     result = xr.apply_ufunc(
         _wrap_interp,
@@ -320,7 +320,7 @@ def print_progress(iteration, total, prefix="", suffix="", decimals=1, bar_lengt
     filled_length = int(round(bar_length * iteration / float(total)))
     bar = "█" * filled_length + "-" * (bar_length - filled_length)
 
-    sys.stdout.write("\r%s |%s| %s%s %s" % (prefix, bar, percents, "%", suffix)),
+    sys.stdout.write("\r{} |{}| {}{} {}".format(prefix, bar, percents, "%", suffix)),
 
     if iteration == total:
         sys.stdout.write("\n")

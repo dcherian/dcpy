@@ -408,7 +408,7 @@ def bin_to_new_coord(data, old_coord, new_coord, edges, reduce_func=None):
         edges,
         input_core_dims=[[old_coord], [old_coord], ["__temp_dim__"]],
         output_core_dims=[[new_coord], [new_coord]],
-        exclude_dims=set((old_coord,)),
+        exclude_dims={old_coord},
         dask="parallelized",
         output_dtypes=[float, int],
         dask_gufunc_kwargs=dict(output_sizes={new_coord: len(edges)}),
