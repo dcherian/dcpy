@@ -873,6 +873,7 @@ def neutral_density(ds):
     else:
         Z = ds.cf["sea_water_pressure"].cf.axes["Z"][0]
 
+    dtype = ds.cf["sea_water_salinity"].dtype
     gamma = xr.apply_ufunc(
         gamma_n_wrapper,
         ds.cf["sea_water_salinity"],
@@ -884,7 +885,8 @@ def neutral_density(ds):
         output_core_dims=[[Z]],
         dask="parallelized",
         vectorize=True,
-        output_dtypes=[ds.cf["sea_water_salinity"].dtype],
+        output_dtypes=[dtype],
+        dask_gufunc_kwargs=dict(meta=np.ndarray((0, 0), dtype=dtype)),
     )
     gamma.attrs["standard_name"] = "neutral_density"
     gamma.attrs["units"] = "kg/m3"
