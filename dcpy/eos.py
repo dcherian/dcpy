@@ -47,6 +47,7 @@ __all__ = [
     "alpha",
     "aonb",
     "beta",
+    "bfrq",
     "dpth",
     "g",
     "salt",
@@ -704,7 +705,7 @@ def pden(s, t, p, pr=0):
     if hasattr(pden, "attrs"):
         pden.attrs["standard_name"] = "sea_water_potential_density"
         pden.attrs["units"] = "kg/m3"
-    if isinstance(pden, xr.DataArray):
+    if isinstance(pden, xr.DataArray) and np.ndim(pr) < 1:
         pden.coords["reference_pressure"] = pr
         pden.reference_pressure.attrs["units"] = "dbar"
     return pden
@@ -1052,8 +1053,166 @@ def temp(s, pt, p, pr=0):
 
     """
     # Carry out inverse calculation by swapping p0 & pr.
-    temp =  ptmp(s, pt, pr, p)
+    temp = ptmp(s, pt, pr, p)
     if isinstance(temp, xr.DataArray):
         temp.attrs["standard_name"] = "sea_water_temperature"
         temp.attrs["description"] = "ITS-90"
     return temp
+
+
+def f(lat):
+    """
+    Calculates the Coriolis factor :math:`f` defined by:
+
+    .. math::
+        f = 2 \\Omega \\sin(lat)
+
+    where:
+
+    .. math::
+        \\Omega = \\frac{2 \\pi}{\\textrm{sidereal day}} = 7.2921150e^{-5}
+        \\textrm{ radians sec}^{-1}
+
+
+    Parameters
+    ----------
+    lat : array_like
+          latitude in decimal degrees north [-90..+90].
+
+    Returns
+    -------
+    f : array_like
+        Coriolis factor [s :sup:`-1`]
+
+    Examples
+    --------
+    >>> import seawater as sw
+    >>> sw.f(45)
+    0.00010312445296824608
+
+    References
+    ----------
+    .. [1] S. Pond & G.Pickard 2nd Edition 1986 Introductory Dynamical
+       Oceanography Pergamon Press Sydney. ISBN 0-08-028728-X
+
+    .. [2] A.E. Gill 1982. p.54  Eqn. 3.7.15 "Atmosphere-Ocean Dynamics"
+       Academic Press: New York. ISBN: 0-12-283522-0
+
+    .. [3] Groten, E., 2004: Fundamental Parameters and Current (2004) Best
+       Estimates of the Parameters of Common Relevance to Astronomy, Geodesy,
+       and Geodynamics. Journal of Geodesy, 77, pp. 724-797.
+
+    """
+    # Eqn p27.  UNESCO 1983.
+    return 2 * OMEGA * np.sin(lat * deg2rad)
+
+
+def bfrq(s, t, p, dim, lat=None):
+    """
+    Calculates Brünt-Väisälä Frequency squared (N :sup:`2`) at the mid
+    depths from the equation:
+
+    .. math::
+        N^{2} = \\frac{-g}{\\sigma_{\\theta}} \\frac{d\\sigma_{\\theta}}{dz}
+
+    Also calculates Potential Vorticity from:
+
+    .. math::
+        q = f \\frac{N^2}{g}
+
+    Parameters
+    ----------
+    s(p) : array_like
+           salinity [psu (PSS-78)]
+    t(p) : array_like
+           temperature or potential temperature [℃ (ITS-90)]
+    p : array_like
+        pressure [db].
+    lat : number or array_like, optional
+          latitude in decimal degrees north [-90..+90].
+          Will grav instead of the default g = 9.8 m :sup:`2` s :sup:`-1`) and
+          d(z) instead of d(p)
+
+    Returns
+    -------
+    n2 : array_like
+           Brünt-Väisälä Frequency squared (M-1xN)  [rad s :sup:`-2`]
+    q : array_like
+           planetary potential vorticity (M-1xN)  [ m s :sup:`-1`]
+    p_ave : array_like
+            mid pressure between P grid (M-1xN) [db]
+
+    Examples
+    --------
+    >>> import seawater as sw
+    >>> s = [[0, 0, 0], [15, 15, 15], [30, 30, 30],[35,35,35]]
+    >>> t = [[15]*3]*4
+    >>> p = [[0], [250], [500], [1000]]
+    >>> lat = [30,32,35]
+    >>> sw.bfrq(s, t, p, lat)[0]
+    array([[  4.51543648e-04,   4.51690708e-04,   4.51920753e-04],
+           [  4.45598092e-04,   4.45743207e-04,   4.45970207e-04],
+           [  7.40996788e-05,   7.41238078e-05,   7.41615525e-05]])
+
+    References
+    ----------
+    .. [1] A.E. Gill 1982. p.54  Eqn. 3.7.15 "Atmosphere-Ocean Dynamics"
+       Academic Press: New York. ISBN: 0-12-283522-0
+
+    .. [2] Jackett, David R., Trevor J. Mcdougall, 1995: Minimal Adjustment of
+       Hydrographic Profiles to Achieve Static Stability. J. Atmos. Oceanic
+       Technol., 12, 381-389.
+       doi: 10.1175/1520-0426(1995)012<0381:MAOHPT>2.0.CO;2
+
+    """
+
+    # s, t, p = list(map(np.asanyarray, (s, t, p)))
+    # s, t, p = np.broadcast_arrays(s, t, p)
+    # s, t, p = list(map(atleast_2d, (s, t, p)))
+
+    if lat is None:
+        z, cor, grav = p, np.NaN, gdef * xr.ones_like(p)
+    else:
+        lat = np.asanyarray(lat)
+        z = dpth(p, lat)
+        grav = g(lat, -z)  # -z because `grav` expects height as argument.
+        cor = f(lat)
+
+    def avg1(data):
+        a, b = xr.align(
+            data.isel({dim: slice(-1)}),
+            data.isel({dim: slice(1, None)}),
+            join="override",
+        )
+        return (a + b) / 2
+
+    p_ave = avg1(p)
+
+    pref = xr.align(p_ave, s, join="right")[0]
+    pden_lo = pden(s, t, p, pref)
+    pden_hi = pden(s.shift({dim: -1}), t.shift({dim: -1}), p.shift({dim: -1}), pref)
+    # pden = pden(s[1:, ...], t[1:, ...], p[1:, ...], p_ave)
+
+    midpos = f"{dim}_mid"
+    mid_pden = ((pden_lo + pden_hi) / 2).isel({dim: slice(-1)})
+    dif_pden = (pden_lo - pden_hi).isel({dim: slice(-1)})
+    mid_g = avg1(grav)
+    dif_z = z.diff(dim=dim, label="lower")  # np.diff(z, axis=0)
+
+    xr.align(mid_pden, dif_pden, p_ave, mid_g, dif_z, join="exact")
+
+    n2 = -mid_g * dif_pden / (dif_z * mid_pden)
+
+    q = -cor * dif_pden / (dif_z * mid_pden)
+
+    n2[dim] = p_ave
+    q[dim] = p_ave
+    n2 = n2.rename({dim: f"{dim}_mid"})
+    q = q.rename({dim: f"{dim}_mid"})
+
+    n2.attrs = {
+        "long_name": "$N²$",
+        "description": "N² from seawater toolbox; 'adiabatic levelling' method",
+    }
+
+    return n2, q
