@@ -4,6 +4,9 @@ import scipy as sp
 
 import xarray as xr
 
+from typing import Union
+from xarray import DataArray, Dataset, Variable
+
 
 def to_uniform_grid(data, coord, dim, new_coord):
     """
@@ -494,3 +497,42 @@ def slice_like(this, other):
     dims = set(this.dims) & set(other.dims)
     slicer = {dim: slice(other[dim][0], other[dim][-1]) for dim in dims}
     return this.sel(slicer)
+
+
+def block_lengths(obj: Union[DataArray, Dataset], dim, index = None):
+    """
+    Return an object where each NaN element in 'obj' is replaced by the
+    length of the gap the element is in.
+
+    Parameters
+    ----------
+
+    obj: DataArray or Dataset
+        Must have boolean values
+    """
+
+    if index is None:
+        index = obj[dim].data  # xr.core.missing.get_clean_interp_index(obj, dim)
+    if np.issubdtype(index.dtype, np.timedelta64):
+        index = index - index[0]
+
+
+    # make variable so that we get broadcasting for free
+    index = Variable([dim], index)
+
+    # algorithm from https://github.com/pydata/xarray/pull/3302#discussion_r324707072
+    arange = Variable(obj.dims, np.broadcast_to(index, obj.shape))  # xr.broadcast(index, obj)[0] # xr.ones_like(obj) * index
+    valid = ~obj
+    valid_arange = arange.where(valid)
+    cumulative_nans = valid_arange.ffill(dim=dim).fillna(index[0])
+
+    block_lengths = (
+        cumulative_nans.diff(dim=dim, label="upper")
+        .reindex({dim: obj[dim]})
+        .where(valid)
+        .bfill(dim=dim)
+        .where(~valid, 0)
+        .fillna(index[-1] - valid_arange.max())
+    )
+
+    return block_lengths
