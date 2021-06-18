@@ -392,11 +392,11 @@ def TSplot(
             [txt.set_backgroundcolor([0.95, 0.95, 0.95, 0.75]) for txt in clabels]
 
         ax.text(
-            0,
             1.005,
+            1.00,
             " $σ_" + str(Pref) + "$",
             transform=ax.transAxes,
-            va="bottom",
+            va="top",
             fontsize=fontsize + 2,
             color="gray",
         )
@@ -595,7 +595,10 @@ def read_argo_clim(dirname="/home/deepak/datasets/argoclim/", chunks=None):
 
     argo.time.attrs["axis"] = "T"
     argo["T"].attrs["standard_name"] = "sea_water_potential_temperature"
+    argo["Tmean"].attrs["standard_name"] = "sea_water_potential_temperature"
     argo["S"].attrs["standard_name"] = "sea_water_salinity"
+    argo["Smean"].attrs["standard_name"] = "sea_water_salinity"
+    argo["pres"].attrs["standard_name"] = "sea_water_pressure"
 
     return argo
 
@@ -864,13 +867,17 @@ def neutral_density(ds):
     # else:
     #     stacked = False
 
-    Z = ds.cf["sea_water_pressure"].cf.axes["Z"][0]
+    P = ds.cf["sea_water_pressure"]
+    if P.ndim == 1:
+        Z = P.dims[0]
+    else:
+        Z = ds.cf["sea_water_pressure"].cf.axes["Z"][0]
 
     gamma = xr.apply_ufunc(
         gamma_n_wrapper,
         ds.cf["sea_water_salinity"],
         ds.cf["sea_water_temperature"],
-        ds.cf["sea_water_pressure"],
+        P,
         ds[lon],
         ds[lat],
         input_core_dims=[[Z], [Z], [Z], [], []],
