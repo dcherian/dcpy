@@ -1043,3 +1043,31 @@ def read_cchdo_chipod_file(file, chunks=None):
     chi.T.attrs["units"] = "C"
     chi = chi.drop_vars(["mooring", "crs", "chipod"])
     return chi
+
+
+def read_kunze_2017_finestructure(dirname="/home/deepak/datasets/finestructure/"):
+    """ Reads the Kunze et al (2017) finestructure estimate CSV file"""
+
+    kunze = pd.read_csv(
+        f"{dirname}/kunze/strainfineoutatlantic.dat",
+        header=None,
+        sep=" ",
+        index_col=False,
+        names=[
+            "cruise",
+            "drop",
+            "latitude",
+            "longitude",
+            "z_i",
+            "z_f",
+            "γ_i",
+            "γ_f",
+            "N2",
+            "ε",
+            "K",
+        ],
+    )
+    kunze["z_mean"] = (kunze["z_i"] + kunze["z_f"]) / 2
+    kunze["γ_mean"] = (kunze["γ_i"] + kunze["γ_f"]) / 2
+
+    return kunze
