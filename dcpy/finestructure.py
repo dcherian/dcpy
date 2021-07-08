@@ -6,7 +6,7 @@ import mixsea
 import gsw
 
 
-def _check_good_segment(N2, N, f):
+def _check_good_segment(N2, N, f, debug=False):
     """
     Check whether segment is good.
 
@@ -20,22 +20,26 @@ def _check_good_segment(N2, N, f):
     """
 
     if (N2.max() - N2.min()).item() > 5e-4:
-        print("too much N2 variance")
+        if debug:
+            print("too much N2 variance")
         return False, 1
 
     if N2.mean() < 1e-9:
-        print("too unstratified")
+        if debug:
+            print("too unstratified")
         return False, 2
 
     if N < 2 * f:
         # Kunze et al (2017): With the expectation that N > 2f
         # is a minimal frequency bandwidth to allow internal wave–wave interactions,
         # segments with ⟨N⟩ less than 2f were also excluded
-        print("too little bandwidth; possibly no wave-wave interactions")
+        if debug:
+            print("too little bandwidth; possibly no wave-wave interactions")
         return False, 3
 
     if N ** 2 < f ** 2:
-        print("no internal waves")
+        if debug:
+            print("no internal waves")
         return False, 4
 
     return True, 5
@@ -82,7 +86,7 @@ def estimate_turb_segment(P, N2, lat, max_wavelength=256, debug=False, crit="mix
     L_Nf = latitude_Nf(N, f)
     kzstar = (π * jstar / b) * (N / N0)
 
-    isgood, flag = _check_good_segment(N2, N, f)
+    isgood, flag = _check_good_segment(N2, N, f, debug=debug)
 
     # TODO: check
     N2[~mask] = N2fit[~mask]
