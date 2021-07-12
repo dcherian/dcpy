@@ -1,9 +1,12 @@
-from scipy import signal
-import xarray as xr
-import numpy as np
 import functools
-import mixsea
+
 import gsw
+import matplotlib.pyplot as plt
+import mixsea
+import numpy as np
+from scipy import signal
+
+import xarray as xr
 
 
 def _check_good_segment(N2, N, f, debug=False):
@@ -75,12 +78,17 @@ def estimate_turb_segment(P, N2, lat, max_wavelength=256, debug=False, crit="mix
     elif crit == "kunze":
         Rω = 7
 
-   # TODO: fix for argo
+    # TODO: ensure approximately uniform spacing
     dp = np.diff(P).min()
 
     mask = np.isfinite(N2)
     N2fit = np.polyval(np.polyfit(P[mask], N2[mask], deg=2), P)
     N = np.sqrt(N2fit.mean()).item()
+
+    # if debug:
+    #     plt.figure()
+    #     plt.plot(N2)
+    #     plt.plot(N2fit)
 
     h_Rω = shearstrain_Rω(Rω)
     L_Nf = latitude_Nf(N, f)
@@ -100,10 +108,13 @@ def estimate_turb_segment(P, N2, lat, max_wavelength=256, debug=False, crit="mix
     if np.sum(~np.isfinite(ξ)) > 0:
         return np.nan
 
-    # kz, psd = signal.periodogram(
-    #    ξ.data, fs=2 * π / dp, window="hann", detrend="linear", scaling="density"
-    # )
-    _, _, psd, kz = mixsea.helpers.psd(ξ.data, 2, ffttype="t", detrend=True)
+    kz, psd = signal.periodogram(
+        ξ.data, fs=2 * π / dp, window="hann", detrend="linear", scaling="density"
+    )
+    # _, _, psd, kz = mixsea.helpers.psd(ξ.data, 2, ffttype="t", detrend=True)
+    # if debug:
+    #    plt.loglog(kz, psd)
+
     # correct for first difference
     psd /= np.sinc(kz * dp / 2 / π) ** 2
 
@@ -149,7 +160,7 @@ def estimate_turb_segment(P, N2, lat, max_wavelength=256, debug=False, crit="mix
 
     if debug:
         print(
-            f"ξgmvar: {ξgmvar:.3f}, ξvar: {ξvar:.3f}, N2: {N2bar:.2e} K: {K:.2e}, ε: {ε:.2e}"
+            f"ξgmvar: {ξgmvar:.3f}, ξvar: {ξvar:.3f}, N2: {N2fit.mean():.2e} K: {K:.2e}, ε: {ε:.2e}"
         )
 
     return K, ε, ξvar, ξgmvar, N ** 2, flag
