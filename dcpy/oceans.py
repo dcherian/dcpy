@@ -885,7 +885,6 @@ def neutral_density(ds):
         output_core_dims=[[Z]],
         dask="parallelized",
         vectorize=True,
-        output_dtypes=[dtype],
         dask_gufunc_kwargs=dict(meta=np.ndarray((0, 0), dtype=dtype)),
     )
     gamma.attrs["standard_name"] = "neutral_density"
