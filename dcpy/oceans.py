@@ -888,13 +888,12 @@ def neutral_density(ds):
         dask="parallelized",
         vectorize=True,
         dask_gufunc_kwargs=dict(meta=np.ndarray((0, 0), dtype=dtype)),
+        keep_attrs=True,
     )
     gamma.attrs["standard_name"] = "neutral_density"
     gamma.attrs["units"] = "kg/m3"
     gamma.attrs["long_name"] = "$γ_n$"
 
-    # if stacked:
-    #    gamma = gamma.unstack()
     return gamma
 
 
