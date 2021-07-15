@@ -1,3 +1,4 @@
+import os
 import cf_xarray
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -721,8 +722,9 @@ def read_oscar(dirname="/home/deepak/work/datasets/oscar/"):
     return oscar
 
 
-def read_mimoc(dirname="/home/deepak/datasets/mimoc/", year=2014):
+def read_mimoc(dirname="~/datasets/mimoc/", year=2014):
 
+    dirname = os.path.expanduser(dirname)
     mimoc = xr.open_mfdataset(
         f"{dirname}/MIMOC_ML_*.nc", concat_dim="month", combine="nested"
     )
