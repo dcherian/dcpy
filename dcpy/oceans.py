@@ -594,11 +594,13 @@ def read_argo_clim(dirname="/home/deepak/datasets/argoclim/", chunks=None):
     )
 
     argo.time.attrs["axis"] = "T"
-    argo["T"].attrs["standard_name"] = "sea_water_potential_temperature"
-    argo["Tmean"].attrs["standard_name"] = "sea_water_potential_temperature"
+    argo["T"].attrs["standard_name"] = "sea_water_temperature"
+    argo["Tmean"].attrs["standard_name"] = "sea_water_temperature"
     argo["S"].attrs["standard_name"] = "sea_water_salinity"
     argo["Smean"].attrs["standard_name"] = "sea_water_salinity"
     argo["pres"].attrs["standard_name"] = "sea_water_pressure"
+    argo.pres.attrs["positive"] = "down"
+    argo["theta_mean"] = eos.ptmp(argo.Smean, argo.Tmean, argo.pres)
 
     return argo
 
