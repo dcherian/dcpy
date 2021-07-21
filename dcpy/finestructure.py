@@ -45,20 +45,22 @@ def trim_mld_mode_water(profile):
     )
 
 
-def results_to_xarray(results, profile):
+def results_to_xarray(results, profile, criteria):
     data_vars = {
-        var: ("pressure", results[var])
+        var: (("pressure", "criteria"), results[var])
         for var in [
             "ε",
             "Kρ",
-            "N2mean",
             "ξvar",
             "ξvargm",
-            "Tzlin",
-            "Tzmean",
-            "mean_dTdz_seg",
         ]
     }
+    data_vars.update(
+        {
+            var: (("pressure",), results[var])
+            for var in ["Tzlin", "Tzmean", "mean_dTdz_seg", "N2mean"]
+        }
+    )
     coords = {
         var: ("pressure", results[var]) for var in ["flag", "pressure", "npts", "γmean"]
     }
@@ -68,6 +70,11 @@ def results_to_xarray(results, profile):
             "longitude": profile.cf["longitude"].data,
             "γ_bounds": (("pressure", "nbnds"), results["γbnds"]),
             "p_bounds": (("pressure", "nbnds"), results["pbnds"]),
+            "criteria": (
+                "criteria",
+                criteria,
+                {"description": "criteria used to find integrating range"},
+            ),
         }
     )
 
@@ -194,7 +201,7 @@ def shearstrain_Rω(Rω):
     return 1 / 6 / np.sqrt(2) * Rω * (Rω + 1) / np.sqrt(Rω - 1)
 
 
-def estimate_turb_segment(P, N2, lat, max_wavelength=256, debug=False, crit="mixsea"):
+def estimate_turb_segment(P, N2, lat, max_wavelength=256, debug=False, criteria=None):
     # GM 75; Kunze et al (2017)
     E0 = 6.3e-5  # nondim spectral energy level
     jstar = 3  # peak mode number
@@ -205,12 +212,6 @@ def estimate_turb_segment(P, N2, lat, max_wavelength=256, debug=False, crit="mix
     f30 = 7.3e-5  # rad/s or oceans.coriolis(30)
     π = np.pi
     f = np.abs(2 * (2 * π / 86400) * np.sin(lat * π / 180))
-
-    # shear strain ratio; Whalen et al (2015) use 3; Kunze et al (2017) use 7
-    if crit in ["mixsea", "whalen"]:
-        Rω = 3
-    elif crit == "kunze":
-        Rω = 7
 
     # TODO: ensure approximately uniform spacing
     dp = np.diff(P).min()
@@ -224,7 +225,6 @@ def estimate_turb_segment(P, N2, lat, max_wavelength=256, debug=False, crit="mix
     #     plt.plot(N2)
     #     plt.plot(N2fit)
 
-    h_Rω = shearstrain_Rω(Rω)
     L_Nf = latitude_Nf(N, f)
     kzstar = (π * jstar / b) * (N / N0)
 
@@ -259,37 +259,54 @@ def estimate_turb_segment(P, N2, lat, max_wavelength=256, debug=False, crit="mix
     ξgmvar = np.nan
     i0 = np.argmin(np.abs(1 / kz[1:] - max_wavelength / 2 / π))
 
-    if crit == "kunze":
-        # TODO: integrating the strain spectra S[ξ](k_z) from the
-        # lowest resolved vertical wavenumber (λ_z = 256 m) to the
-        # wavenumber where variance exceeds a threshold value
-        # of 0.05, which, for a GM-level spectrum, corresponds to
-        # λ_z ≈ 50 m, in part to avoid contamination by ship heave
-        # near 10-m wavelengths
-        for idx in range(i0, 127):
-            ξvar = np.trapz(psd[i0:idx], x=kz[i0:idx])
-            if ξvar > 0.05:
-                idxint = np.arange(i0, idx + 1)
-                break
-            # continue looping if spectrum is  "oversaturated"
+    if criteria is None:
+        criteria = ("kunze", "mixsea", "whalen")
 
-    elif crit == "whalen":
-        for min_wavelength in np.arange(10, 41, dp):
-            idx = np.argmin(np.abs(2 * π / kz[1:] - min_wavelength))
-            ξvar = np.trapz(psd[i0:idx], x=kz[i0:idx])
-            if ξvar <= 0.2:
-                idxint = np.arange(i0, idx + 1)
-                break
-            # continue looping if spectrum is  "oversaturated"
+    elif isinstance(criteria, str):
+        criteria = (criteria,)
 
-    elif crit == "mixsea":
-        idxint, _ = mixsea.shearstrain.find_cutoff_wavenumber(psd, kz, 0.22)
-        ξvar = np.trapz(psd[idxint], x=kz[idxint])
+    h_Rω = np.empty((len(criteria),))
+    ξvar = np.empty((len(criteria),))
+    ξgmvar = np.empty((len(criteria),))
+    for cindex, crit in enumerate(criteria):
+        # shear strain ratio; Whalen et al (2015) use 3; Kunze et al (2017) use 7
+        if crit in ["mixsea", "whalen"]:
+            Rω = 3
+        elif crit == "kunze":
+            Rω = 7
+        h_Rω[cindex] = shearstrain_Rω(Rω)
 
-    ξgmvar = np.trapz(ξgm[idxint], x=kz[idxint])
+        if crit == "kunze":
+            # integrating the strain spectra S[ξ](k_z) from the
+            # lowest resolved vertical wavenumber (λ_z = 256 m) to the
+            # wavenumber where variance exceeds a threshold value
+            # of 0.05, which, for a GM-level spectrum, corresponds to
+            # λ_z ≈ 50 m, in part to avoid contamination by ship heave
+            # near 10-m wavelengths
+            for idx in range(i0, 127):
+                ξvar[cindex] = np.trapz(psd[i0:idx], x=kz[i0:idx])
+                if ξvar[cindex] > 0.05:
+                    idxint = np.arange(i0, idx + 1)
+                    break
+                # continue looping if spectrum is  "oversaturated"
 
-    if np.isnan(ξgmvar):
-        ξvar = np.nan
+        elif crit == "whalen":
+            for min_wavelength in np.arange(10, 41, dp):
+                idx = np.argmin(np.abs(2 * π / kz[1:] - min_wavelength))
+                ξvar[cindex] = np.trapz(psd[i0:idx], x=kz[i0:idx])
+                if ξvar[cindex] <= 0.2:
+                    idxint = np.arange(i0, idx + 1)
+                    break
+                # continue looping if spectrum is  "oversaturated"
+
+        elif crit == "mixsea":
+            idxint, _ = mixsea.shearstrain.find_cutoff_wavenumber(psd, kz, 0.22)
+            ξvar[cindex] = np.trapz(psd[idxint], x=kz[idxint])
+
+        ξgmvar[cindex] = np.trapz(ξgm[idxint], x=kz[idxint])
+
+        if np.isnan(ξgmvar[cindex]):
+            ξvar[cindex] = np.nan
 
     scale = (ξvar / ξgmvar) ** 2 * h_Rω * L_Nf
     K = K_0 * scale
@@ -364,7 +381,7 @@ def do_mixsea_shearstrain(profile, depth_bins):
     return ds
 
 
-def process_profile(profile, dz_segment=200, debug=True):
+def process_profile(profile, dz_segment=200, criteria=None, debug=False):
     profile["σ_θ"] = eos.pden(
         profile.cf["sea_water_salinity"],
         profile.cf["sea_water_temperature"],
@@ -392,10 +409,6 @@ def process_profile(profile, dz_segment=200, debug=True):
     results = {
         var: np.full((len(lefts),), fill_value=np.nan)
         for var in [
-            "Kρ",
-            "ε",
-            "ξvar",
-            "ξvargm",
             "N2mean",
             "γmean",
             "flag",
@@ -406,6 +419,17 @@ def process_profile(profile, dz_segment=200, debug=True):
             "mean_dTdz_seg",
         ]
     }
+
+    if criteria is None:
+        criteria = ["mixsea", "kunze", "whalen"]
+        ncrit = 3
+    elif isinstance(criteria, str):
+        criteria = (criteria,)
+        ncrit = 1
+
+    for var in ["Kρ", "ε", "ξvar", "ξvargm"]:
+        results[var] = np.full((len(lefts), ncrit), fill_value=np.nan)
+
     for var in ["γbnds", "pbnds"]:
         results[var] = np.full((len(lefts), 2), fill_value=np.nan)
 
@@ -472,6 +496,7 @@ def process_profile(profile, dz_segment=200, debug=True):
             seg.cf["latitude"].data,
             max_wavelength=dz_segment,
             debug=debug,
+            criteria=criteria,
         )
 
         results["Tzlin"][idx] = (
@@ -497,7 +522,7 @@ def process_profile(profile, dz_segment=200, debug=True):
         #     dTdz.plot()
         #     dTdz_fit.plot()
 
-    dataset = results_to_xarray(results, profile)
+    dataset = results_to_xarray(results, profile, criteria=criteria)
 
     if debug:
         plot_profile_turb(profile_original, dataset)
