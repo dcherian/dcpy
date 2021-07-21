@@ -351,30 +351,23 @@ def mixsea_to_xarray(result):
     return ds.isel(depth=ds.depth.notnull())
 
 
-def do_mixsea_shearstrain(profile, depth_bins):
-    _, _, resultpf = mixsea.shearstrain.shearstrain(
-        -1 * gsw.z_from_p(profile.pressure, profile.latitude),
-        profile.ctd_temperature,
-        profile.ctd_salinity,
-        profile.longitude,
-        profile.latitude,
-        window_size=245,
-        depth_bin=depth_bins,
-        return_diagnostics=True,
-        smooth="PF",
-    )
+def do_mixsea_shearstrain(profile, dz_segment):
 
-    _, _, resultal = mixsea.shearstrain.shearstrain(
-        -1 * gsw.z_from_p(profile.pressure, profile.latitude),
-        profile.ctd_temperature,
-        profile.ctd_salinity,
-        profile.longitude,
-        profile.latitude,
-        window_size=245,
-        depth_bin=depth_bins,
+    P = profile.cf["sea_water_pressure"]
+    depth_bins = choose_bins(P.data, dz_segment)
+
+    kwargs = dict(
+        depth=-1 * gsw.z_from_p(P, profile.cf["latitude"]),
+        t=profile.cf["sea_water_temperature"],
+        SP=profile.cf["sea_water_salinity"],
+        lon=profile.cf["longitude"],
+        lat=profile.cf["latitude"],
+        window_size=dz_segment,
+        depth_bin=depth_bins[0],
         return_diagnostics=True,
-        smooth="AL",
     )
+    _, _, resultpf = mixsea.shearstrain.nan_shearstrain(**kwargs, smooth="PF")
+    _, _, resultal = mixsea.shearstrain.nan_shearstrain(**kwargs, smooth="AL")
 
     ds = xr.concat([mixsea_to_xarray(resultpf), mixsea_to_xarray(resultal)], dim="kind")
     ds["kind"] = ["PF", "AL"]
