@@ -108,7 +108,7 @@ def results_to_xarray(results, profile, criteria):
     }
     turb.npts.attrs = {"description": "number of points in segment"}
     turb.γmean.attrs = {"bounds": "γ_bounds"}
-    turb.γmean.attrs.update(profile.γ.attrs)
+    turb.γmean.attrs.update(profile.cf["neutral_density"].attrs)
 
     turb.cf.guess_coord_axis()
 
@@ -381,7 +381,8 @@ def process_profile(profile, dz_segment=200, criteria=None, debug=False):
         profile.cf["sea_water_pressure"],
         0,
     )
-    profile["γ"] = oceans.neutral_density(profile)
+    if "neutral_density" not in profile.cf:
+        profile["γ"] = oceans.neutral_density(profile)
 
     if debug:
         profile_original = profile
@@ -472,9 +473,9 @@ def process_profile(profile, dz_segment=200, criteria=None, debug=False):
         results["pbnds"][idx, 0] = P.data[0]
         results["pbnds"][idx, 1] = P.data[-1]
 
-        results["γmean"][idx] = seg.γ.mean()
-        results["γbnds"][idx, 0] = seg.γ.data[0]
-        results["γbnds"][idx, 1] = seg.γ.data[-1]
+        results["γmean"][idx] = seg.cf["neutral_density"].mean()
+        results["γbnds"][idx, 0] = seg.cf["neutral_density"].data[0]
+        results["γbnds"][idx, 1] = seg.cf["neutral_density"].data[-1]
 
         (
             results["Kρ"][idx],
@@ -539,9 +540,9 @@ def plot_profile_turb(profile, result):
     plots.set_axes_color(ax["S"], "r")
     plots.set_axes_color(ax["γ"], "teal")
 
-    profile.TEMP.cf.plot(ax=ax["T"], marker=".", markersize=4)
-    profile.PSAL.cf.plot(ax=ax["S"], color="r", _labels=False)
-    profile.γ.cf.plot(ax=ax["γ"], color="teal", _labels=False)
+    profile.cf["sea_water_temperature"].cf.plot(ax=ax["T"], marker=".", markersize=4)
+    profile.cf["sea_water_salinity"].cf.plot(ax=ax["S"], color="r", _labels=False)
+    profile.cf["neutral_density"].cf.plot(ax=ax["γ"], color="teal", _labels=False)
 
     title = ax["T"].get_title()
     [a.set_title("") for a in axx.flat]
