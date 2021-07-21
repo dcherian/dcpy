@@ -286,7 +286,7 @@ def estimate_turb_segment(P, N2, lat, max_wavelength=256, debug=False, criteria=
             for idx in range(i0, 127):
                 ξvar[cindex] = np.trapz(psd[i0:idx], x=kz[i0:idx])
                 if ξvar[cindex] > 0.05:
-                    idxint = np.arange(i0, idx + 1)
+                    idxint = np.arange(i0, idx)
                     break
                 # continue looping if spectrum is  "oversaturated"
 
@@ -295,7 +295,7 @@ def estimate_turb_segment(P, N2, lat, max_wavelength=256, debug=False, criteria=
                 idx = np.argmin(np.abs(2 * π / kz[1:] - min_wavelength))
                 ξvar[cindex] = np.trapz(psd[i0:idx], x=kz[i0:idx])
                 if ξvar[cindex] <= 0.2:
-                    idxint = np.arange(i0, idx + 1)
+                    idxint = np.arange(i0, idx)
                     break
                 # continue looping if spectrum is  "oversaturated"
 
