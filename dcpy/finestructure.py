@@ -260,7 +260,7 @@ def estimate_turb_segment(P, N2, lat, max_wavelength=256, debug=False, criteria=
     i0 = np.argmin(np.abs(1 / kz[1:] - max_wavelength / 2 / π))
 
     if criteria is None:
-        criteria = ("kunze", "mixsea", "whalen")
+        criteria = ("kunze", "mixsea", "whalen", "whalen_7")
 
     elif isinstance(criteria, str):
         criteria = (criteria,)
@@ -272,7 +272,7 @@ def estimate_turb_segment(P, N2, lat, max_wavelength=256, debug=False, criteria=
         # shear strain ratio; Whalen et al (2015) use 3; Kunze et al (2017) use 7
         if crit in ["mixsea", "whalen"]:
             Rω = 3
-        elif crit == "kunze":
+        elif crit in ["kunze", "whalen_7"]:
             Rω = 7
         h_Rω[cindex] = shearstrain_Rω(Rω)
 
@@ -290,7 +290,7 @@ def estimate_turb_segment(P, N2, lat, max_wavelength=256, debug=False, criteria=
                     break
                 # continue looping if spectrum is  "oversaturated"
 
-        elif crit == "whalen":
+        elif "whalen" in crit:
             for min_wavelength in np.arange(10, 41, dp):
                 idx = np.argmin(np.abs(2 * π / kz[1:] - min_wavelength))
                 ξvar[cindex] = np.trapz(psd[i0:idx], x=kz[i0:idx])
