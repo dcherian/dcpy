@@ -416,13 +416,11 @@ def process_profile(profile, dz_segment=200, criteria=None, debug=False):
 
     if criteria is None:
         criteria = ["mixsea", "kunze", "whalen"]
-        ncrit = 3
     elif isinstance(criteria, str):
         criteria = (criteria,)
-        ncrit = 1
 
     for var in ["Kρ", "ε", "ξvar", "ξvargm"]:
-        results[var] = np.full((len(lefts), ncrit), fill_value=np.nan)
+        results[var] = np.full((len(lefts), len(criteria)), fill_value=np.nan)
 
     for var in ["γbnds", "pbnds"]:
         results[var] = np.full((len(lefts), 2), fill_value=np.nan)
@@ -568,3 +566,46 @@ def plot_profile_turb(profile, result):
         a.grid(True, axis="y", which="minor")
 
     f.suptitle(title)
+
+
+def process_argo_profile(profile, dz_segment=200, criteria=None, debug=False):
+    """
+    Processes finestructure turbulence estimate for Argo profiles
+    in half-overlapping segments of length dz_segment.
+
+    Parameters
+    ----------
+
+    profile: xr.DataArray
+        Argo profile.
+    dz_segment: optional
+        Length of segment in dbar.
+    criteria: hashable or sequence of hashable, optional
+        Passed to process_profile.
+    Returns
+    -------
+
+    xr.Dataset if profile is not bad or too short.
+    """
+
+    for var in ["PRES", "TEMP", "PSAL"]:
+        if profile[f"{var}_QC"] != 1:
+            if debug:
+                raise ValueError("bad_quality")
+            return ["bad_quality"]
+
+    profile = profile.isel(N_LEVELS=profile.PRES.notnull()).swap_dims(
+        {"N_LEVELS": "PRES"}
+    )
+
+    dataset = process_profile(profile, dz_segment, criteria)
+
+    for var in [
+        "CONFIG_MISSION_NUMBER",
+        "PLATFORM_NUMBER",
+        "CYCLE_NUMBER",
+        "DIRECTION",
+    ]:
+        dataset.coords[var] = profile[var].data
+
+    return dataset
