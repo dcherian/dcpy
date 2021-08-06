@@ -45,7 +45,7 @@ def _process_time(time, cycles_per="s"):
 def xfilter(
     x, flen=None, kind="hann", dim="time", decimate=False, min_values=None, **kwargs
 ):
-    """ flen and x.dim should have same units!"""
+    """flen and x.dim should have same units!"""
 
     from .util import smooth
 
@@ -192,7 +192,7 @@ def PlotSpectrum(
     decimate=True,
     mark_freqs=[],
     cycles_per="D",
-    **kwargs
+    **kwargs,
 ):
     """
     Parameters
@@ -1334,7 +1334,7 @@ def plot_scalogram(da, dt=1, ax=None, **kwargs):
             robust=robust,
             center=False,
             levels=levels,
-            **kwargs
+            **kwargs,
         )
     )
 
@@ -1349,7 +1349,7 @@ def plot_scalogram(da, dt=1, ax=None, **kwargs):
             linestyles="-",
             linewidths=1,
             levels=np.nanpercentile(np.log10(w.power), [90, 95]),
-            **kwargs
+            **kwargs,
         )
     )
 
@@ -1558,7 +1558,7 @@ def complex_demodulate(
 
 
 def find_peaks(data, dim, debug=True):
-    """ Only returns peak indexes along dimension "dim". """
+    """Only returns peak indexes along dimension "dim"."""
     import scipy as sp
 
     def wrap_find_peaks(invar, kwargs={}):
