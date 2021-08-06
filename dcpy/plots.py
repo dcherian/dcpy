@@ -1,10 +1,8 @@
-import cartopy
 import cartopy.crs as ccrs
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-
 import xarray as xr
 
 HORCBAR = {"orientation": "horizontal", "aspect": 40, "shrink": 0.8}
@@ -650,8 +648,8 @@ def fill_step(da, dim=None, ax=None, **kwargs):
 
 
 def colorbar(mappable, ax=None, **kwargs):
-    from mpl_toolkits.axes_grid1 import make_axes_locatable
     import matplotlib as mpl
+    from mpl_toolkits.axes_grid1 import make_axes_locatable
 
     if ax is None:
         ax = plt.gca()
@@ -1001,7 +999,7 @@ def cbar_inset_axes(ax):
 
 
 def add_contour_legend(cs, label, numel=None, **kwargs):
-    """ Adds a separate legend for a contour. Call this before adding the final legend. """
+    """Adds a separate legend for a contour. Call this before adding the final legend."""
 
     ax = cs.ax
     if "$" in label:

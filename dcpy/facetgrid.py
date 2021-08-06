@@ -10,10 +10,10 @@ import functools
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-
 import xarray as xr
 from xarray.core.formatting import format_item
-from xarray.plot.utils import label_from_attrs
+
+# from xarray.plot.utils import label_from_attrs
 
 # Overrides axes.labelsize, xtick.major.size, ytick.major.size
 # from mpl.rcParams
@@ -123,7 +123,6 @@ class facetgrid:
         for idx, row in enumerate(self.row_locs):
             axes_dict[row] = dict(zip(self.col_locs, self.axes[idx, :]))
         self.axes_dict = axes_dict
-
 
     def _parse_x_y(self, x, y):
         x = self.x if (x is None and self.x is not None) else x

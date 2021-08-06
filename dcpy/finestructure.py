@@ -5,9 +5,8 @@ import gsw
 import matplotlib.pyplot as plt
 import mixsea
 import numpy as np
-from scipy import signal
-
 import xarray as xr
+from scipy import signal
 
 from . import eos, oceans, plots
 
@@ -223,7 +222,6 @@ def estimate_turb_segment(P, N2, lat, max_wavelength=256, debug=False, criteria=
     N0 = 5.24e-3  # rad/s
     K_0 = 5e-6  # m²/s for a mixing efficiency of Γ=0.2
     ε_0 = 6.73e-10
-    f30 = 7.3e-5  # rad/s or oceans.coriolis(30)
     π = np.pi
     f = np.abs(2 * (2 * π / 86400) * np.sin(lat * π / 180))
 

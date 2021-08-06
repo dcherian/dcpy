@@ -1,12 +1,12 @@
 import os
-import cf_xarray
+
+import cf_xarray as cfxr  # noqa
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import netCDF4 as nc
 import numpy as np
 import pandas as pd
 import seawater as sw
-
 import xarray as xr
 
 from . import eos, plots, util
@@ -848,7 +848,7 @@ def visc(S, T, P):
 
 
 def neutral_density(ds):
-    """ Xarray wrapper for Eric Firing's netural density wrapper"""
+    """Xarray wrapper for Eric Firing's netural density wrapper"""
 
     import pygamma
 
@@ -932,7 +932,6 @@ def read_osu_microstructure_mat(
 
     mat = loadmat(fname)
     structs = [name for name in mat.keys() if "__" not in name]
-    dsets = []
 
     assert len(structs) == 1
     for sname in structs:
@@ -1050,7 +1049,7 @@ def read_cchdo_chipod_file(file, chunks=None):
 
 
 def read_kunze_2017_finestructure(dirname="/home/deepak/datasets/finestructure/"):
-    """ Reads the Kunze et al (2017) finestructure estimate CSV file"""
+    """Reads the Kunze et al (2017) finestructure estimate CSV file"""
 
     kunze = pd.read_csv(
         f"{dirname}/kunze/strainfineoutatlantic.dat",

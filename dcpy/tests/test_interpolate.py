@@ -1,9 +1,10 @@
 import numpy as np
 import pytest
 import scipy.interpolate
-from dcpy.interpolate import bin_to_new_coord, pchip, pchip_fillna, pchip_roots
-
 import xarray as xr
+
+# from dcpy.interpolate import bin_to_new_coord
+from dcpy.interpolate import pchip, pchip_fillna, pchip_roots
 
 
 @pytest.fixture
@@ -144,29 +145,29 @@ def test_pchip_interpolate(data, maybe_chunk, newz):
 # TODO: test with datasets and coords with the interpolated dimension
 
 
-@pytest.mark.xfail
-def test_bin_to_new_coord():
-    depth = xr.DataArray(np.arange(-20, 0, 1), dims=["depth"])
-    z0 = xr.DataArray(np.random.randint(-20, 0, (10,)) * 1.0, dims=("time",))
-    data = depth - z0
-    new_coord = depth - z0
-    new_coord[1, 4] = np.nan
-    new_coord[4, 5] = np.nan
-    data["zeuc"] = new_coord
+# @pytest.mark.xfail
+# def test_bin_to_new_coord():
+#     depth = xr.DataArray(np.arange(-20, 0, 1), dims=["depth"])
+#     z0 = xr.DataArray(np.random.randint(-20, 0, (10,)) * 1.0, dims=("time",))
+#     data = depth - z0
+#     new_coord = depth - z0
+#     new_coord[1, 4] = np.nan
+#     new_coord[4, 5] = np.nan
+#     data["zeuc"] = new_coord
 
-    actual = bin_to_new_coord(
-        data, old_coord="depth", new_coord="zeuc", edges=np.arange(-4.5, 4.6, 1)
-    )
+#     actual = bin_to_new_coord(
+#         data, old_coord="depth", new_coord="zeuc", edges=np.arange(-4.5, 4.6, 1)
+#     )
 
-    expected = xr.ones_like(z0) * new_1d_coord
-    expected = expected.where(
-        (expected >= data.min("depth")) & (expected <= data.max("depth"))
-    )
-    expected[new_dim] = new_1d_coord
-    # stick expected NaNs in the right place. This really should be better.
-    if data[1, 4].values >= edges.min() and data[1, 4].values <= edges.max():
-        expected.loc[{"zeuc": data[1, 4], "time": 4}] = np.nan
-    if data[4, 5].values >= edges.min() and data[4, 5].values <= edges.max():
-        expected.loc[{"zeuc": data[4, 5], "time": 5}] = np.nan
+#     expected = xr.ones_like(z0) * new_1d_coord
+#     expected = expected.where(
+#         (expected >= data.min("depth")) & (expected <= data.max("depth"))
+#     )
+#     expected[new_dim] = new_1d_coord
+#     # stick expected NaNs in the right place. This really should be better.
+#     if data[1, 4].values >= edges.min() and data[1, 4].values <= edges.max():
+#         expected.loc[{"zeuc": data[1, 4], "time": 4}] = np.nan
+#     if data[4, 5].values >= edges.min() and data[4, 5].values <= edges.max():
+#         expected.loc[{"zeuc": data[4, 5], "time": 5}] = np.nan
 
-    xr.testing.assert_equal(expected, actual)
+#     xr.testing.assert_equal(expected, actual)
