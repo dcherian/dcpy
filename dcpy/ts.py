@@ -2,11 +2,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.fftpack as fftpack
 import scipy.signal as signal
+from functools import partial
+from matplotlib import ticker
 
 import xarray as xr
 
 from .plots import linex
-from .util import calc95
+from .util import calc95, one_over
 
 
 def _is_datetime_like(da) -> bool:
@@ -348,10 +350,14 @@ def PlotSpectrum(
         if not linearx:
             aa.set_xscale("log")
 
+        aa2 = aa.secondary_xaxis("top", functions=(one_over, one_over))
+
         if not processed_time:
-            aa.set_xlabel("Frequency")
+            aa.set_xlabel("Wavelength/2π")
+            aa2.set_xlabel("Wavenumber/2π")
         else:
             aa.set_xlabel("Frequency " + "[cp" + cycles_per.lower() + "]")
+            aa2.set_xlabel("Period " + "[" + cycles_per.lower() + "]")
 
     if preserve_area:
         ax[0].set_ylabel("Freq x PSD")
