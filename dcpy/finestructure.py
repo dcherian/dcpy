@@ -12,7 +12,7 @@ import xarray as xr
 from . import eos, oceans, plots
 
 
-def trim_mld_mode_water(profile):
+def trim_mld_mode_water(profile, mode=True):
     """
     Follows Whalen's approach of using a threshold criterion first to identify MLD,
     trimming that; and then applying again to find mode water. I apply both T, σ criteria
@@ -21,7 +21,11 @@ def trim_mld_mode_water(profile):
 
     def find_thresh_delta(delta, thresh):
         """Finds threshold in delta."""
-        return delta.cf["Z"].cf.isel(Z=delta > thresh)[0].data
+        depth = delta.cf["Z"].cf.isel(Z=delta > thresh).data
+        if len(depth) > 0:
+            return depth[0]
+        else:
+            return None
 
     T = profile.cf.standard_names["sea_water_temperature"][0]
     σ = profile.cf.standard_names["sea_water_potential_density"][0]
@@ -33,12 +37,22 @@ def trim_mld_mode_water(profile):
     Tmld = find_thresh_delta(delta[T], 0.2)
     σmld = find_thresh_delta(delta[σ], 0.03)
 
-    trimmed = profile.cf.sel(Z=slice(max(Tmld, σmld), None))
+    if Tmld is not None and σmld is not None:
+        trimmed = profile.cf.sel(Z=slice(max(Tmld, σmld), None))
+    else:
+        # profile is too short
+        return profile.cf.sel(Z=slice(0, 0)).assign_coords(
+            Tmode=np.nan, σmode=np.nan, Tmld=np.nan, σmld=np.nan
+        )
 
-    near_surf = trimmed.cf[[T, σ]].cf.isel(Z=0)
-    delta = np.abs(trimmed - near_surf)
-    Tmode = find_thresh_delta(delta[T], 0.2)
-    σmode = find_thresh_delta(delta[σ], 0.03)
+    if mode:
+        near_surf = trimmed.cf[[T, σ]].cf.isel(Z=0)
+        delta = np.abs(trimmed - near_surf)
+        Tmode = find_thresh_delta(delta[T], 0.2)
+        σmode = find_thresh_delta(delta[σ], 0.03)
+    else:
+        Tmode = Tmld
+        σmode = σmld
 
     return profile.cf.sel(Z=slice(max(Tmode, σmode), None)).assign_coords(
         Tmode=Tmode, σmode=σmode, Tmld=Tmld, σmld=σmld
@@ -415,7 +429,7 @@ def process_profile(profile, dz_segment=200, criteria=None, debug=False):
     }
 
     if criteria is None:
-        criteria = ["mixsea", "kunze", "whalen"]
+        criteria = ["mixsea", "kunze", "whalen", "whalen_7"]
     elif isinstance(criteria, str):
         criteria = (criteria,)
 
