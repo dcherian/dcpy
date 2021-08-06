@@ -638,8 +638,9 @@ def SpectralDensity(
 
 
 def Coherence(v1, v2, dt=1, nsmooth=5, decimate=True, **kwargs):
-    from dcpy.util import MovingAverage
     from scipy.signal import detrend
+
+    from dcpy.util import MovingAverage
 
     if np.any(np.isnan(v1) | np.isnan(v2)):
         raise ValueError("NaNs in times series provided to Coherence")
@@ -693,6 +694,7 @@ def MultiTaperCoherence(y0, y1, dt=1, tbp=5, ntapers=None):
     """
 
     from mtspec import mt_coherence
+
     from dcpy.util import calc95
 
     # common defaults are time-bandwidth product tbp=4
@@ -769,6 +771,7 @@ def RotaryPSD(y, dt=1, nsmooth=5, multitaper=False, decimate=True):
     Confidence intervals for multitaper not implemented!
     """
     from scipy.signal import detrend
+
     from dcpy.util import MovingAverage
 
     N = len(y)
@@ -1129,9 +1132,6 @@ def FillGaps(y, x=None, maxlen=None):
     Output:
         interpolated array
     """
-
-    import numpy as np
-    import xarray as xr
 
     if isinstance(y, xr.core.dataarray.DataArray):
         isxarray = True
