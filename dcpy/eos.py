@@ -1186,6 +1186,7 @@ def bfrq(s, t, p, dim, lat=None):
         return (a + b) / 2
 
     p_ave = avg1(p)
+    p_ave.attrs = p.attrs
 
     pref = xr.align(p_ave, s, join="right")[0]
     pden_lo = pden(s, t, p, pref)
