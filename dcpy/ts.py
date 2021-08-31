@@ -177,7 +177,7 @@ def FindGaps(var):
 def PlotSpectrum(
     var,
     ax=None,
-    dt=1,
+    dt=None,
     nsmooth=5,
     SubsetLength=None,
     breakpts=[],
@@ -256,11 +256,16 @@ def PlotSpectrum(
             ax[1].set_title("CCW (cyclonic)" + name)
 
     processed_time = False
-    if isinstance(var, xr.DataArray) and var.ndim == 1:
+    if isinstance(var, xr.DataArray) and var.ndim == 1 and dt is None:
         maybe_time = var[var.dims[0]]
         if _is_datetime_like(maybe_time):
             dt, t = _process_time(maybe_time, cycles_per)
             processed_time = True
+        else:
+            dt = maybe_time.diff(maybe_time.name).median().data
+
+    if dt is None:
+        dt = 1
 
     if isinstance(var, xr.DataArray):
         var = var.dropna(var.dims[0])
