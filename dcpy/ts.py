@@ -690,7 +690,7 @@ def Coherence(v1, v2, dt=1, nsmooth=5, decimate=True, **kwargs):
     # Cxy_white = np.abs(Pw2 / np.sqrt(Pww * P22[:, np.newaxis]))
     # siglevel = calc95(Cxy_white.ravel(), 'onesided')
 
-    return f, Cxy, phase, siglevel
+    return f, np.abs(Cxy)**2, phase, siglevel
 
 
 def MultiTaperCoherence(y0, y1, dt=1, tbp=5, ntapers=None):
@@ -882,16 +882,18 @@ def PlotCoherence(y0, y1, dt=1, nsmooth=5, multitaper=False, scale=1, decimate=F
     ax[1].plot(f, Cxy)
     dcpy.plots.liney(siglevel, ax=ax[1])
     ax[1].set_title(
-        f"{sum(Cxy > siglevel) / len(Cxy) * 100:.2f}% above 95% significance"
+        f"{sum(Cxy > siglevel) / len(Cxy) * 100:.2f}% above 95% significance (> {siglevel:.2f})"
     )
     ax[1].set_ylim([0, 1])
     ax[1].set_ylabel("Squared Coherence")
 
     ax[2].plot(f, phase)
+    ax[2].set_yticks([-180, -135, -90, -45, 0, 45, 90, 135, 180])
+    ax[2].grid(True)
     ax[2].set_ylabel("Coherence phase")
     ax[2].set_title("+ve = y0 leads y1")
 
-    return ax
+    return Cxy
 
 
 def BandPassButter(
