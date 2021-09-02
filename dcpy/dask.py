@@ -2,7 +2,6 @@ import itertools
 
 import dask
 import numpy as np
-
 import xarray as xr
 
 
@@ -36,7 +35,7 @@ def visualize_one_block(dataset, **kwargs):
     block = get_one_block(dataset.unify_chunks())
     graph = block.__dask_graph__()
 
-    for name, variable in block.variables.items():
+    for _, variable in block.variables.items():
         if isinstance(variable.data, dask.array.Array):
             key = (variable.data.name,) + (0,) * variable.ndim
             keys.append(key)
@@ -166,8 +165,8 @@ def batch_to_zarr(ds, file, dim, batch_size, restart=False, **kwargs):
 
 
 def map_copy(obj):
-    from xarray import DataArray
     import numpy as np
+    from xarray import DataArray
 
     if isinstance(obj, DataArray):
         name = obj.name
@@ -181,6 +180,7 @@ def map_copy(obj):
 
     if isinstance(obj, DataArray):
         result = obj._from_temp_dataset(dataset)
+        result.name = name
     else:
         result = dataset
 
@@ -234,6 +234,7 @@ def dask_safeslice(data, indices, chunks=None):
     """
 
     from collections.abc import Iterable
+
     import dask.array as da
 
     # The idea is to "push down" the indexing operation to "underneath" the
@@ -243,12 +244,9 @@ def dask_safeslice(data, indices, chunks=None):
     # We assume that any *one* chunk *can* be successfully computed.
     # By applying the indexing operation to each chunk, prior to the
     # complete result (re-)construction, we hope to make this work.
-
     # Normalise input to a list over all data dimensions.
-
     # NOTE: FOR NOW, this does not support Ellipsis.
     # TODO: that could easily be fixed.
-
     # Convert the slicing indices to a list of (int or slice).
     # ( NOTE: not supporting Ellipsis. )
     if not isinstance(indices, Iterable):

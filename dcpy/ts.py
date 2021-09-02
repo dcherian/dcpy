@@ -1,14 +1,12 @@
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.fftpack as fftpack
 import scipy.signal as signal
-from functools import partial
-from matplotlib import ticker
-
 import xarray as xr
 
 from .plots import linex
-from .util import calc95, one_over
+from .util import one_over
 
 
 def _is_datetime_like(da) -> bool:
@@ -179,7 +177,7 @@ def FindGaps(var):
 def PlotSpectrum(
     var,
     ax=None,
-    dt=1,
+    dt=None,
     nsmooth=5,
     SubsetLength=None,
     breakpts=[],
@@ -258,11 +256,16 @@ def PlotSpectrum(
             ax[1].set_title("CCW (cyclonic)" + name)
 
     processed_time = False
-    if isinstance(var, xr.DataArray) and var.ndim == 1:
+    if isinstance(var, xr.DataArray) and var.ndim == 1 and dt is None:
         maybe_time = var[var.dims[0]]
         if _is_datetime_like(maybe_time):
             dt, t = _process_time(maybe_time, cycles_per)
             processed_time = True
+        else:
+            dt = maybe_time.diff(maybe_time.name).median().data
+
+    if dt is None:
+        dt = 1
 
     if isinstance(var, xr.DataArray):
         var = var.dropna(var.dims[0])
@@ -523,9 +526,10 @@ def SpectralDensity(
             [sin(2π/10) will have a peak at 1/10]
      conf : 95% confidence interval for 2*nsmooth dof
     """
-    import dcpy.util
-    import numpy as np
     import mtspec
+    import numpy as np
+
+    import dcpy.util
 
     if len(input) == 0:
         raise ValueError("0 length input!")
@@ -700,8 +704,6 @@ def MultiTaperCoherence(y0, y1, dt=1, tbp=5, ntapers=None):
     """
 
     from mtspec import mt_coherence
-
-    from dcpy.util import calc95
 
     # common defaults are time-bandwidth product tbp=4
     # ntapers = 2*tbp - 1 (jLab)
@@ -1258,7 +1260,7 @@ def PlotSpectrogram(da, nfft, shift, multitaper=False, ax=None, **kwargs):
     )
 
     plot_kwargs = dict(
-        x=da.dims[0], yscale="log", cmap=svc.cm.blue_orange_div, robust=True
+        x=da.dims[0], yscale="log", robust=True  # cmap=svc.cm.blue_orange_div,
     )
     mtitle = " [mutitaper]" if multitaper else " [freq. smoothed]"
 
@@ -1324,7 +1326,7 @@ def plot_scalogram(da, dt=1, ax=None, **kwargs):
         f, ax = plt.subplots()
 
     robust = kwargs.pop("robust", True)
-    cmap = kwargs.pop("cmap", svc.cm.blue_orange_div)
+    cmap = kwargs.pop("cmap", mpl.cm.RdBu_r)  # svc.cm.blue_orange_div)
     levels = kwargs.pop("levels", 20)
 
     (

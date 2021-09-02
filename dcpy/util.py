@@ -1,11 +1,13 @@
+from typing import Union
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import scipy as sp
-
 import xarray as xr
-
-from typing import Union
 from xarray import DataArray, Dataset, Variable
+
+from .plots import linex
 
 
 def to_uniform_grid(data, coord, dim, new_coord):
@@ -95,9 +97,6 @@ def ExtractSeason(time, var, season):
     month abbreviation.
     """
 
-    import numpy as np
-    from dcpy.util import datenum2datetime
-
     mask = np.isnan(time)
     time = time[~mask]
     var = var[~mask]
@@ -137,8 +136,9 @@ def find_approx(vec, value):
 
 
 def dt64_to_datenum(dt64):
-    import matplotlib.dates as mdt
     import datetime as pdt
+
+    import matplotlib.dates as mdt
 
     return mdt.date2num(dt64.astype("M8[s]").astype(pdt.datetime))
 
@@ -259,8 +259,8 @@ def smooth(x, window_len=11, window="hanning", axis=-1, preserve_nan=True):
 
 
 def MovingAverage(vin, N, dim=None, decimate=True, min_count=1, **kwargs):
-    from bottleneck import move_mean
     import numpy as np
+    from bottleneck import move_mean
 
     N = np.int(np.floor(N))
 
@@ -281,8 +281,8 @@ def BinEqualizeHist(coords, bins=10, offset=0.0, label=None):
     and/or compresses them into a visible range starting at a
     specified offset between 0 and 1.0.
     """
-    from skimage.exposure import equalize_hist
     import numpy as np
+    from skimage.exposure import equalize_hist
 
     def eq_hist(d, m):
         return equalize_hist(1 * d, nbins=100000, mask=m)
@@ -400,7 +400,7 @@ def interp_zero_crossing(da, debug=False):
 
     if debug:
         interped.plot(marker=".")
-        dcpy.plots.linex(coords, zorder=10)
+        linex(coords, zorder=10)
         plt.axhline(0)
 
     return coords
@@ -435,7 +435,7 @@ def avg1(da, dim):
 
 
 def latlon_to_distance(lat, lon, *, central_lat, central_lon):
-    """ Returns distance relative to central_lat, central_lon """
+    """Returns distance relative to central_lat, central_lon"""
 
     lat0 = central_lat * np.pi / 180
     lon0 = central_lon * np.pi / 180
@@ -499,7 +499,7 @@ def slice_like(this, other):
     return this.sel(slicer)
 
 
-def block_lengths(obj: Union[DataArray, Dataset], dim, index = None):
+def block_lengths(obj: Union[DataArray, Dataset], dim, index=None):
     """
     Return an object where each NaN element in 'obj' is replaced by the
     length of the gap the element is in.
@@ -516,12 +516,13 @@ def block_lengths(obj: Union[DataArray, Dataset], dim, index = None):
     if np.issubdtype(index.dtype, np.timedelta64):
         index = index - index[0]
 
-
     # make variable so that we get broadcasting for free
     index = Variable([dim], index)
 
     # algorithm from https://github.com/pydata/xarray/pull/3302#discussion_r324707072
-    arange = Variable(obj.dims, np.broadcast_to(index, obj.shape))  # xr.broadcast(index, obj)[0] # xr.ones_like(obj) * index
+    arange = Variable(
+        obj.dims, np.broadcast_to(index, obj.shape)
+    )  # xr.broadcast(index, obj)[0] # xr.ones_like(obj) * index
     valid = ~obj
     valid_arange = arange.where(valid)
     cumulative_nans = valid_arange.ffill(dim=dim).fillna(index[0])

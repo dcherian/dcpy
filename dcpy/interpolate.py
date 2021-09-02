@@ -8,17 +8,12 @@
 # guvectorized functions have out=None, you need to assign to out. no returns allowed!
 
 import warnings
-from functools import partial
 from typing import Any, Iterable
 
 import numpy as np
-import scipy as sp
-from numba import double, guvectorize, int_, njit
-from scipy import interpolate
-
 import xarray as xr
-
-from . import interpolators
+from numba import double, guvectorize, int_
+from scipy import interpolate
 
 from .interpolators import (
     _gufunc_pchip,
@@ -26,7 +21,6 @@ from .interpolators import (
     preprocess_nan_func,
     univ_spline,
 )
-
 
 # _pchip = partial(interpolate.PchipInterpolator, extrapolate=False, axis=-1)
 # _gufunc_pchip = interpolators.make_interpolator(_pchip)

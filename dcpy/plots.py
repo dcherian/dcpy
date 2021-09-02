@@ -1,10 +1,8 @@
-import cartopy
 import cartopy.crs as ccrs
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-
 import xarray as xr
 
 HORCBAR = {"orientation": "horizontal", "aspect": 40, "shrink": 0.8}
@@ -87,7 +85,16 @@ def FillRectangle(x, y=None, ax=None, color="k", alpha=0.05, zorder=-1, **kwargs
         )
 
 
-def linex(var, ax=None, label=None, color="gray", linestyle="--", zorder=-1, **kwargs):
+def linex(
+    var,
+    ax=None,
+    label=None,
+    legend_label=None,
+    color="gray",
+    linestyle="--",
+    zorder=-1,
+    **kwargs,
+):
 
     if ax is None:
         ax = plt.gca()
@@ -102,7 +109,12 @@ def linex(var, ax=None, label=None, color="gray", linestyle="--", zorder=-1, **k
     for idx, vv in enumerate(var):
         for aa in ax:
             hdl = aa.axvline(
-                vv, color=color, linestyle=linestyle, zorder=zorder, **kwargs
+                vv,
+                color=color,
+                label=legend_label if idx == 1 else None,
+                linestyle=linestyle,
+                zorder=zorder,
+                **kwargs,
             )
             if label is not None:
                 annotate_end(hdl, label)
@@ -650,8 +662,8 @@ def fill_step(da, dim=None, ax=None, **kwargs):
 
 
 def colorbar(mappable, ax=None, **kwargs):
-    from mpl_toolkits.axes_grid1 import make_axes_locatable
     import matplotlib as mpl
+    from mpl_toolkits.axes_grid1 import make_axes_locatable
 
     if ax is None:
         ax = plt.gca()
@@ -1001,7 +1013,7 @@ def cbar_inset_axes(ax):
 
 
 def add_contour_legend(cs, label, numel=None, **kwargs):
-    """ Adds a separate legend for a contour. Call this before adding the final legend. """
+    """Adds a separate legend for a contour. Call this before adding the final legend."""
 
     ax = cs.ax
     if "$" in label:

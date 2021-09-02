@@ -1,7 +1,6 @@
 import numpy as np
-from numpy import pi
-
 import xarray as xr
+from numpy import pi
 
 from .library import T68conv, T90conv, salrp, salrt, sals, seck, smow
 
@@ -1187,13 +1186,14 @@ def bfrq(s, t, p, dim, lat=None):
         return (a + b) / 2
 
     p_ave = avg1(p)
+    p_ave.attrs = p.attrs
 
     pref = xr.align(p_ave, s, join="right")[0]
     pden_lo = pden(s, t, p, pref)
     pden_hi = pden(s.shift({dim: -1}), t.shift({dim: -1}), p.shift({dim: -1}), pref)
     # pden = pden(s[1:, ...], t[1:, ...], p[1:, ...], p_ave)
 
-    midpos = f"{dim}_mid"
+    # midpos = f"{dim}_mid"
     mid_pden = ((pden_lo + pden_hi) / 2).isel({dim: slice(-1)})
     dif_pden = (pden_lo - pden_hi).isel({dim: slice(-1)})
     mid_g = avg1(grav)
