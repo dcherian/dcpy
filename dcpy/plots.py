@@ -85,7 +85,16 @@ def FillRectangle(x, y=None, ax=None, color="k", alpha=0.05, zorder=-1, **kwargs
         )
 
 
-def linex(var, ax=None, label=None, color="gray", linestyle="--", zorder=-1, **kwargs):
+def linex(
+    var,
+    ax=None,
+    label=None,
+    legend_label=None,
+    color="gray",
+    linestyle="--",
+    zorder=-1,
+    **kwargs,
+):
 
     if ax is None:
         ax = plt.gca()
@@ -100,7 +109,12 @@ def linex(var, ax=None, label=None, color="gray", linestyle="--", zorder=-1, **k
     for idx, vv in enumerate(var):
         for aa in ax:
             hdl = aa.axvline(
-                vv, color=color, linestyle=linestyle, zorder=zorder, **kwargs
+                vv,
+                color=color,
+                label=legend_label if idx == 1 else None,
+                linestyle=linestyle,
+                zorder=zorder,
+                **kwargs,
             )
             if label is not None:
                 annotate_end(hdl, label)

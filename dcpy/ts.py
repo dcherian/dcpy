@@ -177,7 +177,7 @@ def FindGaps(var):
 def PlotSpectrum(
     var,
     ax=None,
-    dt=1,
+    dt=None,
     nsmooth=5,
     SubsetLength=None,
     breakpts=[],
@@ -256,11 +256,16 @@ def PlotSpectrum(
             ax[1].set_title("CCW (cyclonic)" + name)
 
     processed_time = False
-    if isinstance(var, xr.DataArray) and var.ndim == 1:
+    if isinstance(var, xr.DataArray) and var.ndim == 1 and dt is None:
         maybe_time = var[var.dims[0]]
         if _is_datetime_like(maybe_time):
             dt, t = _process_time(maybe_time, cycles_per)
             processed_time = True
+        else:
+            dt = maybe_time.diff(maybe_time.name).median().data
+
+    if dt is None:
+        dt = 1
 
     if isinstance(var, xr.DataArray):
         var = var.dropna(var.dims[0])
@@ -689,7 +694,7 @@ def Coherence(v1, v2, dt=1, nsmooth=5, decimate=True, **kwargs):
     # Cxy_white = np.abs(Pw2 / np.sqrt(Pww * P22[:, np.newaxis]))
     # siglevel = calc95(Cxy_white.ravel(), 'onesided')
 
-    return f, Cxy, phase, siglevel
+    return f, np.abs(Cxy)**2, phase, siglevel
 
 
 def MultiTaperCoherence(y0, y1, dt=1, tbp=5, ntapers=None):
@@ -879,16 +884,18 @@ def PlotCoherence(y0, y1, dt=1, nsmooth=5, multitaper=False, scale=1, decimate=F
     ax[1].plot(f, Cxy)
     dcpy.plots.liney(siglevel, ax=ax[1])
     ax[1].set_title(
-        f"{sum(Cxy > siglevel) / len(Cxy) * 100:.2f}% above 95% significance"
+        f"{sum(Cxy > siglevel) / len(Cxy) * 100:.2f}% above 95% significance (> {siglevel:.2f})"
     )
     ax[1].set_ylim([0, 1])
     ax[1].set_ylabel("Squared Coherence")
 
     ax[2].plot(f, phase)
+    ax[2].set_yticks([-180, -135, -90, -45, 0, 45, 90, 135, 180])
+    ax[2].grid(True)
     ax[2].set_ylabel("Coherence phase")
     ax[2].set_title("+ve = y0 leads y1")
 
-    return ax
+    return Cxy
 
 
 def BandPassButter(
