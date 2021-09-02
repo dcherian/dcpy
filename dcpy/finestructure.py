@@ -3,7 +3,6 @@ import functools
 import cf_xarray as cfxr
 import gsw
 import matplotlib.pyplot as plt
-import mixsea
 import numpy as np
 import xarray as xr
 from scipy import signal
@@ -312,6 +311,8 @@ def estimate_turb_segment(P, N2, lat, max_wavelength=256, debug=False, criteria=
                 # continue looping if spectrum is  "oversaturated"
 
         elif crit == "mixsea":
+            import mixsea
+
             idxint, _ = mixsea.shearstrain.find_cutoff_wavenumber(psd, kz, 0.22)
             ξvar[cindex] = np.trapz(psd[idxint], x=kz[idxint])
 
@@ -343,6 +344,8 @@ def concat_lol(segments, name):
 
 
 def mixsea_to_xarray(result):
+    import mixsea
+
     ds = xr.Dataset()
     ds["eps"] = ("depth_bin", result["eps_st"])
     ds["krho"] = ("depth_bin", result["krho_st"])
@@ -364,6 +367,8 @@ def mixsea_to_xarray(result):
 
 
 def do_mixsea_shearstrain(profile, dz_segment):
+
+    import mixsea
 
     P = profile.cf["sea_water_pressure"]
     depth_bins = choose_bins(P.data, dz_segment)
