@@ -412,24 +412,29 @@ def TSplot(
 
 
 def argo_mld_clim(kind="monthly", fname=None):
+    import glob
+
     if fname is None:
         if kind == "monthly":
-            fname = (
-                "~/datasets/argomld/Argo_mixedlayers_monthlyclim_03192017.nc"  # noqa
+            fname = glob.glob(
+                "~/datasets/argomld/Argo_mixedlayers_monthlyclim_*.nc"  # noqa
             )
 
         if kind == "annual":
-            fname = "~/datasets/argomld/Argo_mixedlayers_all_03192017.nc"
+            fname = glob.glob("~/datasets/argomld/Argo_mixedlayers_all_*.nc")
+
+    if len(fname) > 1:
+        raise ValueError("Multiple files found. Either delete one or pass ``fname``")
 
     ds = xr.open_dataset(fname)
 
-    mld = xr.Dataset()
+    mld = xr.Dataset(coords={"lat": ds["lat"], "lon": ds["lon"], "month": ds["month"]})
     for da in ds:
         name = ""
         if da[0:2] == "ml":
             mld[da] = xr.DataArray(
                 ds[da].values,
-                coords=[("lat", ds["lat"]), ("lon", ds["lon"]), ("month", ds["month"])],
+                dims=("lat", "lon", "month")
             )
 
             if "mean" in da:
