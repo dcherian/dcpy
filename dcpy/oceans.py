@@ -413,29 +413,36 @@ def TSplot(
 
 def argo_mld_clim(kind="monthly", fname=None):
     import glob
+    import os
 
     if fname is None:
         if kind == "monthly":
-            fname = glob.glob(
-                "~/datasets/argomld/Argo_mixedlayers_monthlyclim_*.nc"  # noqa
-            )
-
+            loc = "~/datasets/argomld/Argo_mixedlayers_monthlyclim_*.nc"
         if kind == "annual":
-            fname = glob.glob("~/datasets/argomld/Argo_mixedlayers_all_*.nc")
+            loc = "~/argomld/datasets/Argo_mixedlayers_all_*.nc"
+        loc = os.path.expanduser(loc)
+        fname = glob.glob(loc)
+
+    if not fname:
+        raise ValueError(f"No files found at {loc}!")
 
     if len(fname) > 1:
         raise ValueError("Multiple files found. Either delete one or pass ``fname``")
 
-    ds = xr.open_dataset(fname)
+    ds = xr.open_dataset(fname[0])
 
-    mld = xr.Dataset(coords={"lat": ds["lat"], "lon": ds["lon"], "month": ds["month"]})
+    mld = xr.Dataset(
+        coords={
+            "lat": ds["lat"].rename({"iLAT": "lat"}),
+            "lon": ds["lon"].rename({"iLON": "lon"}),
+            "month": ds["month"].rename({"iMONTH": "month"}),
+        }
+    )
+
     for da in ds:
         name = ""
         if da[0:2] == "ml":
-            mld[da] = xr.DataArray(
-                ds[da].values,
-                dims=("lat", "lon", "month")
-            )
+            mld[da] = (("lat", "lon", "month"), ds[da].data)
 
             if "mean" in da:
                 name = "Mean"
@@ -471,7 +478,9 @@ def argo_mld_clim(kind="monthly", fname=None):
                 name += " from density threshold algorithm"
 
             mld[da].attrs["long_name"] = name
-
+            mld[da].attrs["positive"] = "down"
+    mld.month.attrs["axis"] = "T"
+    mld.month.attrs["_CoordinateAxisType"] = "Time"
     return mld
 
 
