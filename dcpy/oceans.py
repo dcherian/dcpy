@@ -416,12 +416,13 @@ def argo_mld_clim(kind="monthly", fname=None):
 
     if fname is None:
         if kind == "monthly":
-            fname = glob.glob(
-                "~/datasets/argomld/Argo_mixedlayers_monthlyclim_*.nc"  # noqa
-            )
-
+            loc = "~/datasets/argomld/Argo_mixedlayers_monthlyclim_*.nc"
         if kind == "annual":
-            fname = glob.glob("~/datasets/argomld/Argo_mixedlayers_all_*.nc")
+            loc = "~/datasets/argomld/Argo_mixedlayers_all_*.nc"
+        fname = glob.glob(loc)
+
+    if not fname:
+        raise ValueError(f"No files found at {loc}!")
 
     if len(fname) > 1:
         raise ValueError("Multiple files found. Either delete one or pass ``fname``")
