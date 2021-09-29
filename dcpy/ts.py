@@ -5,6 +5,7 @@ import scipy.fftpack as fftpack
 import scipy.signal as signal
 import xarray as xr
 
+from functools import lru_cache
 from .plots import linex
 from .util import one_over
 
@@ -356,8 +357,8 @@ def PlotSpectrum(
         aa2 = aa.secondary_xaxis("top", functions=(one_over, one_over))
 
         if not processed_time:
-            aa.set_xlabel("Wavelength/2π")
-            aa2.set_xlabel("Wavenumber/2π")
+            aa.set_xlabel("Wavenumber/2π")
+            aa2.set_xlabel("Wavelength")
         else:
             aa.set_xlabel("Frequency " + "[cp" + cycles_per.lower() + "]")
             aa2.set_xlabel("Period " + "[" + cycles_per.lower() + "]")
@@ -647,7 +648,52 @@ def SpectralDensity(
     return S[mask], f[mask], conf[mask, :]
 
 
-def Coherence(v1, v2, dt=1, nsmooth=5, decimate=True, **kwargs):
+@lru_cache(maxsize=1024)
+def coh_siglevel(N, repeats=100):
+    """Compute coherence significance level accounting for tapering.
+
+    Parameters
+    ----------
+    N : int
+        Length of time series
+    repeats: int, optional
+        Number of monte carlo iterations
+
+    Returns
+    -------
+    siglevel: double
+
+    Notes
+    -----
+
+    Follows Farrar's suggestion:
+       if the time series is tapered before using a band-averaged spectral estimate,
+       the effective value of M is less than the actual value of M.
+       It is possible to make a good estimate of the effective value of M
+       (or effective number of degrees of freedom), but this is misunderstood by many people.
+       It is always a good idea (and very easy) to check the significance of coherence
+       calculations by Monte Carlo simulation. Simply repeat your coherence calculation many times,
+       replacing one of your time series with random noise, sort the results
+       and find the 95th percentile (or whatever significance level you desire).
+
+
+    Uses lru_cache, so input cannot be DataArray or np.ndarray. I choose to use len(time_series)
+    instead and contruct two synthetic time series.
+    """
+
+    cohs = []
+    for _ in range(repeats):
+        syn0 = synthetic(N, 1, 1, 0)
+        syn1 = synthetic(N, 1, 1, 0)
+        _, coh, _, _ = Coherence(syn0, syn1, siglevel=False)
+        cohs.append(coh)
+    allcohs = np.sort(np.concatenate(cohs))
+    return allcohs[np.round(0.95 * len(allcohs)).astype(int)]
+
+
+def Coherence(
+    v1, v2, dt=1, nsmooth=5, decimate=True, unwrap=False, siglevel=True, **kwargs
+):
     from scipy.signal import detrend
 
     from dcpy.util import MovingAverage
@@ -658,6 +704,8 @@ def Coherence(v1, v2, dt=1, nsmooth=5, decimate=True, **kwargs):
     window = signal.hann(len(v1))
     # variance correction
     window /= np.sqrt(np.sum(window ** 2) / len(v1))
+
+    # window = 1
 
     y1, freq = CenteredFFT(detrend(v1) * window, dt)
     y1 = y1[freq > 0]
@@ -675,11 +723,24 @@ def Coherence(v1, v2, dt=1, nsmooth=5, decimate=True, **kwargs):
     C = P12 / np.sqrt(P11 * P22)
 
     Cxy = C
-    phase = np.angle(C, deg=True)
-    if nsmooth > 1:
-        siglevel = 1 - (0.05) ** (1 / (nsmooth - 1))
+    angle = np.angle(C)
+    if unwrap:
+        unwrapped = np.unwrap(angle)
+        unwrapped[unwrapped < -1.5 * np.pi] = angle[unwrapped < -1.5 * np.pi]
+        unwrapped[unwrapped > 1.5 * np.pi] = angle[unwrapped > 1.5 * np.pi]
+        angle = unwrapped
+
+    phase = np.rad2deg(angle)
+
+    # if nsmooth > 1:
+    #    siglevel = 1 - (0.05) ** (1 / (nsmooth - 1))
+    # else:
+    #    siglevel = 1
+
+    if siglevel:
+        siglevel = coh_siglevel(len(v1))
     else:
-        siglevel = 1
+        siglevel = np.nan
 
     # C2std = 1.414 * (1 - Cxy**2) / np.abs(Cxy) / np.sqrt(nsmooth)
 
@@ -694,7 +755,7 @@ def Coherence(v1, v2, dt=1, nsmooth=5, decimate=True, **kwargs):
     # Cxy_white = np.abs(Pw2 / np.sqrt(Pww * P22[:, np.newaxis]))
     # siglevel = calc95(Cxy_white.ravel(), 'onesided')
 
-    return f, np.abs(Cxy)**2, phase, siglevel
+    return f, np.abs(Cxy) ** 2, phase, siglevel
 
 
 def MultiTaperCoherence(y0, y1, dt=1, tbp=5, ntapers=None):
@@ -849,7 +910,18 @@ def RotaryPSD(y, dt=1, nsmooth=5, multitaper=False, decimate=True):
     return (np.real(cw), np.real(ccw), freq, np.real(conf_cw), np.real(conf_ccw))
 
 
-def PlotCoherence(y0, y1, dt=1, nsmooth=5, multitaper=False, scale=1, decimate=False):
+def PlotCoherence(
+    y0,
+    y1,
+    dt=1,
+    nsmooth=5,
+    multitaper=False,
+    scale=1,
+    decimate=False,
+    ax=None,
+    unwrap=False,
+    ploty0=True,
+):
 
     import dcpy.plots
 
@@ -857,45 +929,84 @@ def PlotCoherence(y0, y1, dt=1, nsmooth=5, multitaper=False, scale=1, decimate=F
         f, Cxy, phase, siglevel = MultiTaperCoherence(y0, y1, dt=dt, tbp=nsmooth)
     else:
         f, Cxy, phase, siglevel = Coherence(
-            y0, y1, dt=dt, nsmooth=nsmooth, decimate=decimate
+            y0,
+            y1,
+            dt=dt,
+            nsmooth=nsmooth,
+            decimate=decimate,
+            unwrap=unwrap,
         )
 
-    fig, ax = plt.subplots(3, 1, sharex=True, constrained_layout=True)
-    fig.set_size_inches((8, 9))
+    scale_factor = np.abs(y0 / y1).mean()
+
+    if ax is None:
+        fig, ax = plt.subplots(3, 1, sharex=True, constrained_layout=True)
+    else:
+        fig = ax[0].get_figure()
+    fig.set_size_inches((8, 6))
+
+    if isinstance(y0, xr.DataArray):
+        y0name = xr.plot.utils.label_from_attrs(y0)
+    else:
+        y0name = "y0"
+
+    if isinstance(y1, xr.DataArray):
+        y1name = xr.plot.utils.label_from_attrs(y1)
+    else:
+        y1name = "y1"
+
+    if ploty0:
+        PlotSpectrum(
+            y0,
+            ax=ax[0],
+            dt=dt,
+            scale=scale,
+            nsmooth=nsmooth,
+            multitaper=multitaper,
+            decimate=decimate,
+            label=y0name,
+            color="k",
+        )
     PlotSpectrum(
-        y0,
+        y1 * scale_factor,
         ax=ax[0],
         dt=dt,
         scale=scale,
         nsmooth=nsmooth,
         multitaper=multitaper,
         decimate=decimate,
-    )
-    PlotSpectrum(
-        y1,
-        ax=ax[0],
-        dt=dt,
-        scale=scale,
-        nsmooth=nsmooth,
-        multitaper=multitaper,
-        decimate=decimate,
+        label=f"{y1name} * {scale_factor.data:.1e}",
     )
 
-    ax[1].plot(f, Cxy)
-    dcpy.plots.liney(siglevel, ax=ax[1])
-    ax[1].set_title(
-        f"{sum(Cxy > siglevel) / len(Cxy) * 100:.2f}% above 95% significance (> {siglevel:.2f})"
+    ax[0].legend(bbox_to_anchor=[1.05, 0.8])
+
+    ax[1].plot(
+        f,
+        Cxy,
+        label=f"{sum(Cxy > siglevel) / len(Cxy) * 100:.2f}% (> {siglevel:.2f})",
     )
+    dcpy.plots.liney(siglevel, ax=ax[1])
     ax[1].set_ylim([0, 1])
     ax[1].set_ylabel("Squared Coherence")
+    ax[1].legend(title="% above 95% sig.", bbox_to_anchor=[1.05, 0.5])
 
-    ax[2].plot(f, phase)
-    ax[2].set_yticks([-180, -135, -90, -45, 0, 45, 90, 135, 180])
+    aa1 = ax[1].secondary_xaxis("top", functions=(one_over, one_over))
+    aa2 = ax[2].secondary_xaxis("top", functions=(one_over, one_over))
+
+    ax[2].plot(f, phase, label=f"{y0name} leads {y1name}")
+    ax[2].set_yticks([-225, -180, -135, -90, -45, 0, 45, 90, 135, 180, 225])
     ax[2].grid(True)
+    ax[2].legend(bbox_to_anchor=[1.05, 0.3])
     ax[2].set_ylabel("Coherence phase")
-    ax[2].set_title("+ve = y0 leads y1")
+    ax[2].set_xlabel(ax[0].get_xlabel())
 
-    return Cxy
+    ax[0].set_xlabel("")
+    ax[0].set_title("")
+
+    [tt.set_visible(False) for tt in aa1.get_xticklabels()]
+    [tt.set_visible(False) for tt in aa2.get_xticklabels()]
+
+    return Cxy, ax
 
 
 def BandPassButter(

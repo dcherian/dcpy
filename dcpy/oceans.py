@@ -419,7 +419,7 @@ def argo_mld_clim(kind="monthly", fname=None):
         if kind == "monthly":
             loc = "~/datasets/argomld/Argo_mixedlayers_monthlyclim_*.nc"
         if kind == "annual":
-            loc = "~/argomld/datasets/Argo_mixedlayers_all_*.nc"
+            loc = "~/datasets/argomld/Argo_mixedlayers_all_*.nc"
         loc = os.path.expanduser(loc)
         fname = glob.glob(loc)
 
