@@ -395,7 +395,7 @@ def TSplot(
         ax.text(
             1.005,
             1.00,
-            " $σ_" + str(Pref) + "$",
+            " $σ_{" + str(Pref) + "}$",
             transform=ax.transAxes,
             va="top",
             fontsize=fontsize + 2,
@@ -994,13 +994,10 @@ def read_osu_microstructure_mat(
         "CHI": "chi",
         "SIGMA": "pden",
         "SIGT": "pden",
+        "THETA": "theta",
     }
 
     if rename:
-        if "THETA" in ds:
-            renamer["THETA"] = "theta"
-        else:
-            renamer["T"] = "theta"
         if "SIGT" in ds:
             ds["SIGT"] += 1000
         ds = ds.rename({k: v for k, v in renamer.items() if k in ds})

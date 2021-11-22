@@ -408,8 +408,8 @@ def bin_to_new_coord(data, old_coord, new_coord, edges, reduce_func=None):
         dask_gufunc_kwargs=dict(output_sizes={new_coord: len(edges)}),
         # kwargs={"func": reduce_func}  # TODO: add support for reduce_func
     )
-    remapped.coords["counts"] = counts
-    remapped.counts.attrs["description"] = "number of values in the bin"
+    # remapped.coords["counts"] = counts
+    # remapped.counts.attrs["description"] = "number of values in the bin"
     remapped = remapped.isel({new_coord: slice(-1)})
     remapped[new_coord] = new_1d_coord
 

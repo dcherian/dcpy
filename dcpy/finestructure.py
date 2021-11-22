@@ -28,7 +28,7 @@ def trim_mld_mode_water(profile, mode=True):
     T = profile.cf.standard_names["sea_water_temperature"][0]
     σ = profile.cf.standard_names["sea_water_potential_density"][0]
 
-    assert (profile.cf["Z"] > 0).all().data
+    assert (profile.cf["Z"] >= 0).all().data
     near_surf = profile.cf[[T, σ]].cf.sel(Z=10, method="nearest")
     delta = np.abs(profile - near_surf)
 
@@ -344,8 +344,6 @@ def concat_lol(segments, name):
 
 
 def mixsea_to_xarray(result):
-    import mixsea
-
     ds = xr.Dataset()
     ds["eps"] = ("depth_bin", result["eps_st"])
     ds["krho"] = ("depth_bin", result["krho_st"])
