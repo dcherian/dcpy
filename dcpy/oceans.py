@@ -1034,9 +1034,13 @@ def read_osu_microstructure_mat(
     ds["time"] = util.datenum2datetime(ds.time.data)
     if "depth" in ds:
         ds["depth"].attrs.update({"positive": "down", "axis": "Z"})
+        ds["depth"] = ds.depth.astype(float)
 
-    for var in set(attrs) & set(ds.variables):
-        ds[var].attrs.update(attrs[var])
+    for known in attrs:
+        for var in ds.variables:
+            if var == known or (known != "T" and var.startswith(known)):
+                # deals with things like eps1, eps2
+                ds[var].attrs.update(attrs[known])
 
     return ds
 
