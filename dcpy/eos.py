@@ -1,3 +1,4 @@
+import numba
 import numpy as np
 import xarray as xr
 from numpy import pi
@@ -120,8 +121,13 @@ def adtg(s, t, p):
        Res. Vol20,401-408. doi:10.1016/0011-7471(73)90063-6
 
     """
-
     T68 = T68conv(t)
+
+    return xr.apply_ufunc(_adtg, s, T68, p, dask="parallelized")
+
+
+@numba.vectorize(cache=True)
+def _adtg(s, T68, p):
 
     a = [3.5803e-5, 8.5258e-6, -6.836e-8, 6.6228e-10]
     b = [1.8932e-6, -4.2393e-8]
@@ -1183,7 +1189,9 @@ def bfrq(s, t, p, dim, lat=None):
             data.isel({dim: slice(1, None)}),
             join="override",
         )
-        return (a + b) / 2
+        result = (a + b) / 2
+        result.attrs = data.attrs
+        return result
 
     p_ave = avg1(p)
     p_ave.attrs = p.attrs
