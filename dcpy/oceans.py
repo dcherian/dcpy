@@ -4,6 +4,7 @@ import cf_xarray as cfxr  # noqa
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import netCDF4 as nc
+import numba
 import numpy as np
 import pandas as pd
 import seawater as sw
@@ -1085,3 +1086,34 @@ def read_kunze_2017_finestructure(dirname="/home/deepak/datasets/finestructure/"
     kunze["γ_mean"] = (kunze["γ_i"] + kunze["γ_f"]) / 2
 
     return kunze
+
+
+@numba.guvectorize("(m), (m), () -> (m)", nopython=True)
+def sortby(tosort, by, ascending, out):
+    mask = ~np.isnan(by)
+    idx = np.argsort(by[mask])
+
+    out[:] = np.nan
+    out[mask] = tosort[mask][idx]
+    if not ascending:
+        mask = ~np.isnan(out)
+        out[mask] = out[mask][::-1]
+
+
+def thorpesort(field, by, ascending=True):
+    """Numba accelerate Thorpe sorting."""
+
+    def wrapper(tosort, by, ascending):
+        out = np.empty_like(tosort)
+        sortby(tosort, by, ascending, out)
+        return out
+
+    return xr.apply_ufunc(
+        wrapper,
+        field,
+        by,
+        input_core_dims=[["depth"], ["depth"]],
+        output_core_dims=[["depth"]],
+        dask="parallelized",
+        kwargs=dict(ascending=ascending),
+    )
