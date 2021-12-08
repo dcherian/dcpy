@@ -546,3 +546,33 @@ def one_over(x):
     x[near_zero] = np.inf
     x[~near_zero] = 1 / x[~near_zero]
     return x
+
+
+def sliding_window(obj, **kwargs):
+    if isinstance(obj, xr.DataArray):
+        ds = obj._to_temp_dataset()
+
+    dim_names = list(kwargs.keys())
+    window_dim_names, window_lengths = zip(*kwargs.values())
+
+    out = xr.Dataset(
+        {
+            name: da.variable.rolling_window(
+                dim_names, window_lengths, window_dim_names, center=True, fill_value=0
+            )
+            for name, da in ds.items()
+        }
+    )
+
+    if isinstance(obj, xr.DataArray):
+        return obj._from_temp_dataset(out)
+    else:
+        return out
+
+
+def lagged_autocorrelation(obj, dim: str, maxlag: int = None):
+    if maxlag is None:
+        maxlag = obj.sizes[dim]
+    reshaped = sliding_window(obj, **{dim: ("__lags__", maxlag)})
+    reshaped2 = sliding_window(reshaped, **{"__lags__": ("lags", maxlag)})
+    return xr.dot(reshaped, reshaped2, dims="__lags__", optimize=True)
