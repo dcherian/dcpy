@@ -1025,3 +1025,42 @@ def add_contour_legend(cs, label, numel=None, **kwargs):
         )
     elements = tuple(a[:numel] for a in cs.legend_elements(label))
     ax.add_artist(ax.legend(*elements, **kwargs))
+
+
+def fill_between_bounds(ds, var, y, axis="x", color=None, ax=None, label=None):
+
+    if ax is None:
+        ax = plt.gca()
+
+    bvar = ds.cf.bounds[var][0]
+    bdim = ds.cf.get_bounds_dim_name(var)
+    bounds = ds[bvar]
+
+    if axis == "x":
+        func = ax.fill_betweenx
+    else:
+        func = ax.fill_between
+
+    ybounds = ds[ds.cf.bounds[y][0]]
+    bdim = ds.cf.get_bounds_dim_name(y)
+    yedges = np.append(ybounds.isel({bdim: 0}).data, ybounds[-1, -1])
+
+    y = ds[y].data.copy()
+
+    hdl = func(
+        y,
+        bounds.isel({bdim: 0}),
+        bounds.isel({bdim: 1}),
+        facecolor=color,
+        alpha=0.3,
+        step="mid",
+        label=label,
+    )
+
+    ax.stairs(
+        ds[var],
+        yedges,
+        orientation="horizontal" if axis == "x" else "vertical",
+        color=hdl.get_facecolor()[..., :-1],
+        lw=1,
+    )
