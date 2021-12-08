@@ -347,15 +347,16 @@ def pchip_fillna(obj, dim):
     [(double[:], double[:], double[:], double[:], int_[:])],
     "(n), (n), (m) -> (m), (m)",
     nopython=True,
+    cache=True,
 )
-def remap(values, zeuc, edges, out=None, count=None):
+def remap(values, newcoord, edges, out=None, count=None):
     func = np.nanmean
 
     out[:] = np.nan
     count[:] = 0
 
-    idx = np.digitize(zeuc, edges)
-    idx = np.where(~np.isnan(zeuc), idx, np.nan)
+    idx = np.digitize(newcoord, edges)
+    idx = np.where(~np.isnan(newcoord), idx, np.nan)
 
     minz = edges.min()
     maxz = edges.max()
@@ -367,7 +368,7 @@ def remap(values, zeuc, edges, out=None, count=None):
         #         If values in x are beyond the bounds of bins,
         #         0 or len(bins) is returned as appropriate.
         if ~np.isnan(ii):
-            mask = (idx == ii) & (zeuc >= minz) & (zeuc <= maxz)
+            mask = (idx == ii) & (newcoord >= minz) & (newcoord < maxz)
             if np.any(mask):
                 out[np.int(ii) - 1] = func(values[mask])
                 count[np.int(ii) - 1] = np.sum(mask)
@@ -397,7 +398,7 @@ def bin_to_new_coord(data, old_coord, new_coord, edges, reduce_func=None):
 
     remapped, counts = xr.apply_ufunc(
         remap,
-        data,
+        data.assign({"__old_coord__": data[old_coord]}),
         data[new_coord],
         edges,
         input_core_dims=[[old_coord], [old_coord], ["__temp_dim__"]],
@@ -409,8 +410,10 @@ def bin_to_new_coord(data, old_coord, new_coord, edges, reduce_func=None):
         # kwargs={"func": reduce_func}  # TODO: add support for reduce_func
     )
 
+    counts = counts.rename({"__old_coord__": old_coord})
     counts = counts.rename({var: f"count_{var}" for var in counts.data_vars})
     remapped.update(counts)
+    remapped = remapped.rename({"__old_coord__": old_coord})
     remapped = remapped.isel({new_coord: slice(-1)})
     remapped[new_coord] = new_1d_coord
     # remapped[new_coord].attrs["bounds"] = f"{new_coord}_bounds"
