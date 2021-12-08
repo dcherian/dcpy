@@ -626,7 +626,7 @@ def annotate_heatmap_string(mesh, annot_data, **kwargs):
             ax.text(x, y, ann.decode("UTF-8"), **text_kwargs)
 
 
-def fill_step(da, dim=None, ax=None, **kwargs):
+def fill_step(da, dim=None, coord=None, ax=None, **kwargs):
 
     if ax is None:
         ax = plt.gca()
@@ -634,7 +634,10 @@ def fill_step(da, dim=None, ax=None, **kwargs):
     if dim is None:
         dim = da.dims[0]
 
-    coord = da[dim]
+    if coord is None:
+        coord = da[dim]
+    else:
+        coord = da[coord]
 
     dc = coord.diff(dim).mean()
     icoord = np.linspace(-dc + coord.min(), dc + coord.max(), coord.size * 50)
