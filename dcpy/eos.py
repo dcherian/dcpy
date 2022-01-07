@@ -1,6 +1,7 @@
 import numba
 import numpy as np
 import xarray as xr
+from numba import jit
 from numpy import pi
 
 from .library import T68conv, T90conv, salrp, salrt, sals, seck, smow
@@ -123,17 +124,19 @@ def adtg(s, t, p):
     """
     T68 = T68conv(t)
 
-    return xr.apply_ufunc(_adtg, s, T68, p, dask="parallelized")
+    return xr.apply_ufunc(
+        _adtg, s, T68, p, dask="parallelized", output_dtypes=[s.dtype]
+    )
 
 
-@numba.vectorize(cache=True)
+@jit(nopython=True, nogil=True, cache=True, parallel=True)
 def _adtg(s, T68, p):
 
-    a = [3.5803e-5, 8.5258e-6, -6.836e-8, 6.6228e-10]
-    b = [1.8932e-6, -4.2393e-8]
-    c = [1.8741e-8, -6.7795e-10, 8.733e-12, -5.4481e-14]
-    d = [-1.1351e-10, 2.7759e-12]
-    e = [-4.6206e-13, 1.8676e-14, -2.1687e-16]
+    a = np.array([3.5803e-5, 8.5258e-6, -6.836e-8, 6.6228e-10])
+    b = np.array([1.8932e-6, -4.2393e-8])
+    c = np.array([1.8741e-8, -6.7795e-10, 8.733e-12, -5.4481e-14])
+    d = np.array([-1.1351e-10, 2.7759e-12])
+    e = np.array([-4.6206e-13, 1.8676e-14, -2.1687e-16])
     return (
         a[0]
         + (a[1] + (a[2] + a[3] * T68) * T68) * T68
