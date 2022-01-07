@@ -872,7 +872,9 @@ def neutral_density(ds):
             lat = lat * np.ones_like(s[..., 0])
         if np.isscalar(lon):
             lon = lon * np.ones_like(s[..., 0])
-        g = pygamma.gamma_n(s, t, p, lon, lat)[0]
+        mask = ~np.isnan(s + t + p)
+        g = np.full(s.shape, np.nan)
+        g[mask] = pygamma.gamma_n(s[mask], t[mask], p[mask], lon, lat)[0]
         g[g < 0.1] = np.nan  # bad values are 0?
         return g
 
@@ -892,10 +894,17 @@ def neutral_density(ds):
     else:
         Z = ds.cf["sea_water_pressure"].cf.axes["Z"][0]
 
-    dtype = ds.cf["sea_water_salinity"].dtype
+    if "sea_water_salinity" in ds.cf.standard_names:
+        S = ds.cf["sea_water_salinity"]
+    elif "sea_water_practical_salinity" in ds.cf.standard_names:
+        S = ds.cf["sea_water_practical_salinity"]
+    else:
+        raise ValueError("Could not find practical salinity variable.")
+
+    dtype = S.dtype
     gamma = xr.apply_ufunc(
         gamma_n_wrapper,
-        ds.cf["sea_water_salinity"],
+        S,
         ds.cf["sea_water_temperature"],
         P,
         ds[lon],
