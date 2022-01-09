@@ -713,6 +713,7 @@ def pden(s, t, p, pr=0):
     if hasattr(pden, "attrs"):
         pden.attrs["standard_name"] = "sea_water_potential_density"
         pden.attrs["units"] = "kg/m3"
+        pden.attrs["long_name"] = "$ρ$"
     if isinstance(pden, xr.DataArray) and np.ndim(pr) < 1:
         pden.coords["reference_pressure"] = pr
         pden.reference_pressure.attrs["units"] = "dbar"
@@ -843,6 +844,7 @@ def ptmp(s, t, p, pr=0):
     if hasattr(ptmp, "attrs"):
         ptmp.attrs["standard_name"] = "sea_water_potential_temperature"
         ptmp.attrs["units"] = "degC"
+        ptmp.attrs["long_name"] = "$θ$"
     return ptmp
 
 
@@ -1065,6 +1067,8 @@ def temp(s, pt, p, pr=0):
     if isinstance(temp, xr.DataArray):
         temp.attrs["standard_name"] = "sea_water_temperature"
         temp.attrs["description"] = "ITS-90"
+        temp.attrs["long_name"] = "$T$"
+        temp.attrs["units"] = "celsius"
     return temp
 
 
@@ -1224,6 +1228,7 @@ def bfrq(s, t, p, dim, lat=None):
     n2.attrs = {
         "long_name": "$N²$",
         "description": "N² from seawater toolbox; 'adiabatic levelling' method",
+        "units": "s^-2",
     }
 
     return n2, q
