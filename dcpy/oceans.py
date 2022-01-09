@@ -1113,20 +1113,24 @@ def sortby(tosort, by, ascending, out):
         out[mask] = out[mask][::-1]
 
 
-def thorpesort(field, by, ascending=True):
+def thorpesort(field, by, core_dim="depth", ascending=True):
     """Numba accelerate Thorpe sorting."""
 
     def wrapper(tosort, by, ascending):
+        if tosort.dtype.kind not in "cif":
+            return tosort
         out = np.empty_like(tosort)
         sortby(tosort, by, ascending, out)
         return out
 
+    if isinstance(by, str):
+        by = field[by]
     return xr.apply_ufunc(
         wrapper,
         field,
         by,
-        input_core_dims=[["depth"], ["depth"]],
-        output_core_dims=[["depth"]],
+        input_core_dims=[[core_dim], [core_dim]],
+        output_core_dims=[[core_dim]],
         dask="parallelized",
         kwargs=dict(ascending=ascending),
     )
