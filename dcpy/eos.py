@@ -125,7 +125,14 @@ def adtg(s, t, p):
     T68 = T68conv(t)
 
     return xr.apply_ufunc(
-        _adtg, s, T68, p, dask="parallelized", output_dtypes=[s.dtype]
+        _adtg,
+        s,
+        T68,
+        p,
+        input_core_dims=[p.dims] * 3,
+        output_core_dims=[p.dims],
+        dask="parallelized",
+        output_dtypes=[s.dtype],
     )
 
 
