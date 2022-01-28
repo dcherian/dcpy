@@ -1064,3 +1064,11 @@ def fill_between_bounds(ds, var, y, axis="x", color=None, ax=None, label=None):
         color=hdl.get_facecolor()[..., :-1],
         lw=1,
     )
+
+
+def cmap_color_cycler(cmap=mpl.cm.Reds_r, N=10):
+    """Generate a color cycler for cmap."""
+    from cycler import cycler
+
+    colors = cmap(np.arange(1, N + 1) / (N + 1))
+    return cycler(color=colors)
