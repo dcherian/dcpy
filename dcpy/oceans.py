@@ -345,8 +345,10 @@ def TSplot(
         Svec = np.linspace(Slim[0], Slim[1], 40)
         [Smat, Tmat] = np.meshgrid(Svec, Tvec)
 
-        # background ρ contours are T, S at the reference level
-        ρ = sw.pden(Smat, Tmat, Pref, Pref) - 1000
+        if Pref is not None:
+            # background ρ contours are T, S at the reference level
+            rho = sw.pden(Smat, Tmat, Pref, Pref) - 1000
+            rholabel = " $σ_{" + str(Pref) + "}$"
 
         rho_levels = np.asarray(rho_levels)
         if np.all(rho_levels > 1000):
@@ -357,7 +359,7 @@ def TSplot(
         handles["rho_contours"] = ax.contour(
             Smat,
             Tmat,
-            ρ,
+            rho,
             colors="gray",
             levels=rho_levels,
             linestyles="solid",
@@ -396,7 +398,7 @@ def TSplot(
         ax.text(
             1.005,
             1.00,
-            " $σ_{" + str(Pref) + "}$",
+            rholabel,
             transform=ax.transAxes,
             va="top",
             fontsize=fontsize + 2,
@@ -406,8 +408,8 @@ def TSplot(
     ax.spines["right"].set_visible(True)
     ax.spines["top"].set_visible(True)
 
-    ax.set_xlabel("S")
-    ax.set_ylabel("T")
+    ax.set_xlabel(S.attrs.get("long_name", "$S$"))
+    ax.set_ylabel(T.attrs.get("long_name", "$T$"))
 
     return handles, axes
 
