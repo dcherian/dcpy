@@ -1,4 +1,5 @@
 import functools
+import warnings
 
 import cf_xarray as cfxr
 import gsw
@@ -8,6 +9,12 @@ import xarray as xr
 from scipy import signal
 
 from . import eos, oceans, plots
+
+salt_criteria = {
+    "sea_water_salinity": {
+        "standard_name": "sea_water_salinity|sea_water_practical_salinity"
+    }
+}
 
 
 def trim_mld_mode_water(profile, mode=True):
@@ -229,7 +236,9 @@ def estimate_turb_segment(P, N2, lat, max_wavelength=256, debug=False, criteria=
 
     mask = np.isfinite(N2)
     N2fit = np.polyval(np.polyfit(P[mask], N2[mask], deg=2), P)
-    N = np.sqrt(N2fit.mean()).item()
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
+        N = np.sqrt(N2fit.mean()).item()
 
     # if debug:
     #     plt.figure()
@@ -371,16 +380,17 @@ def do_mixsea_shearstrain(profile, dz_segment):
     P = profile.cf["sea_water_pressure"]
     depth_bins = choose_bins(P.data, dz_segment)
 
-    kwargs = dict(
-        depth=-1 * gsw.z_from_p(P, profile.cf["latitude"]),
-        t=profile.cf["sea_water_temperature"],
-        SP=profile.cf["sea_water_salinity"],
-        lon=profile.cf["longitude"],
-        lat=profile.cf["latitude"],
-        window_size=dz_segment,
-        depth_bin=depth_bins[0],
-        return_diagnostics=True,
-    )
+    with cfxr.set_options(custom_criteria=salt_criteria):
+        kwargs = dict(
+            depth=-1 * gsw.z_from_p(P, profile.cf["latitude"]),
+            t=profile.cf["sea_water_temperature"],
+            SP=profile.cf["sea_water_salinity"],
+            lon=profile.cf["longitude"],
+            lat=profile.cf["latitude"],
+            window_size=dz_segment,
+            depth_bin=depth_bins[0],
+            return_diagnostics=True,
+        )
     _, _, resultpf = mixsea.shearstrain.nan_shearstrain(**kwargs, smooth="PF")
     _, _, resultal = mixsea.shearstrain.nan_shearstrain(**kwargs, smooth="AL")
 
@@ -390,12 +400,13 @@ def do_mixsea_shearstrain(profile, dz_segment):
 
 
 def process_profile(profile, dz_segment=200, criteria=None, debug=False):
-    profile["σ_θ"] = eos.pden(
-        profile.cf["sea_water_salinity"],
-        profile.cf["sea_water_temperature"],
-        profile.cf["sea_water_pressure"],
-        0,
-    )
+    with cfxr.set_options(custom_criteria=salt_criteria):
+        profile["σ_θ"] = eos.pden(
+            profile.cf["sea_water_salinity"],
+            profile.cf["sea_water_temperature"],
+            profile.cf["sea_water_pressure"],
+            0,
+        )
     if "neutral_density" not in profile.cf:
         profile["γ"] = oceans.neutral_density(profile)
 
@@ -404,7 +415,8 @@ def process_profile(profile, dz_segment=200, criteria=None, debug=False):
 
     profile = trim_mld_mode_water(profile)
 
-    S = profile.cf["sea_water_salinity"]
+    with cfxr.set_options(custom_criteria=salt_criteria):
+        S = profile.cf["sea_water_salinity"]
     T = profile.cf["sea_water_temperature"]
     P = profile.cf["sea_water_pressure"]
 
