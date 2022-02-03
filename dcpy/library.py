@@ -88,16 +88,16 @@ def cndr(s, t, p):
     # Once Rt found, corresponding to each (s,t) evaluate r.
     # Eqn(4) p.8 UNESCO 1983.
     A = d[2] + d[3] * T68
-    B = 1 + d[0] * T68 + d[1] * T68 ** 2
-    C = p * (e[0] + e[1] * p + e[2] * p ** 2)
+    B = 1 + d[0] * T68 + d[1] * T68**2
+    C = p * (e[0] + e[1] * p + e[2] * p**2)
 
     # Eqn(6) p.9 UNESCO 1983.
-    Rt = Rx ** 2
+    Rt = Rx**2
     rt = salrt(t)
     # Rtrt  = rt * Rt # NOTE: unused in the code, but present in the original.
     D = B - A * rt * Rt
     E = rt * Rt * A * (B + C)
-    r = np.sqrt(np.abs(D ** 2 + 4 * E)) - D
+    r = np.sqrt(np.abs(D**2 + 4 * E)) - D
     r = 0.5 * r / A
     return r
 
@@ -193,8 +193,8 @@ def salrp(r, t, p):
     # Eqn(4) p.8 UNESCO.
     T68 = T68conv(t)
 
-    rp = 1 + (p * (e[0] + e[1] * p + e[2] * p ** 2)) / (
-        1 + d[0] * T68 + d[1] * T68 ** 2 + (d[2] + d[3] * T68) * r
+    rp = 1 + (p * (e[0] + e[1] * p + e[2] * p**2)) / (
+        1 + d[0] * T68 + d[1] * T68**2 + (d[2] + d[3] * T68) * r
     )
 
     return rp
@@ -303,7 +303,7 @@ def seck(s, t, p=0):
     # Sea water terms of secant bulk modulus at atmos. pressure.
     j0 = 1.91075e-4
     i = [2.2838e-3, -1.0981e-5, -1.6078e-6]
-    A = AW + (i[0] + (i[1] + i[2] * T68) * T68 + j0 * s ** 0.5) * s
+    A = AW + (i[0] + (i[1] + i[2] * T68) * T68 + j0 * s**0.5) * s
 
     m = [-9.9348e-7, 2.0816e-8, 9.1697e-10]
     B = BW + (m[0] + (m[1] + m[2] * T68) * T68) * s  # Eqn 18.
@@ -315,7 +315,7 @@ def seck(s, t, p=0):
         + (
             f[0]
             + (f[1] + (f[2] + f[3] * T68) * T68) * T68
-            + (g[0] + (g[1] + g[2] * T68) * T68) * s ** 0.5
+            + (g[0] + (g[1] + g[2] * T68) * T68) * s**0.5
         )
         * s
     )  # Eqn 16.

@@ -691,9 +691,9 @@ def pow10Formatter(x, pos):
     b = int(b)
 
     if int(np.float(a)) != 1:
-        return fr"${a} \times 10^{{{b}}}$"
+        return rf"${a} \times 10^{{{b}}}$"
     else:
-        return fr"$10^{{{b}}}$"
+        return rf"$10^{{{b}}}$"
 
 
 def rain_colormap(subset=slice(None, None)):
@@ -806,7 +806,7 @@ def set_shade(a, intensity=None, cmap=mpl.cm.jet, scale=10.0, azdeg=165.0, altde
     # form an rgb eqvivalent of intensity
     d = intensity.repeat(3).reshape(rgb.shape)
     # simulate illumination based on pegtop algorithm.
-    rgb = 2 * d * rgb + (rgb ** 2) * (1 - 2 * d)
+    rgb = 2 * d * rgb + (rgb**2) * (1 - 2 * d)
 
     return rgb
 

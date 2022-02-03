@@ -378,8 +378,8 @@ def calc_iso_surface(data, value, zs, interp_order=3, power_parameter=0.5):
         valuei = dist[:, :, i]
         wi = 1 / valuei
         np.clip(wi, 0, 1.0e6, out=wi)  # avoiding overflows
-        w_total += wi ** power_parameter
-        z += zi * wi ** power_parameter
+        w_total += wi**power_parameter
+        z += zi * wi**power_parameter
 
     z /= w_total
 

@@ -1,3 +1,5 @@
+from functools import lru_cache
+
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
@@ -5,7 +7,6 @@ import scipy.fftpack as fftpack
 import scipy.signal as signal
 import xarray as xr
 
-from functools import lru_cache
 from .plots import linex
 from .util import one_over
 
@@ -437,7 +438,7 @@ def CenteredFFT(input, dt=1.0, axis=-1):
     X = fftpack.fft(input, axis=axis)
     X = fftpack.fftshift(X, axes=axis)
 
-    if (np.sum(abs(X) ** 2) / N - np.sum(input ** 2)) / np.sum(input ** 2) > 1e-3:
+    if (np.sum(abs(X) ** 2) / N - np.sum(input**2)) / np.sum(input**2) > 1e-3:
         raise ValueError("Parseval's theorem not satisfied!")
 
     return X, freq
@@ -584,7 +585,7 @@ def SpectralDensity(
                 T = N * dt
                 window = signal.hann(N)
                 # variance correction
-                window /= np.sqrt(np.sum(window ** 2) / N)
+                window /= np.sqrt(np.sum(window**2) / N)
 
                 try:
                     Y, freq = CenteredFFT(var * window, dt)
@@ -593,7 +594,7 @@ def SpectralDensity(
                 Y = Y[freq > 0]
                 freq = freq[freq > 0]
                 confint = ConfChi2(0.05, 1)
-                YY_raw.append(2 * T / N ** 2 * Y * np.conj(Y))
+                YY_raw.append(2 * T / N**2 * Y * np.conj(Y))
 
     if YY_raw == []:
         raise ValueError("No subsets of specified length found.")
@@ -703,7 +704,7 @@ def Coherence(
 
     window = signal.hann(len(v1))
     # variance correction
-    window /= np.sqrt(np.sum(window ** 2) / len(v1))
+    window /= np.sqrt(np.sum(window**2) / len(v1))
 
     # window = 1
 
@@ -874,7 +875,7 @@ def RotaryPSD(y, dt=1, nsmooth=5, multitaper=False, decimate=True):
 
     else:
         window = signal.hann(N)
-        window /= np.sqrt(np.sum(window ** 2) / N)
+        window /= np.sqrt(np.sum(window**2) / N)
 
         X, freq = CenteredFFT(detrend(np.real(y)) * window, dt)
         Y, freq = CenteredFFT(detrend(np.imag(y)) * window, dt)
@@ -1371,8 +1372,8 @@ def PlotSpectrogram(da, nfft, shift, multitaper=False, ax=None, **kwargs):
     )
 
     plot_kwargs = dict(
-        x=da.dims[0], yscale="log", robust=True  # cmap=svc.cm.blue_orange_div,
-    )
+        x=da.dims[0], yscale="log", robust=True
+    )  # cmap=svc.cm.blue_orange_div,
     mtitle = " [mutitaper]" if multitaper else " [freq. smoothed]"
 
     if iscomplex:

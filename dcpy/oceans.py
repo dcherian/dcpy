@@ -1,6 +1,7 @@
 import os
 
 import cf_xarray as cfxr  # noqa
+import gsw
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import netCDF4 as nc
@@ -680,8 +681,8 @@ def calc_wind_power_input(
     r.name = "damping"
 
     # transfer functions
-    R = (r - 1j * (f0 + σ)) / (r ** 2 + (f0 + σ) ** 2)
-    RE = (r - 1j * f0) / (r ** 2 + f0 ** 2)
+    R = (r - 1j * (f0 + σ)) / (r**2 + (f0 + σ) ** 2)
+    RE = (r - 1j * f0) / (r**2 + f0**2)
     RI = R - RE
 
     # plt.plot(σ / f0, np.real(R), 'k')
@@ -858,7 +859,7 @@ def visc(S, T, P):
     """
 
     visc = (
-        1e-4 * (17.91 - 0.5381 * T + 0.00694 * T ** 2 + 0.02305 * S) / sw.dens(S, T, P)
+        1e-4 * (17.91 - 0.5381 * T + 0.00694 * T**2 + 0.02305 * S) / sw.dens(S, T, P)
     )
 
     return visc

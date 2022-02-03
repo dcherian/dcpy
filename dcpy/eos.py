@@ -248,10 +248,10 @@ def aonb(s, t, p, pt=False):
     return (
         polyval(c1, t)
         + sm35 * (polyval(c2, t) + polyval(c2a, p))
-        + sm35 ** 2 * c3
+        + sm35**2 * c3
         + p * polyval(c4, t)
-        + c5 * (p ** 2) * (t ** 2)
-        + c6 * p ** 3
+        + c5 * (p**2) * (t**2)
+        + c6 * p**3
     )
 
 
@@ -310,10 +310,10 @@ def beta(s, t, p, pt=False):
     return (
         polyval(c1, t)
         + sm35 * (polyval(c2, t) + polyval(c3, p))
-        + c4 * (sm35 ** 2)
+        + c4 * (sm35**2)
         + p * polyval(c5, t)
-        + (p ** 2) * polyval(c6, t)
-        + c7 * (p ** 3)
+        + (p**2) * polyval(c6, t)
+        + c7 * (p**3)
     )
 
 
@@ -383,8 +383,8 @@ def cp(s, t, p):
     Cpst0 = (
         (((c[4] * T68 + c[3]) * T68 + c[2]) * T68 + c[1]) * T68
         + c[0]
-        + (a[0] + a[1] * T68 + a[2] * T68 ** 2) * s
-        + (b[0] + b[1] * T68 + b[2] * T68 ** 2) * s * s ** 0.5
+        + (a[0] + a[1] * T68 + a[2] * T68**2) * s
+        + (b[0] + b[1] * T68 + b[2] * T68**2) * s * s**0.5
     )
 
     # Eqn. 28 p.33.
@@ -409,7 +409,7 @@ def cp(s, t, p):
     h = (5.540e-10, -1.7682e-11, 3.513e-13)
     j1 = -1.4300e-12
 
-    S3_2 = s * s ** 0.5
+    S3_2 = s * s**0.5
 
     del_Cpstp = (
         (
@@ -417,8 +417,8 @@ def cp(s, t, p):
             + ((e[2] * T68 + e[1]) * T68 + e[0]) * S3_2
         )
         * p
-        + ((((f[3] * T68 + f[2]) * T68 + f[1]) * T68 + f[0]) * s + g0 * S3_2) * p ** 2
-        + (((h[2] * T68 + h[1]) * T68 + h[0]) * s + j1 * T68 * S3_2) * p ** 3
+        + ((((f[3] * T68 + f[2]) * T68 + f[1]) * T68 + f[0]) * s + g0 * S3_2) * p**2
+        + (((h[2] * T68 + h[1]) * T68 + h[0]) * s + j1 * T68 * S3_2) * p**3
     )
 
     return Cpst0 + del_Cp0t0 + del_Cpstp
@@ -474,8 +474,8 @@ def dens0(s, t):
     return (
         smow(t)
         + (b[0] + (b[1] + (b[2] + (b[3] + b[4] * T68) * T68) * T68) * T68) * s
-        + (c[0] + (c[1] + c[2] * T68) * T68) * s * s ** 0.5
-        + d * s ** 2
+        + (c[0] + (c[1] + c[2] * T68) * T68) * s * s**0.5
+        + d * s**2
     )
 
 
@@ -623,7 +623,7 @@ def fp(s, p):
     # Eqn  p.29.
     a = [-0.0575, 1.710523e-3, -2.154996e-4]
     b = -7.53e-4
-    return T90conv(a[0] * s + a[1] * s * s ** 0.5 + a[2] * s ** 2 + b * p)
+    return T90conv(a[0] * s + a[1] * s * s**0.5 + a[2] * s**2 + b * p)
 
 
 def g(lat, z=0):
@@ -759,7 +759,7 @@ def pres(depth, lat):
     """
 
     X = np.sin(np.abs(lat * deg2rad))
-    C1 = 5.92e-3 + X ** 2 * 5.25e-3
+    C1 = 5.92e-3 + X**2 * 5.25e-3
     pres = ((1 - C1) - (((1 - C1) ** 2) - (8.84e-6 * depth)) ** 0.5) / 4.42e-6
 
     if hasattr(pres, "attrs"):
@@ -836,13 +836,13 @@ def ptmp(s, t, p, pr=0):
 
     # Theta2.
     del_th = del_P * adtg(s, T90conv(th), p + 0.5 * del_P)
-    th = th + (1 - 1 / 2 ** 0.5) * (del_th - q)
-    q = (2 - 2 ** 0.5) * del_th + (-2 + 3 / 2 ** 0.5) * q
+    th = th + (1 - 1 / 2**0.5) * (del_th - q)
+    q = (2 - 2**0.5) * del_th + (-2 + 3 / 2**0.5) * q
 
     # Theta3.
     del_th = del_P * adtg(s, T90conv(th), p + 0.5 * del_P)
-    th = th + (1 + 1 / 2 ** 0.5) * (del_th - q)
-    q = (2 + 2 ** 0.5) * del_th + (-2 - 3 / 2 ** 0.5) * q
+    th = th + (1 + 1 / 2**0.5) * (del_th - q)
+    q = (2 + 2**0.5) * del_th + (-2 - 3 / 2**0.5) * q
 
     # Theta4.
     del_th = del_P * adtg(s, T90conv(th), p + del_P)
@@ -1026,7 +1026,7 @@ def svel(s, t, p):
     D = d00 + d10 * p
 
     # Eqn 33 p.46.
-    return Cw + A * s + B * s * s ** 0.5 + D * s ** 2
+    return Cw + A * s + B * s * s**0.5 + D * s**2
 
 
 def temp(s, pt, p, pr=0):

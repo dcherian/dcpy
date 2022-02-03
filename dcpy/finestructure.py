@@ -144,7 +144,7 @@ def results_to_xarray(results, profile, criteria):
         "flag_meanings": "too_coarse too_short N²_variance_too_high too_unstratified too_little_bandwidth no_internal_waves good_data",
     }
 
-    turb["χ"] = 2 * turb.Kρ * turb.Tzmean ** 2
+    turb["χ"] = 2 * turb.Kρ * turb.Tzmean**2
     turb.χ.attrs = {"long_name": "$χ$", "units": "°C²/s"}
     turb["KtTz"] = turb.Kρ * turb.Tzmean
     turb.KtTz.attrs = {"long_name": "$K_ρθ_z$", "units": "°Cm/s"}
@@ -204,7 +204,7 @@ def _check_good_segment(N2, N, f, debug=False):
             print("too little bandwidth; possibly no wave-wave interactions")
         return False, 3
 
-    if N ** 2 < f ** 2:
+    if N**2 < f**2:
         if debug:
             print("no internal waves")
         return False, 4
@@ -249,7 +249,7 @@ def estimate_turb_segment(P, N2, lat, max_wavelength=256, debug=False, criteria=
 
     isgood, flag = _check_good_segment(N2, N, f, debug=debug)
     if not isgood:
-        return np.nan, np.nan, np.nan, np.nan, N ** 2, flag
+        return np.nan, np.nan, np.nan, np.nan, N**2, flag
 
     # if debug:
     #     plt.figure()
@@ -281,7 +281,7 @@ def estimate_turb_segment(P, N2, lat, max_wavelength=256, debug=False, criteria=
     # correct for first difference
     psd /= np.sinc(kz * dp / 2 / π) ** 2
 
-    ξgm = np.pi * E0 * b / 2 * jstar * kz ** 2 / (kz + kzstar) ** 2
+    ξgm = np.pi * E0 * b / 2 * jstar * kz**2 / (kz + kzstar) ** 2
     ξgmvar = np.nan
     i0 = np.argmin(np.abs(1 / kz[1:] - max_wavelength / 2 / π))
 
@@ -345,7 +345,7 @@ def estimate_turb_segment(P, N2, lat, max_wavelength=256, debug=False, criteria=
             f"{P[0]:4.0f} — {P[-1]:4.0f}dbar: ξgmvar: {ξgmvar:.3f}, ξvar: {ξvar:.3f}, N2: {N2fit.mean():.2e} K: {K:.2e}, ε: {ε:.2e}"
         )
 
-    return K, ε, ξvar, ξgmvar, N ** 2, flag
+    return K, ε, ξvar, ξgmvar, N**2, flag
 
 
 def concat_lol(segments, name):
