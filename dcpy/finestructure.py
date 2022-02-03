@@ -177,10 +177,14 @@ def _check_good_segment(N2, N, f, debug=False):
     ------
     good: bool
     flag:
+       -1. No data
         1. max(N²) - min(N²) > 1e-9 : Too much N² variance
         2. mean(N²) < 1e-9 : Too unstratified
         3. N < 2f: Too little bandwidth
     """
+
+    if sum(np.isfinite(N2)) == 0:
+        return False, -1
 
     if (N2.max() - N2.min()).item() > 5e-4:
         if debug:
@@ -233,12 +237,19 @@ def estimate_turb_segment(P, N2, lat, max_wavelength=256, debug=False, criteria=
 
     # TODO: ensure approximately uniform spacing
     dp = np.diff(P).min()
-
     mask = np.isfinite(N2)
-    N2fit = np.polyval(np.polyfit(P[mask], N2[mask], deg=2), P)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", RuntimeWarning)
-        N = np.sqrt(N2fit.mean()).item()
+    if np.sum(mask) > 0:
+        N2fit = np.polyval(np.polyfit(P[mask], N2[mask], deg=2), P)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            warnings.simplefilter("ignore", np.RankWarning)
+            N = np.sqrt(N2fit.mean()).item()
+    else:
+        N = np.nan
+
+    isgood, flag = _check_good_segment(N2, N, f, debug=debug)
+    if not isgood:
+        return np.nan, np.nan, np.nan, np.nan, N ** 2, flag
 
     # if debug:
     #     plt.figure()
@@ -247,11 +258,6 @@ def estimate_turb_segment(P, N2, lat, max_wavelength=256, debug=False, criteria=
 
     L_Nf = latitude_Nf(N, f)
     kzstar = (π * jstar / b) * (N / N0)
-
-    isgood, flag = _check_good_segment(N2, N, f, debug=debug)
-
-    if not isgood:
-        return np.nan, np.nan, np.nan, np.nan, N ** 2, flag
 
     # TODO: check
     N2[~mask] = N2fit[~mask]

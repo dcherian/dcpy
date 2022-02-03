@@ -1136,3 +1136,22 @@ def thorpesort(field, by, core_dim="depth", ascending=True):
         dask="parallelized",
         kwargs=dict(ascending=ascending),
     )
+
+
+def turner_angle(ds):
+    """Calculate Turner Angle."""
+
+    SA, CT = (
+        ds.cf["sea_water_absolute_salinity"],
+        ds.cf["sea_water_conservative_temperature"],
+    )
+    P = SA.cf["sea_water_pressure"]
+
+    αTz = gsw.alpha(SA, CT, P) * CT.cf.differentiate("Z", positive_upward=True)
+    βSz = gsw.beta(SA, CT, P) * SA.cf.differentiate("Z", positive_upward=True)
+
+    Tu = np.arctan2(αTz + βSz, αTz - βSz)
+    Tu.attrs["long_name"] = "$Tu$"
+    Tu.attrs["units"] = "radian"
+
+    return Tu
