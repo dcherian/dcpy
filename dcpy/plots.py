@@ -1034,10 +1034,6 @@ def fill_between_bounds(
     if ax is None:
         ax = plt.gca()
 
-    bvar = ds.cf.bounds[var][0]
-    bdim = ds.cf.get_bounds_dim_name(var)
-    bounds = ds[bvar]
-
     ybounds = ds[ds.cf.bounds[y][0]]
     bdim = ds.cf.get_bounds_dim_name(y)
     yedges = np.append(ybounds.isel({bdim: 0}).data, ybounds[-1, -1])
@@ -1048,6 +1044,10 @@ def fill_between_bounds(
         color = ax._get_patches_for_fill.get_next_color()
 
     if fill:
+        bvar = ds.cf.bounds[var][0]
+        bdim = ds.cf.get_bounds_dim_name(var)
+        bounds = ds[bvar]
+
         if axis == "x":
             func = ax.fill_betweenx
         else:
