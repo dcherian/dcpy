@@ -528,7 +528,6 @@ def SpectralDensity(
             [sin(2π/10) will have a peak at 1/10]
      conf : 95% confidence interval for 2*nsmooth dof
     """
-    import mtspec
     import numpy as np
 
     import dcpy.util
@@ -568,6 +567,8 @@ def SpectralDensity(
             var = signal.detrend(var)
 
             if multitaper:
+                import mtspec
+
                 Y, freq, conf, _, _ = mtspec.mtspec(
                     data=var,
                     delta=dt,
