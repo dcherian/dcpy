@@ -1079,3 +1079,10 @@ def cmap_color_cycler(cmap=mpl.cm.Reds, N=10):
 
     colors = cmap(np.arange(1, N + 1) / (N + 1))
     return cycler(color=colors)
+
+
+def add_secondary_axis_inverted(aa):
+    from .util import one_over
+
+    aa2 = aa.secondary_xaxis("top", functions=(one_over, one_over))
+    return aa2
