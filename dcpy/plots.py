@@ -1028,11 +1028,23 @@ def add_contour_legend(cs, label, numel=None, **kwargs):
 
 
 def fill_between_bounds(
-    ds, var, y, axis="x", color=None, ax=None, label=None, fill=True
+    ds,
+    var,
+    y,
+    axis="x",
+    color=None,
+    ax=None,
+    label=None,
+    fill=True,
+    stairs_kwargs=None,
 ):
 
     if ax is None:
         ax = plt.gca()
+
+    if stairs_kwargs is None:
+        stairs_kwargs = {}
+    stairs_kwargs.setdefault("lw", 1)
 
     ybounds = ds[ds.cf.bounds[y][0]]
     bdim = ds.cf.get_bounds_dim_name(y)
@@ -1066,8 +1078,8 @@ def fill_between_bounds(
         yedges,
         orientation="horizontal" if axis == "x" else "vertical",
         color=color,
-        lw=1,
         label=label,
+        **stairs_kwargs,
     )
     if ds[y].attrs.get("positive", "up") == "down" and not ax.yaxis_inverted():
         ax.invert_yaxis()
