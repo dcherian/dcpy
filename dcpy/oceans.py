@@ -575,11 +575,12 @@ def read_aquarius_l3(dirname="/home/deepak/datasets/aquarius/L3/combined/"):
     return aq
 
 
-def read_argo_clim(dirname="/home/deepak/datasets/argoclim/", chunks=None):
+def read_argo_clim(dirname="~/datasets/argoclim/", chunks=None):
 
     if chunks is None:
         chunks = {"LATITUDE": 20, "LONGITUDE": 60}
 
+    dirname = os.path.expanduser(dirname)
     argoT = xr.open_mfdataset(
         dirname + "RG_ArgoClim_Temperature_*.nc", decode_times=False, chunks=chunks
     )
@@ -609,7 +610,7 @@ def read_argo_clim(dirname="/home/deepak/datasets/argoclim/", chunks=None):
     _, ref_date = xr.coding.times._unpack_netcdf_time_units(argo.time.units)
 
     argo = argo.assign_coords(
-        time=pd.Timestamp(ref_date) + pd.to_timedelta(30 * argo.time.values, unit="D")
+        time=pd.date_range(ref_date, freq="M", periods=argo.sizes["time"])
     )
 
     argo.time.attrs["axis"] = "T"
@@ -740,16 +741,21 @@ def read_oscar(dirname="/home/deepak/work/datasets/oscar/"):
     return oscar
 
 
-def read_mimoc(dirname="~/datasets/mimoc/", year=2014):
+def read_mimoc(dirname="~/datasets/mimoc/", globstr="MIMOC_ML_*", year=2014):
 
     dirname = os.path.expanduser(dirname)
     mimoc = xr.open_mfdataset(
-        f"{dirname}/MIMOC_ML_*.nc", concat_dim="month", combine="nested"
+        f"{dirname}/{globstr}", concat_dim="month", combine="nested"
     )
+    if "SIG" in mimoc.dims:
+        mimoc["SIGMA_0"] = mimoc.SIGMA_0.isel(month=1).load() - 1000
+        mimoc = mimoc.swap_dims({"SIG": "SIGMA_0"}).rename({"SIGMA_0": "sigma0"})
+        mimoc["sigma0"].attrs.update({"long_name": "$σ_0$", "units": "kg/m^3"})
+        mimoc = mimoc.rename({"CONSERVATIVE_TEMPERATURE": "CT", "ABSOLUTE_SALINITY": "SA"})
     mimoc["LATITUDE"] = mimoc.LATITUDE.isel(month=1)
     mimoc["LONGITUDE"] = mimoc.LONGITUDE.isel(month=1)
     mimoc = mimoc.swap_dims({"LAT": "LATITUDE", "LONG": "LONGITUDE"}).rename(
-        {"LATITUDE": "latitude", "LONGITUDE": "longitude"}
+        {"LATITUDE": "latitude", "LONGITUDE": "longitude", "PRESSURE": "pressure"}
     )
     mimoc["longitude"].attrs.update({"units": "degrees_east", "axis": "X"})
     mimoc["latitude"].attrs.update({"units": "degrees_north", "axis": "Y"})
