@@ -576,3 +576,14 @@ def lagged_autocorrelation(obj, dim: str, maxlag: int = None):
     reshaped = sliding_window(obj, **{dim: ("__lags__", maxlag)})
     reshaped2 = sliding_window(reshaped, **{"__lags__": ("lags", maxlag)})
     return xr.dot(reshaped, reshaped2, dims="__lags__", optimize=True)
+
+
+def set_zarr_compression_encoding(ds):
+    import zarr
+
+    compressor = zarr.Blosc(cname="zstd", clevel=3, shuffle=2)
+    if not isinstance(ds, xr.Dataset):
+        raise ValueError("Expected xarray.Dataset!")
+    for var in set(ds.variables) - set(ds.dims):
+        ds[var].encoding.update({"compressor": compressor})
+    return ds
