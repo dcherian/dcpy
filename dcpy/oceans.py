@@ -1128,7 +1128,7 @@ def sortby(tosort, by, ascending, out):
         out[mask] = out[mask][::-1]
 
 
-def thorpesort(field, by, core_dim="depth", ascending=True):
+def thorpesort(field, by, core_dim=None, ascending=True):
     """Numba accelerate Thorpe sorting."""
 
     def wrapper(tosort, by, ascending):
@@ -1138,17 +1138,29 @@ def thorpesort(field, by, core_dim="depth", ascending=True):
         sortby(tosort, by, ascending, out)
         return out
 
+    if core_dim is None:
+        core_dim = field.cf.axes["Z"]
+        if len(core_dim) > 1:
+            raise ValueError(f"Detected multiple values for core_dim: {core_dim}")
+        core_dim = core_dim[0]
     if isinstance(by, str):
         by = field[by]
-    return xr.apply_ufunc(
+    if isinstance(field, xr.Dataset):
+        missing_core_dim = [var for var in field if core_dim not in field[var].dims]
+    else:
+        missing_core_dim = []
+    result = xr.apply_ufunc(
         wrapper,
-        field,
+        field.drop_vars(missing_core_dim),
         by,
         input_core_dims=[[core_dim], [core_dim]],
         output_core_dims=[[core_dim]],
         dask="parallelized",
         kwargs=dict(ascending=ascending),
     )
+    for var in missing_core_dim:
+        result[var] = field[var]
+    return result
 
 
 def turner_angle(ds):
