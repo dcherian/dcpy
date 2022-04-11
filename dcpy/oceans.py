@@ -1048,6 +1048,12 @@ def read_osu_microstructure_mat(
         "lat": {"standard_name": "latitude", "units": "degrees_north"},
         "eps": {"long_name": "$ε$", "units": "W/kg"},
         "chi": {"long_name": "$χ$", "units": "°C²/s"},
+        "Jq_eps": {
+            "long_name": "$J_q^ε$",
+            "units": "W/m^2",
+            "description": "Γε/N^2 T_z^2",
+        },
+        "Jq": {"long_name": "$J_q^χ", "units": "W/m^2"},
     }
     ds["time"] = util.datenum2datetime(ds.time.data)
     if "depth" in ds:
