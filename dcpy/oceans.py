@@ -1180,3 +1180,98 @@ def turner_angle(ds):
     Tu.attrs["units"] = "radian"
 
     return Tu
+
+
+def get_mld(dens, N2=None, min_delta_dens=0.015, min_N2=1e-5):
+    """
+    Given density field, estimate MLD as depth where drho > 0.01 and N2 > 2e-5.
+    # Interpolates density to 1m grid.
+    """
+    if not isinstance(dens, xr.DataArray):
+        raise ValueError(f"Expected DataArray, received {dens.__class__.__name__}")
+
+    if "Z" in dens.cf:
+        depth = dens.cf["Z"]
+        key = "Z"
+    else:
+        depth = dens.cf["vertical"]
+        key = "vertical"
+
+    positive = depth.attrs.get("positive", "up")
+    if positive == "down":
+        assert np.all(depth > 0)
+        func = "min"
+        sign = -1
+    else:
+        func = "max"
+        sign = 1
+
+    drho = dens - dens.cf.sel(**{key: 0, "method": "nearest"})
+    if N2 is None:
+        N2 = sign * -9.81 / 1025 * dens.cf.differentiate(key)
+
+    thresh = xr.where(
+        (np.abs(drho) > min_delta_dens) & (N2 > min_N2), depth, np.nan, keep_attrs=False
+    )
+    # thresh.attrs = depth.attrs
+    thresh[depth.name].attrs = depth.attrs
+    mld = getattr(thresh.cf, func)(key)
+
+    mld.name = "mld"
+    mld.attrs["long_name"] = "MLD"
+    mld.attrs["units"] = "m"
+    mld.attrs["description"] = (
+        "Interpolate density to 1m grid. "
+        f"Search for {func} depth where "
+        f" |drho| > {min_delta_dens} and N2 > {min_N2}"
+    )
+
+    return mld
+
+
+def _get_max(var, dim="depth"):
+
+    # return((xr.where(var == var.max(dim), var[dim], np.nan))
+    #       .max(dim))
+
+    coords = dict(var.coords)
+    coords.pop(dim)
+
+    dims = list(var.dims)
+    del dims[var.get_axis_num(dim)]
+
+    # non_nans = var
+    # for dd in dims:
+    #    non_nans = non_nans.dropna(dd, how="all")
+    argmax = var.fillna(-123456).argmax(dim)
+    argmax = argmax.where(argmax != 0)
+
+    new_coords = dict(var.coords)
+    new_coords.pop(dim)
+
+    da = xr.DataArray(argmax.data.squeeze(), dims=dims, coords=new_coords).compute()
+    return (
+        var[dim][da.fillna(0).astype(int)]
+        .drop(dim)
+        .reindex_like(var)
+        .where(da.notnull())
+    )
+
+
+def get_euc_max(u, kind="model"):
+    """Given a u field, returns depth of max speed i.e. EUC maximum."""
+
+    if kind == "data":
+        u = u.fillna(-100)
+
+    dim = u.cf.coordinates.get("vertical", [None])[0]
+    if not dim:
+        dim = u.cf.coordinates.get("Z", [None])[0]
+    if not dim:
+        dim = "depth"
+    euc_max = _get_max(u, dim)
+
+    euc_max.attrs["long_name"] = "Depth of EUC max"
+    euc_max.attrs["units"] = "m"
+
+    return euc_max
