@@ -587,3 +587,7 @@ def set_zarr_compression_encoding(ds):
     for var in set(ds.variables) - set(ds.dims):
         ds[var].encoding.update({"compressor": compressor})
     return ds
+
+
+def to_base_units(da):
+    return da.copy(data=da.data.to_base_units())
