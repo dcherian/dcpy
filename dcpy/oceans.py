@@ -618,9 +618,8 @@ def read_argo_clim(dirname="~/datasets/argoclim/", chunks=None):
     argo["Tmean"].attrs["standard_name"] = "sea_water_temperature"
     argo["S"].attrs["standard_name"] = "sea_water_salinity"
     argo["Smean"].attrs["standard_name"] = "sea_water_salinity"
-    argo["pres"].attrs["standard_name"] = "sea_water_pressure"
-    argo.pres.attrs["positive"] = "down"
     argo["theta_mean"] = eos.ptmp(argo.Smean, argo.Tmean, argo.pres)
+    argo["pres"].attrs = {"standard_name": "sea_water_pressure", "positive": "down", "axis": "Z"}
 
     return argo
 
@@ -755,8 +754,10 @@ def read_mimoc(dirname="~/datasets/mimoc/", globstr="MIMOC_ML_*", year=2014):
     mimoc["LATITUDE"] = mimoc.LATITUDE.isel(month=1)
     mimoc["LONGITUDE"] = mimoc.LONGITUDE.isel(month=1)
     mimoc = mimoc.swap_dims({"LAT": "LATITUDE", "LONG": "LONGITUDE"}).rename(
-        {"LATITUDE": "latitude", "LONGITUDE": "longitude", "PRESSURE": "pressure"}
+        {"LATITUDE": "latitude", "LONGITUDE": "longitude"}
     )
+    if "PRESSURE" in mimoc:
+         mimoc = mimoc.rename({"PRESSURE": "pressure"})
     mimoc["longitude"].attrs.update({"units": "degrees_east", "axis": "X"})
     mimoc["latitude"].attrs.update({"units": "degrees_north", "axis": "Y"})
     mimoc["month"] = pd.date_range(f"{year}-01-01", f"{year}-12-31", freq="SM")[::2]
