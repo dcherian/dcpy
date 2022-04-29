@@ -1178,8 +1178,7 @@ def turner_angle(ds):
     βSz = gsw.beta(SA, CT, P) * SA.cf.differentiate("Z", positive_upward=True)
 
     Tu = np.arctan2(αTz + βSz, αTz - βSz)
-    Tu.attrs["long_name"] = "$Tu$"
-    Tu.attrs["units"] = "radian"
+    Tu.attrs = {"long_name": "$Tu$", "standard_name": "turner_angle", "units": "radian"}
 
     return Tu
 
