@@ -1276,3 +1276,33 @@ def get_euc_max(u, kind="model"):
     euc_max.attrs["units"] = "m"
 
     return euc_max
+
+
+def preprocess_cchdo_whp_netcdf(ds):
+    """
+    Nicely format CCHDO WHP netCDF files
+    """
+    ds["station"] = ds.station.astype(int)
+    ds["cast"] = ds.cast.astype(int)
+    ds["btm_depth"] = ds.attrs["BOTTOM_DEPTH_METERS"].astype(int)
+    ds = (
+        ds.squeeze()
+        .reset_coords()
+        .expand_dims("station")
+        .set_coords(["station", "cast", "latitude", "longitude", "time"])
+    )
+    ds["station"].attrs = {"cf_role": "profile_id"}
+
+    ds["temperature"].attrs.update(
+        {"standard_name": "sea_water_temperature", "units": "degC"}
+    )
+    ds["salinity"].attrs.update({"standard_name": "sea_water_salinity"})
+    ds["pressure"].attrs.update({"standard_name": "sea_water_pressure"})
+    ds["btm_depth"].attrs.update({"standard_name": "sea_floor_depth", "units": "m"})
+    ds = ds.cf.guess_coord_axis()
+    del ds.attrs["STATION_NUMBER"]
+    del ds.attrs["ORIGINAL_HEADER"]
+    del ds.attrs["CAST_NUMBER"]
+    del ds.attrs["BOTTOM_DEPTH_METERS"]
+    return ds
+    return ds
