@@ -884,8 +884,9 @@ def neutral_density(ds):
             lon = lon * np.ones_like(s[..., 0])
         mask = ~np.isnan(s + t + p)
         g = np.full(s.shape, np.nan)
-        g[mask] = pygamma.gamma_n(s[mask], t[mask], p[mask], lon, lat)[0]
-        g[g < 0.1] = np.nan  # bad values are 0?
+        if np.any(mask):
+            g[mask] = pygamma.gamma_n(s[mask], t[mask], p[mask], lon, lat)[0]
+            g[g < 0.1] = np.nan  # bad values are 0?
         return g
 
     lat = ds.cf.coordinates["latitude"][0]
