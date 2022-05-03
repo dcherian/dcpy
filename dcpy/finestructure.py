@@ -86,8 +86,8 @@ def results_to_xarray(results, profile, criteria):
     }
     coords.update(
         {
-            "latitude": profile.cf["latitude"].data,
-            "longitude": profile.cf["longitude"].data,
+            "latitude": profile.cf["latitude"].reset_coords(drop=True),
+            "longitude": profile.cf["longitude"].reset_coords(drop=True),
             "γ_bounds": (("pressure", "nbnds"), results["γbnds"]),
             "p_bounds": (("pressure", "nbnds"), results["pbnds"]),
             "criteria": (
@@ -129,8 +129,6 @@ def results_to_xarray(results, profile, criteria):
     turb.npts.attrs = {"description": "number of points in segment"}
     turb.γmean.attrs = {"bounds": "γ_bounds"}
     turb.γmean.attrs.update(profile.cf["neutral_density"].attrs)
-
-    turb.cf.guess_coord_axis()
 
     for var in ["Tmld", "σmld", "Tmode", "σmode"]:
         turb[var] = profile[var].data
@@ -429,10 +427,11 @@ def process_profile(profile, dz_segment=200, criteria=None, debug=False):
                 p=profile.cf["sea_water_pressure"],
             )
 
-    profile["σ_θ"] = gswxr.sigma0(
-        profile.cf["sea_water_absolute_salinity"],
-        profile.cf["sea_water_conservative_temperature"],
-    )
+        if "sea_water_sigma_t" not in profile.cf:
+            profile["σ_θ"] = gswxr.sigma0(
+                profile.cf["sea_water_absolute_salinity"],
+                profile.cf["sea_water_conservative_temperature"],
+            )
     if "neutral_density" not in profile.cf:
         profile["γ"] = oceans.neutral_density(profile)
 
