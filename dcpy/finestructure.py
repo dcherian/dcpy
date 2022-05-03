@@ -3,6 +3,7 @@ import warnings
 
 import cf_xarray as cfxr
 import gsw
+import gsw_xarray as gswxr
 import matplotlib.pyplot as plt
 import numpy as np
 import xarray as xr
@@ -33,7 +34,7 @@ def trim_mld_mode_water(profile, mode=True):
             return None
 
     T = profile.cf.standard_names["sea_water_temperature"][0]
-    σ = profile.cf.standard_names["sea_water_potential_density"][0]
+    σ = profile.cf.standard_names["sea_water_sigma_t"][0]
 
     assert (profile.cf["Z"] >= 0).all().data
     near_surf = profile.cf[[T, σ]].cf.sel(Z=10, method="nearest")
@@ -337,14 +338,15 @@ def estimate_turb_segment(P, N2, lat, max_wavelength=256, debug=False, criteria=
             idxint, _ = mixsea.shearstrain.find_cutoff_wavenumber(psd, kz, 0.22)
             ξvar[cindex] = np.trapz(psd[idxint], x=kz[idxint])
 
-        ξgmvar[cindex] = np.trapz(ξgm[idxint], x=kz[idxint])
+        if idxint == []:
+            ξgmvar[cindex] = np.nan
+        else:
+            ξgmvar[cindex] = np.trapz(ξgm[idxint], x=kz[idxint])
 
-        if np.isnan(ξgmvar[cindex]):
-            ξvar[cindex] = np.nan
-
-    scale = (ξvar / ξgmvar) ** 2 * h_Rω * L_Nf
-    K = K_0 * scale
-    ε = ε_0 * (N / N0) ** 2 * scale
+    with np.errstate(divide="ignore"):
+        scale = (ξvar / ξgmvar) ** 2 * h_Rω * L_Nf
+        K = K_0 * scale
+        ε = ε_0 * (N / N0) ** 2 * scale
 
     if debug:
         with np.printoptions(precision=2):
@@ -414,12 +416,23 @@ def do_mixsea_shearstrain(profile, dz_segment):
 
 def process_profile(profile, dz_segment=200, criteria=None, debug=False):
     with cfxr.set_options(custom_criteria=salt_criteria):
-        profile["σ_θ"] = eos.pden(
-            profile.cf["sea_water_salinity"],
-            profile.cf["sea_water_temperature"],
-            profile.cf["sea_water_pressure"],
-            0,
-        )
+        if "sea_water_conservative_temperature" not in profile.cf:
+            profile["SA"] = gswxr.SA_from_SP(
+                profile.cf["sea_water_salinity"],
+                profile.cf["sea_water_pressure"],
+                profile.cf["longitude"],
+                profile.cf["latitude"],
+            )
+            profile["CT"] = gswxr.CT_from_t(
+                SA=profile.SA,
+                t=profile.cf["sea_water_temperature"],
+                p=profile.cf["sea_water_pressure"],
+            )
+
+    profile["σ_θ"] = gswxr.sigma0(
+        profile.cf["sea_water_absolute_salinity"],
+        profile.cf["sea_water_conservative_temperature"],
+    )
     if "neutral_density" not in profile.cf:
         profile["γ"] = oceans.neutral_density(profile)
 
@@ -434,6 +447,8 @@ def process_profile(profile, dz_segment=200, criteria=None, debug=False):
     P = profile.cf["sea_water_pressure"]
 
     if profile.cf.sizes["Z"] < 13:
+    CT_name = profile.cf.standard_names["sea_water_conservative_temperature"][0]
+    SA_name = profile.cf.standard_names["sea_water_absolute_salinity"][0]
         if debug:
             raise ValueError("empty")
         return ["empty!"]
@@ -467,14 +482,17 @@ def process_profile(profile, dz_segment=200, criteria=None, debug=False):
 
     # N² calculation is the expensive step; do it only once
     Zdim = profile.cf.axes["Z"][0]
-    N2full, _ = eos.bfrq(S, T, P, dim=Zdim, lat=profile.cf["latitude"])
+    N2full, pmid = gswxr.Nsquared(profile[SA_name], profile[CT_name], P, lat=latitude)
+    N2Zdim = f"{P.name}_mid"
+    N2full = xr.DataArray(
+        N2full, dims=(N2Zdim,), coords={N2Zdim: (N2Zdim, pmid, {"axis": "Z"})}
+    )
     P.attrs = profile.cf["sea_water_pressure"].attrs
 
-    # TODO: Need potential temperature so do this at the segment level
-    dTdzfull = (
-        -1 * profile.cf["sea_water_temperature"].cf.diff("Z") / P.cf.diff("Z")
-    ).cf.assign_coords({"Z": N2full.cf["Z"].data})
-    dTdzfull[Zdim].attrs["axis"] = "Z"
+    with xr.set_options(keep_attrs=True):
+        dTdz_ = -1 * profile[CT_name].cf.diff("Z") / P.cf.diff("Z")
+        dTdzfull = dTdz_.assign_coords({Zdim: N2full.cf["Z"].data})
+        dTdzfull[Zdim].attrs["axis"] = "Z"
 
     for idx, (l, r) in enumerate(zip(lefts, rights)):
         seg = profile.cf.sel(Z=slice(l, r))
@@ -582,9 +600,12 @@ def plot_profile_turb(profile, result):
     plots.set_axes_color(ax["S"], "r")
     plots.set_axes_color(ax["γ"], "teal")
 
-    profile.cf["sea_water_temperature"].cf.plot(ax=ax["T"], marker=".", markersize=4)
-    with cfxr.set_options(custom_criteria=salt_criteria):
-        profile.cf["sea_water_salinity"].cf.plot(ax=ax["S"], color="r", _labels=False)
+    profile.cf["sea_water_conservative_temperature"].cf.plot(
+        ax=ax["T"], marker=".", markersize=4
+    )
+    profile.cf["sea_water_absolute_salinity"].cf.plot(
+        ax=ax["S"], color="r", _labels=False
+    )
     profile.cf["neutral_density"].cf.plot(ax=ax["γ"], color="teal", _labels=False)
 
     title = ax["T"].get_title()
