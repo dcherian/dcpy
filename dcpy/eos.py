@@ -136,7 +136,7 @@ def adtg(s, t, p):
     )
 
 
-@jit(nopython=True, nogil=True, cache=True, parallel=True)
+@jit(nopython=True, nogil=True, cache=True)
 def _adtg(s, T68, p):
 
     a = np.array([3.5803e-5, 8.5258e-6, -6.836e-8, 6.6228e-10])
