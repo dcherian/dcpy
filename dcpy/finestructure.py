@@ -445,14 +445,19 @@ def process_profile(profile, dz_segment=200, criteria=None, debug=False):
     T = profile.cf["sea_water_temperature"]
     P = profile.cf["sea_water_pressure"]
 
-    if profile.cf.sizes["Z"] < 13:
+    Zdim = profile.cf.axes["Z"][0]
+    Z = profile[Zdim]
+    gamma_name = profile.cf.standard_names["neutral_density"][0]
     CT_name = profile.cf.standard_names["sea_water_conservative_temperature"][0]
     SA_name = profile.cf.standard_names["sea_water_absolute_salinity"][0]
+    latitude = profile.cf["latitude"].data
+
+    if profile.sizes[Zdim] < 13:
         if debug:
             raise ValueError("empty")
         return ["empty!"]
 
-    lefts, rights = choose_bins(profile.cf["Z"].data, dz_segment)
+    lefts, rights = choose_bins(Z.data, dz_segment)
 
     results = {
         var: np.full((len(lefts),), fill_value=np.nan)
@@ -480,7 +485,6 @@ def process_profile(profile, dz_segment=200, criteria=None, debug=False):
         results[var] = np.full((len(lefts), 2), fill_value=np.nan)
 
     # N² calculation is the expensive step; do it only once
-    Zdim = profile.cf.axes["Z"][0]
     N2full, pmid = gswxr.Nsquared(profile[SA_name], profile[CT_name], P, lat=latitude)
     N2Zdim = f"{P.name}_mid"
     N2full = xr.DataArray(
@@ -496,17 +500,18 @@ def process_profile(profile, dz_segment=200, criteria=None, debug=False):
     for idx, (l, r) in enumerate(zip(lefts, rights)):
         seg = profile.cf.sel(Z=slice(l, r))
 
-        if seg.cf.sizes["Z"] == 1:
+        if seg.sizes[Zdim] == 1:
             results["flag"][idx] = -1
             continue
 
-        P = seg.cf["Z"]
+        P = seg[Zdim]
+        γ = seg[gamma_name]
 
         # Argo in NATRE region: At 1000m sampling dz changes drastically;
         # it helps to just drop that one point
-        seg = seg.where(P.cf.diff("Z") < 21, drop=True)
+        seg = seg.where(P.diff(Zdim) < 21, drop=True)
 
-        results["npts"][idx] = seg.cf.sizes["Z"]
+        results["npts"][idx] = seg.sizes[Zdim]
 
         # max dz of 20m; ensure min number of points
         if results["npts"][idx] < np.ceil(dz_segment / 20):
@@ -518,20 +523,21 @@ def process_profile(profile, dz_segment=200, criteria=None, debug=False):
         N2 = N2full.cf.sel(Z=slice(P[0], P[-1]))
 
         # TODO: Is this interpolation sensible?
-        dp = P.cf.diff("Z")
+        dp = P.diff(Zdim)
+        Pn2 = N2[N2Zdim]
         if dp.max() - dp.min() > 2:
             dp = dp.median()
             seg = seg.cf.interp(Z=np.arange(P[0], P[-1], dp.median()))
-            Pn2 = N2.cf["Z"]
             N2 = N2.cf.interp(Z=np.arange(Pn2[0], Pn2[-1], dp.median()))
+            Pn2 = N2[N2Zdim]
 
         results["pressure"][idx] = (P.data[0] + P.data[-1]) / 2
         results["pbnds"][idx, 0] = P.data[0]
         results["pbnds"][idx, 1] = P.data[-1]
 
-        results["γmean"][idx] = seg.cf["neutral_density"].mean()
-        results["γbnds"][idx, 0] = seg.cf["neutral_density"].data[0]
-        results["γbnds"][idx, 1] = seg.cf["neutral_density"].data[-1]
+        results["γmean"][idx] = γ.mean()
+        results["γbnds"][idx, 0] = γ.data[0]
+        results["γbnds"][idx, 1] = γ.data[-1]
 
         (
             results["Kρ"][idx],
@@ -541,28 +547,23 @@ def process_profile(profile, dz_segment=200, criteria=None, debug=False):
             results["N2mean"][idx],
             results["flag"][idx],
         ) = estimate_turb_segment(
-            N2.cf["Z"].data,
+            Pn2.data,
             N2.data,
-            seg.cf["latitude"].data,
+            latitude,
             max_wavelength=dz_segment,
             debug=debug,
             criteria=criteria,
         )
 
         results["Tzlin"][idx] = (
-            seg.cf["sea_water_temperature"]
-            .cf.polyfit("Z", deg=1)
-            .sel(degree=1)
-            .polyfit_coefficients.values
+            seg[CT_name].polyfit(Zdim, deg=1).sel(degree=1).polyfit_coefficients.values
             * -1
         )
         dTdz = dTdzfull.cf.sel(Z=slice(l, r))
 
         results["mean_dTdz_seg"][idx] = dTdz.cf.mean("Z")
 
-        dTdz_fit = xr.polyval(
-            N2.cf["Z"], dTdz.cf.polyfit("Z", deg=2).polyfit_coefficients
-        )
+        dTdz_fit = xr.polyval(Pn2, dTdz.polyfit(Zdim, deg=2).polyfit_coefficients)
         results["Tzmean"][idx] = dTdz_fit.mean().data
 
         # if debug:
