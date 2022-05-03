@@ -287,10 +287,10 @@ def estimate_turb_segment(P, N2, lat, max_wavelength=256, debug=False, criteria=
     i0 = np.argmin(np.abs(1 / kz[1:] - max_wavelength / 2 / π))
 
     if criteria is None:
-        criteria = ("kunze", "mixsea", "whalen", "whalen_7")
+        criteria = ["kunze", "mixsea", "whalen", "whalen_7"]
 
     elif isinstance(criteria, str):
-        criteria = (criteria,)
+        criteria = [criteria]
 
     h_Rω = np.empty((len(criteria),))
     ξvar = np.empty((len(criteria),))
@@ -452,7 +452,7 @@ def process_profile(profile, dz_segment=200, criteria=None, debug=False):
     if criteria is None:
         criteria = ["mixsea", "kunze", "whalen", "whalen_7"]
     elif isinstance(criteria, str):
-        criteria = (criteria,)
+        criteria = [criteria]
 
     for var in ["Kρ", "ε", "ξvar", "ξvargm"]:
         results[var] = np.full((len(lefts), len(criteria)), fill_value=np.nan)
