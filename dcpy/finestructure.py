@@ -316,6 +316,8 @@ def estimate_turb_segment(P, N2, lat, max_wavelength=256, debug=False, criteria=
                     idxint = np.arange(i0, idx)
                     break
                 # continue looping if spectrum is  "oversaturated"
+            else:
+                idxint = []
 
         elif "whalen" in crit:
             for min_wavelength in np.arange(10, 41, dp):
@@ -325,6 +327,9 @@ def estimate_turb_segment(P, N2, lat, max_wavelength=256, debug=False, criteria=
                     idxint = np.arange(i0, idx)
                     break
                 # continue looping if spectrum is  "oversaturated"
+            else:
+                # always oversaturated
+                idxint = []
 
         elif crit == "mixsea":
             import mixsea
@@ -463,6 +468,7 @@ def process_profile(profile, dz_segment=200, criteria=None, debug=False):
     # N² calculation is the expensive step; do it only once
     Zdim = profile.cf.axes["Z"][0]
     N2full, _ = eos.bfrq(S, T, P, dim=Zdim, lat=profile.cf["latitude"])
+    P.attrs = profile.cf["sea_water_pressure"].attrs
 
     # TODO: Need potential temperature so do this at the segment level
     dTdzfull = (
