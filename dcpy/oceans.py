@@ -1305,4 +1305,15 @@ def preprocess_cchdo_whp_netcdf(ds):
     del ds.attrs["CAST_NUMBER"]
     del ds.attrs["BOTTOM_DEPTH_METERS"]
     return ds
+
+
+def preprocess_cchdo_cf_netcdf(ds):
+    ds["station"] = ds.station.astype(int)
+    ds.station.attrs.update({"cf_role": "profile_id"})
+    ds["N_LEVELS"] = ("N_LEVELS", np.arange(ds.sizes["N_LEVELS"]), {"axis": "Z"})
+    ds = ds.swap_dims({"N_PROF": "station"}).set_coords(
+        ["section_id", "btm_depth", "profile_type", "geometry_container"]
+    )
+    # pressure is vertical, N_LEVELS is Z
+    del ds.pressure.attrs["axis"]
     return ds
