@@ -619,7 +619,11 @@ def read_argo_clim(dirname="~/datasets/argoclim/", chunks=None):
     argo["S"].attrs["standard_name"] = "sea_water_salinity"
     argo["Smean"].attrs["standard_name"] = "sea_water_salinity"
     argo["theta_mean"] = eos.ptmp(argo.Smean, argo.Tmean, argo.pres)
-    argo["pres"].attrs = {"standard_name": "sea_water_pressure", "positive": "down", "axis": "Z"}
+    argo["pres"].attrs = {
+        "standard_name": "sea_water_pressure",
+        "positive": "down",
+        "axis": "Z",
+    }
 
     return argo
 
@@ -744,20 +748,25 @@ def read_mimoc(dirname="~/datasets/mimoc/", globstr="MIMOC_ML_*", year=2014):
 
     dirname = os.path.expanduser(dirname)
     mimoc = xr.open_mfdataset(
-        f"{dirname}/{globstr}", concat_dim="month", combine="nested"
+        f"{dirname}/{globstr}.nc",
+        concat_dim="month",
+        combine="nested",
+        engine="netcdf4",
     )
     if "SIG" in mimoc.dims:
         mimoc["SIGMA_0"] = mimoc.SIGMA_0.isel(month=1).load() - 1000
         mimoc = mimoc.swap_dims({"SIG": "SIGMA_0"}).rename({"SIGMA_0": "sigma0"})
         mimoc["sigma0"].attrs.update({"long_name": "$σ_0$", "units": "kg/m^3"})
-        mimoc = mimoc.rename({"CONSERVATIVE_TEMPERATURE": "CT", "ABSOLUTE_SALINITY": "SA"})
+        mimoc = mimoc.rename(
+            {"CONSERVATIVE_TEMPERATURE": "CT", "ABSOLUTE_SALINITY": "SA"}
+        )
     mimoc["LATITUDE"] = mimoc.LATITUDE.isel(month=1)
     mimoc["LONGITUDE"] = mimoc.LONGITUDE.isel(month=1)
     mimoc = mimoc.swap_dims({"LAT": "LATITUDE", "LONG": "LONGITUDE"}).rename(
         {"LATITUDE": "latitude", "LONGITUDE": "longitude"}
     )
     if "PRESSURE" in mimoc:
-         mimoc = mimoc.rename({"PRESSURE": "pressure"})
+        mimoc = mimoc.rename({"PRESSURE": "pressure"})
     mimoc["longitude"].attrs.update({"units": "degrees_east", "axis": "X"})
     mimoc["latitude"].attrs.update({"units": "degrees_north", "axis": "Y"})
     mimoc["month"] = pd.date_range(f"{year}-01-01", f"{year}-12-31", freq="SM")[::2]
