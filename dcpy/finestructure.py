@@ -186,9 +186,10 @@ def _check_good_segment(N2, N, f, debug=False):
     if sum(np.isfinite(N2)) == 0:
         return False, -1
 
-    if (N2.max() - N2.min()).item() > 5e-4:
+    delN2 = (N2.max() - N2.min()).item()
+    if delN2 > 5e-4:
         if debug:
-            print("too much N2 variance")
+            print(f"too much N2 variance: {delN2}")
         return False, 1
 
     if N2.mean() < 1e-9:
@@ -341,9 +342,10 @@ def estimate_turb_segment(P, N2, lat, max_wavelength=256, debug=False, criteria=
     ε = ε_0 * (N / N0) ** 2 * scale
 
     if debug:
-        print(
-            f"{P[0]:4.0f} — {P[-1]:4.0f}dbar: ξgmvar: {ξgmvar:.3f}, ξvar: {ξvar:.3f}, N2: {N2fit.mean():.2e} K: {K:.2e}, ε: {ε:.2e}"
-        )
+        with np.printoptions(precision=2):
+            print(
+                f"{P[0]:4.0f} — {P[-1]:4.0f}dbar: ξgmvar: {ξgmvar}, ξvar: {ξvar}, N2: {N2fit.mean()} K: {K}, ε: {ε}"
+            )
 
     return K, ε, ξvar, ξgmvar, N**2, flag
 
@@ -556,9 +558,12 @@ def process_profile(profile, dz_segment=200, criteria=None, debug=False):
 
 
 def plot_profile_turb(profile, result):
-    if all(result.ε.isnull().data):
+    if result.ε.isnull().data.all():
         print("no output!")
         return
+
+    if "criteria" in result.sizes and result.sizes["criteria"] > 1:
+        raise ValueError("Cannot plot for multiple criteria.")
     p_edges = cfxr.bounds_to_vertices(result.p_bounds, bounds_dim="nbnds")
 
     f, axx = plt.subplots(1, 4, sharey=True)
@@ -572,12 +577,14 @@ def plot_profile_turb(profile, result):
     plots.set_axes_color(ax["γ"], "teal")
 
     profile.cf["sea_water_temperature"].cf.plot(ax=ax["T"], marker=".", markersize=4)
-    profile.cf["sea_water_salinity"].cf.plot(ax=ax["S"], color="r", _labels=False)
+    with cfxr.set_options(custom_criteria=salt_criteria):
+        profile.cf["sea_water_salinity"].cf.plot(ax=ax["S"], color="r", _labels=False)
     profile.cf["neutral_density"].cf.plot(ax=ax["γ"], color="teal", _labels=False)
 
     title = ax["T"].get_title()
     [a.set_title("") for a in axx.flat]
 
+    result = result.cf.sel(Z=result.cf["Z"].notnull())
     result.ξvar.cf.plot(ax=ax["ξ"], _labels=False)
     result.ξvargm.cf.plot(ax=ax["ξ"], _labels=False)
     ax["ξ"].legend(["obs", "GM"])
