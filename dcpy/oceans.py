@@ -1323,6 +1323,18 @@ def preprocess_cchdo_cf_netcdf(ds):
     ds = ds.swap_dims({"N_PROF": "station"}).set_coords(
         ["section_id", "btm_depth", "profile_type", "geometry_container"]
     )
-    # pressure is vertical, N_LEVELS is Z
-    del ds.pressure.attrs["axis"]
+    newp = np.arange(ds.pressure.min().data, ds.pressure.max().data + 1, 2)
+
+    casts = []
+    for station in ds.station:
+        cast = ds.sel(station=station)
+        cast = (
+            cast.sel(N_LEVELS=cast.pressure.notnull())
+            .swap_dims({"N_LEVELS": "pressure"})
+            .drop_vars("N_LEVELS")
+            .reindex(pressure=newp)
+        )
+        casts.append(cast)
+    ds = xr.concat(casts, dim="station")
+    return ds
     return ds
