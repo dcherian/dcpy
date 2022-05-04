@@ -1337,4 +1337,31 @@ def preprocess_cchdo_cf_netcdf(ds):
         casts.append(cast)
     ds = xr.concat(casts, dim="station")
     return ds
+
+
+def reformat_ctd_chipod_nc(ds):
+    ds = ds.copy(deep=True).set_coords(["CTD_chipod"])
+
+    ds["direction"] = ("direction", ["up", "dn"])
+
+    # fmt: off
+    for var in ["T", "S", "SN", "dThdz", "pts2bin", "N2", "chi",
+                "eps", "KT", "chiGE", "epsGE", "KTGE", "GEflag", "sn_avail"]:
+        # fmt: on
+        with xr.set_options(keep_attrs=True):
+            ds[var] = xr.concat([ds[f"{var}_up"], ds[f"{var}_dn"]], dim="direction")
+        ds = ds.drop_vars([f"{var}_up", f"{var}_dn"])
+
+    ds["T"] -= 273
+    ds["T"].attrs["units"] = "degrees_Celsius"
+    ds["SN"] = ds.SN.astype(int)
+    ds["sn_avail"] = ds.sn_avail.astype(int)
+    ds["sn_avail"] = ds.sn_avail.where(ds.sn_avail > 0, 0)
+
+    # TODO: remove this eventually
+    # line up with CTD file
+    ds["station"] = np.round(ds.station, 0).astype(int)
+    ds["pressure"] = ds.pressure + 1
+    del ds.chiGE.attrs["long_name"]
+
     return ds
