@@ -340,7 +340,8 @@ def estimate_turb_segment(P, N2, lat, max_wavelength=256, debug=False, criteria=
         else:
             ξgmvar[cindex] = np.trapz(ξgm[idxint], x=kz[idxint])
 
-    with np.errstate(divide="ignore"):
+    ξvar[ξvar < 1e-6] = np.nan
+    with np.errstate(divide="ignore", invalid="ignore"):
         scale = (ξvar / ξgmvar) ** 2 * h_Rω * L_Nf
         K = K_0 * scale
         ε = ε_0 * (N / N0) ** 2 * scale
@@ -451,10 +452,8 @@ def process_profile(profile, dz_segment=200, criteria=None, debug=False):
     SA_name = profile.cf.standard_names["sea_water_absolute_salinity"][0]
     latitude = profile.cf["latitude"].data
 
-    if profile.sizes[Zdim] < 13:
-        if debug:
-            raise ValueError("empty")
-        return ["empty!"]
+    if profile.sizes[Zdim] < 13 and debug:
+        raise ValueError("empty")
 
     lefts, rights = choose_bins(Z.data, dz_segment)
 
