@@ -893,6 +893,8 @@ def neutral_density(ds):
             lon = lon * np.ones_like(s[..., 0])
         mask = ~np.isnan(s + t + p)
         g = np.full(s.shape, np.nan)
+        if np.any(t > 200):
+            raise ValueError("Found temperature values > 200. These may be in Kelvin.")
         if np.any(mask):
             g[mask] = pygamma.gamma_n(s[mask], t[mask], p[mask], lon, lat)[0]
             g[g < 0.1] = np.nan  # bad values are 0?
@@ -939,6 +941,7 @@ def neutral_density(ds):
     gamma.attrs["standard_name"] = "neutral_density"
     gamma.attrs["units"] = "kg/m3"
     gamma.attrs["long_name"] = "$γ_n$"
+    gamma.name = "gamma_n"
 
     return gamma
 
