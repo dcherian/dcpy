@@ -86,8 +86,6 @@ def results_to_xarray(results, profile, criteria):
     }
     coords.update(
         {
-            "latitude": profile.cf["latitude"].reset_coords(drop=True),
-            "longitude": profile.cf["longitude"].reset_coords(drop=True),
             "γ_bounds": (("pressure", "nbnds"), results["γbnds"]),
             "p_bounds": (("pressure", "nbnds"), results["pbnds"]),
             "criteria": (
@@ -97,6 +95,7 @@ def results_to_xarray(results, profile, criteria):
             ),
         }
     )
+    coords.update({k: v for k, v in profile.coords.items() if k not in coords})
 
     turb = xr.Dataset(data_vars, coords)
 
