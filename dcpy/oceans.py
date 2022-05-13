@@ -1158,6 +1158,8 @@ def thorpesort(field, by, core_dim=None, ascending=True):
             raise ValueError(f"Detected multiple values for core_dim: {core_dim}")
         core_dim = core_dim[0]
     if isinstance(by, str):
+        if by in field.coords:
+            raise ValueError(f"{by} is in .coords. It will not get sorted. This is probably not what you want!")
         by = field[by]
     if isinstance(field, xr.Dataset):
         missing_core_dim = [var for var in field if core_dim not in field[var].dims]
