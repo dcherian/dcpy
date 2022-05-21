@@ -40,3 +40,46 @@ def fit(curve, x, y, weights=None, doplot=False, **kwargs):
         return spl
     else:
         return popt
+
+
+def bin_linear_fit(obj, min_count=3, **dim_kwargs):
+    """
+    Returns slope from linear fit in windows.
+
+    Parameters
+    ----------
+    obj: DataArray or Dataset
+    min_count: int
+        Minimum number of data points with which to fit
+    **dim_kwargs:
+        Mapping of dimension name to window length
+
+    Returns
+    -------
+    Dataset or DataArray
+
+    Notes
+    -----
+    1. First coarsens to windows.
+    2. Runs polyfit
+    3. Assigns nice coordinates
+    """
+    assert len(dim_kwargs) == 1
+    for dim, window in dim_kwargs.items():
+        break
+
+    newdim = f"{dim}_"
+
+    coarse = obj.coarsen(**dim_kwargs, boundary="pad").construct(
+        {dim: (newdim, "__window__")}
+    )
+    coarse["__window__"] = obj[dim].data[:window]
+    coarse = coarse.where(coarse.count("__window__") > min_count)
+    slope = coarse.polyfit("__window__", deg=1).sel(degree=1, drop=True)
+
+    slope[dim] = coarse[dim].mean("__window__")
+    slope = slope.swap_dims({newdim: dim})
+
+    if isinstance(obj, xr.DataArray):
+        return slope.polyfit_coefficients
+    return slope
