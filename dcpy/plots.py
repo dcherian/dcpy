@@ -1055,6 +1055,9 @@ def fill_between_bounds(
     if color is None:
         color = ax._get_patches_for_fill.get_next_color()
 
+    if label is None:
+        label = ds[var].attrs.get("long_name", None)
+
     if fill:
         bvar = ds.cf.bounds[var][0]
         bdim = ds.cf.get_bounds_dim_name(var)
