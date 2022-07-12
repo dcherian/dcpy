@@ -1101,3 +1101,31 @@ def add_secondary_axis_inverted(aa):
 
     aa2 = aa.secondary_xaxis("top", functions=(one_over, one_over))
     return aa2
+
+
+def errorbar(ds, x, y, error=None, ax=None, label=None, **kwargs):
+    if ax is None:
+        ax = plt.gca()
+
+    if label is None:
+        label = ds[y].attrs.get("long_name", None)
+
+    xerr, yerr = None, None
+
+    if error is None:
+        raise ValueError("Calling errorbar with error=None.")
+
+    if error is not None and "x" in error:
+        bvar = ds.cf.bounds[x][0]
+        bdim = ds.cf.get_bounds_dim_name(x)
+        xerr = ds[bvar].transpose(bdim, ...).data
+
+    if error is not None and "y" in error:
+        bvar = ds.cf.bounds[y][0]
+        bdim = ds.cf.get_bounds_dim_name(y)
+        yerr = ds[bvar].transpose(bdim, ...).data
+
+    ax.errorbar(x=ds[x].data, y=ds[y].data, xerr=xerr, yerr=yerr, label=label, **kwargs)
+
+    if ds[y].attrs.get("positive", "up") == "down" and not ax.yaxis_inverted():
+        ax.invert_yaxis()
