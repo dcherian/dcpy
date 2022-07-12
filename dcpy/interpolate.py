@@ -7,7 +7,7 @@
 
 # guvectorized functions have out=None, you need to assign to out. no returns allowed!
 
-import warnings
+from functools import partial
 from typing import Any, Iterable
 
 import numpy as np
@@ -15,117 +15,15 @@ import xarray as xr
 from numba import double, guvectorize, int_
 from scipy import interpolate
 
-from .interpolators import (
-    _gufunc_pchip,
-    _gufunc_pchip_roots,
-    preprocess_nan_func,
-    univ_spline,
-)
+from . import interpolators
 
-# _pchip = partial(interpolate.PchipInterpolator, extrapolate=False, axis=-1)
-# _gufunc_pchip = interpolators.make_interpolator(_pchip)
-# _gufunc_pchip_roots = interpolators.make_root_finder(_pchip)
+_pchip = partial(interpolate.PchipInterpolator, extrapolate=False, axis=-1)
+_gufunc_pchip = interpolators.make_interpolator(_pchip)
+_gufunc_pchip_roots = interpolators.make_root_finder(_pchip)
 
-# _gufunc_spline = interpolators.make_interpolator(interpolators.univ_spline)
-# _gufunc_spline_roots = interpolators.make_root_finder(interpolators.univ_spline)
-# _gufunc_spline_der = interpolators.make_derivative(interpolators.univ_spline)
-
-
-@guvectorize(
-    [
-        (int_[:], int_[:], double[:], double[:]),
-        (double[:], int_[:], double[:], double[:]),
-        (int_[:], double[:], double[:], double[:]),
-        (double[:], double[:], double[:], double[:]),
-    ],
-    "(n),(n),(m)->(m)",
-    forceobj=True,
-    cache=True,
-)
-def _gufunc_spline(x, y, ix, out):
-    xy = preprocess_nan_func(x, y, out)
-    min_points = 2  # TODO: make this a kwarg
-    if xy is None or len(x) < min_points:
-        out[:] = np.nan
-        return
-    x, y = xy
-    interpfn = univ_spline(x, y)
-    out[:] = interpfn(ix)
-
-    # disable extrapolation; needed for UnivariateSpline
-    out[ix < x.min()] = np.nan
-    out[ix > x.max()] = np.nan
-
-
-@guvectorize(
-    [
-        (int_[:], int_[:], double[:], double[:]),
-        (double[:], int_[:], double[:], double[:]),
-        (int_[:], double[:], double[:], double[:]),
-        (double[:], double[:], double[:], double[:]),
-    ],
-    "(n),(n),(m)->(m)",
-    forceobj=True,
-    cache=True,
-)
-def _gufunc_spline_roots(x, y, target, out):
-    xy = preprocess_nan_func(x, y, out)
-    if xy is None:
-        out[:] = np.nan
-        return
-    x, y = xy
-
-    # reshape to [target, ...]
-    target = np.reshape(
-        target,
-        [len(target)]
-        + [
-            1,
-        ]
-        * y.ndim,
-    )
-    y = y[np.newaxis, ...]
-
-    interpfn = univ_spline(x, y - target)
-    roots = interpfn.roots()
-    flattened = roots.ravel()
-    for idx, f in enumerate(flattened):
-        if f.size > 1:
-            warnings.warn(
-                "Found multiple roots. Picking the first one. This will depend on the ordering of `dim`",
-                UserWarning,
-            )
-            flattened[idx] = f[0]
-    good = flattened.nonzero()[0]
-    out[:] = np.where(
-        np.isin(np.arange(flattened.size), good), flattened, np.nan
-    ).reshape(roots.shape)
-
-
-@guvectorize(
-    [
-        (int_[:], int_[:], double[:], double[:]),
-        (double[:], int_[:], double[:], double[:]),
-        (int_[:], double[:], double[:], double[:]),
-        (double[:], double[:], double[:], double[:]),
-    ],
-    "(n),(n),(m)->(m)",
-    forceobj=True,
-)
-def _gufunc_spline_der(x, y, x0, out):
-    """
-    Only first-order derivative
-    """
-    xy = preprocess_nan_func(x, y, out)
-    if xy is None:
-        out[:] = np.nan
-        return
-    x, y = xy
-
-    interpfn = univ_spline(x, y)
-    out[:] = interpfn.derivative(n=1)(x0)
-    out[x0 > x.max()] = np.nan
-    out[x0 < x.min()] = np.nan
+_gufunc_spline = interpolators.make_interpolator(interpolators.univ_spline)
+_gufunc_spline_roots = interpolators.make_root_finder(interpolators.univ_spline)
+_gufunc_spline_der = interpolators.make_derivative(interpolators.univ_spline)
 
 
 def is_scalar(value: Any, include_0d: bool = True) -> bool:
@@ -199,6 +97,7 @@ def _interpolator(obj, dim, ix, core_dim=None, interp_gufunc=None, *args, **kwar
         *args,
         input_core_dims=input_core_dims,
         output_core_dims=output_core_dims,
+        vectorize=True,
         dask="parallelized",
         output_dtypes=[float],
         dask_gufunc_kwargs=dict(output_sizes={core_dim: ix_da.sizes[core_dim]}),
@@ -255,12 +154,13 @@ def _roots(obj, dim, target, _root_finder):
         target,
         input_core_dims=input_core_dims,
         output_core_dims=[target.dims],
+        vectorize=True,
         dask="parallelized",
         output_dtypes=[float],
     )
-    # result = result.assign_coords({target.dims[0]: target})
     if "target" not in result.dims:
         result = result.expand_dims("target")
+    result = result.assign_coords({target.dims[0]: target})
 
     return result
 
@@ -420,95 +320,3 @@ def bin_to_new_coord(data, old_coord, new_coord, edges, reduce_func=None):
     # remapped.coords[f"{new_coord}_bounds"] = ()
 
     return remapped
-
-
-@guvectorize(
-    [
-        (int_[:], int_[:], double[:], double[:]),
-        (double[:], int_[:], double[:], double[:]),
-        (int_[:], double[:], double[:], double[:]),
-        (double[:], double[:], double[:], double[:]),
-    ],
-    "(n),(n),(m)->(m)",
-    forceobj=True,
-)
-def _gufunc_pchip_roots_old(x, y, target, out):
-    xy = preprocess_nan_func(x, y, out)
-    if xy is None:
-        out[:] = np.nan
-        return
-    x, y = xy
-
-    # reshape to [target, ...]
-    target = np.reshape(
-        target,
-        [len(target)]
-        + [
-            1,
-        ]
-        * y.ndim,
-    )
-    y = y[np.newaxis, ...]
-
-    interpolator = interpolate.PchipInterpolator(
-        x,
-        y - target,
-        extrapolate=False,
-        axis=-1,
-    )
-    roots = interpolator.roots()
-    flattened = roots.ravel()
-    for idx, f in enumerate(flattened):
-        if f.size > 1:
-            warnings.warn(
-                "Found multiple roots. Picking the first one. This will depend on the ordering of `dim`",
-                UserWarning,
-            )
-            flattened[idx] = f[0]
-    good = flattened.nonzero()[0]
-    out[:] = np.where(
-        np.isin(np.arange(flattened.size), good), flattened, np.nan
-    ).reshape(roots.shape)
-
-
-def pchip_roots_old(obj, dim, target):
-    """
-    Find locations where `obj == target` along dimension `dim`.
-    Parameters
-    ----------
-    obj : xarray.Dataset or xarray.DataArray
-        The object to interpolate.
-    dim : str
-        The axis to interpolate along.
-    target : target values to locate
-        Locates values by constructing PchipInterpolant and solving for roots.
-    Returns
-    -------
-    new_xobj : xarray.DataArray or xarray.Dataset
-    """
-
-    if is_scalar(target):
-        target = np.array(target, ndmin=1)
-
-    if isinstance(target, (np.ndarray, list)):
-        target = xr.DataArray(target, dims="target")
-
-    assert target.ndim == 1
-
-    input_core_dims = [(dim,), (dim,), target.dims]
-
-    result = xr.apply_ufunc(
-        _gufunc_pchip_roots_old,
-        obj[dim],
-        obj,
-        target,
-        input_core_dims=input_core_dims,
-        output_core_dims=[target.dims],
-        dask="parallelized",
-        output_dtypes=[float],
-    )
-    # result = result.assign_coords({target.dims[0]: target})
-    if "target" not in result.dims:
-        result = result.expand_dims("target")
-
-    return result
