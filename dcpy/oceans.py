@@ -1347,6 +1347,47 @@ def preprocess_cchdo_cf_netcdf(ds):
     return ds
 
 
+def kraichnan(k, chi, eps, nu, D, q=7):
+    """
+    Calculate Kraichnan scalar spectrum
+
+    Parameters
+    ----------
+    k : np.ndarray
+        wavenumbers
+    chi : scalar
+        χ
+    eps : scalar
+        ε
+    nu : scalar
+        kinematic viscosity
+    D : scalar
+        molecular diffusivity of scalar
+    q : scalar, optional
+        universal constant
+    """
+
+    C_star = 0.01366  # Aurelie says this is the correct value
+    kb = 1 / 2 / np.pi * (eps / nu / D**2) ** (1 / 4)
+    k_cut = C_star * kb * np.sqrt(D / nu)
+
+    idxs = np.nonzero(k < k_cut)[0] + 1
+
+    if not idxs.any():
+        a = 0
+    else:
+        a = np.max(idxs)
+
+    newk = np.concatenate([[k_cut], k[a:]])
+    const = (2 * np.pi) ** 2 * q * chi * np.sqrt(nu / eps)
+    spec_vals2 = const * newk * np.exp(-np.sqrt(6 * q) * newk / kb)
+
+    spec_vals1 = spec_vals2[0] * (k[:a] / k_cut) ** (1 / 3)
+    spec_vals = np.concatenate([spec_vals1, spec_vals2[1:]])
+
+    return spec_vals
+
+
 def reformat_ctd_chipod_nc(ds):
     ds = ds.copy(deep=True).set_coords(["CTD_chipod"])
 
