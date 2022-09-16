@@ -1159,7 +1159,9 @@ def thorpesort(field, by, core_dim=None, ascending=True):
         core_dim = core_dim[0]
     if isinstance(by, str):
         if by in field.coords:
-            raise ValueError(f"{by} is in .coords. It will not get sorted. This is probably not what you want!")
+            raise ValueError(
+                f"{by} is in .coords. It will not get sorted. This is probably not what you want!"
+            )
         by = field[by]
     if isinstance(field, xr.Dataset):
         missing_core_dim = [var for var in field if core_dim not in field[var].dims]
@@ -1173,6 +1175,7 @@ def thorpesort(field, by, core_dim=None, ascending=True):
         output_core_dims=[[core_dim]],
         dask="parallelized",
         kwargs=dict(ascending=ascending),
+        keep_attrs=True,
     )
     for var in missing_core_dim:
         result[var] = field[var]
