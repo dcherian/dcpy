@@ -1,4 +1,5 @@
 import os
+import warnings
 
 import cf_xarray as cfxr  # noqa
 import gsw
@@ -944,6 +945,45 @@ def neutral_density(ds):
     gamma.name = "gamma_n"
 
     return gamma
+
+
+def mat_to_tree(mat, coords, verbose=False):
+    from datatree import DataTree
+
+    structs = [name for name in mat.keys() if "__" not in name]
+
+    dt = DataTree()
+    for sname in structs:
+        varnames = mat[sname].dtype.names
+        if verbose:
+            print("-----")
+            print(f"Structure {sname}: found variables named {varnames!r}")
+
+        ds = xr.Dataset()
+        shapes = {mat[sname][coord][0, 0].squeeze().shape[0]: coord for coord in coords}
+        if verbose:
+            print(f"Using coordinate vars with shapes: {shapes}")
+
+        for var in varnames:
+            arr = mat[sname][var][0, 0]
+
+            if np.issubdtype(arr.dtype, np.str_) or np.issubdtype(arr.dtype, np.object):
+                if verbose:
+                    print(f"Setting {var} as attr.")
+                ds.attrs[var] = str(arr.ravel())
+                continue
+
+            if arr.dtype.names:
+                warnings.warn(
+                    f"Skipping substructure {var} with fields {arr.dtype.names}",
+                    UserWarning,
+                )
+                continue
+
+            dims = [shapes[s] for s in arr.shape if s > 1]
+            ds[var] = (dims, arr.squeeze(), {"coordinates": " ".join(dims)})
+        dt[sname] = DataTree(ds)
+    return dt
 
 
 def read_osu_microstructure_mat(
