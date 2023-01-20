@@ -225,6 +225,12 @@ def PlotSpectrum(
         Convert datetime spacing to cycles_per_units.
     """
 
+    if multitaper:
+        try:
+            import mtspec  # noqa
+        except ImportError:
+            multitaper = False
+
     iscomplex = not np.all(np.isreal(var))
     if not iscomplex:
         twoside = False  # meaningless for real data
