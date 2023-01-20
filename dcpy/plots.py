@@ -1037,6 +1037,7 @@ def fill_between_bounds(
     label=None,
     fill=True,
     stairs_kwargs=None,
+    title=False,
 ):
 
     if ax is None:
@@ -1055,8 +1056,12 @@ def fill_between_bounds(
     if color is None:
         color = ax._get_patches_for_fill.get_next_color()
 
+    long_name = ds[var].attrs.get("long_name", None)
     if label is None:
-        label = ds[var].attrs.get("long_name", None)
+        label = long_name
+
+    if title and long_name:
+        ax.set_title(long_name)
 
     if fill:
         bvar = ds.cf.bounds[var][0]
