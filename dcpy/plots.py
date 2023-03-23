@@ -1007,7 +1007,7 @@ def add_contour_legend(cs, label, numel=None, **kwargs):
     Call this before adding the final legend.
     """
 
-    ax = cs.ax
+    ax = cs.axes
     if "$" in label:
         raise ValueError(
             "'$' found in label. mpl adds this automatically "
