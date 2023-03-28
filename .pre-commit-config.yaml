@@ -1,27 +1,14 @@
 # https://pre-commit.com/
 repos:
-  # isort should run before black as black sometimes tweaks the isort output
-  - repo: https://github.com/timothycrosley/isort
-    rev: 5.10.1
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    # Ruff version.
+    rev: 'v0.0.259'
     hooks:
-      - id: isort
-        files: .+\.py$
+      - id: ruff
+        args: ["--fix"]
 
   # https://github.com/python/black#version-control-integration
   - repo: https://github.com/python/black
-    rev: 22.8.0
+    rev: 23.1.0
     hooks:
       - id: black
-
-  - repo: https://gitlab.com/pycqa/flake8
-    rev: 3.9.2
-    hooks:
-      - id: flake8
-
-  # run this occasionally, ref discussion https://github.com/pydata/xarray/pull/3194
-  - repo: https://github.com/asottile/pyupgrade
-    rev: v2.38.0
-    hooks:
-      - id: pyupgrade
-        args:
-          - "--py36-plus"
