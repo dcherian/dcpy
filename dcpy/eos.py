@@ -1,4 +1,3 @@
-import numba
 import numpy as np
 import xarray as xr
 from numba import jit
@@ -138,7 +137,6 @@ def adtg(s, t, p):
 
 @jit(nopython=True, nogil=True, cache=True)
 def _adtg(s, T68, p):
-
     a = np.array([3.5803e-5, 8.5258e-6, -6.836e-8, 6.6228e-10])
     b = np.array([1.8932e-6, -4.2393e-8])
     c = np.array([1.8741e-8, -6.7795e-10, 8.733e-12, -5.4481e-14])

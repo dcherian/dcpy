@@ -23,7 +23,6 @@ def data():
 )
 @pytest.mark.parametrize("targets", [0, [0.0], [-30], [-30, 29.234]])
 def test_roots(data, targets, maybe_chunk, maybe_persist):
-
     if maybe_chunk:
         data = data.chunk({"x": 1, "y": 2})
     if maybe_persist:
@@ -40,7 +39,6 @@ def test_roots(data, targets, maybe_chunk, maybe_persist):
 
 
 def expected_pchip_interpolate_z(data, ix):
-
     assert ix.ndim == 1
     data = data.compute()
     stacked = data.stack({"stacked": ["x", "y"]})
@@ -67,7 +65,6 @@ def expected_pchip_interpolate_z(data, ix):
 
 @pytest.mark.parametrize("maybe_chunk", [False, True])
 def test_pchip_fillna(data, maybe_chunk):
-
     data[:, :, 10:20] = np.nan
 
     if maybe_chunk:
@@ -94,7 +91,6 @@ def test_pchip_fillna(data, maybe_chunk):
 )
 @pytest.mark.parametrize("maybe_chunk", [False, True])
 def test_pchip_interpolate(data, maybe_chunk, newz):
-
     if isinstance(newz, xr.DataArray) and "x" in newz.dims:
         ix_nd_da = True
     else:

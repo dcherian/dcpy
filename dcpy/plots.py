@@ -22,7 +22,6 @@ white_blue_orange_red = sns.blend_palette(
 def offset_line_plot(
     da, x, y, ax=None, offset=0, remove_mean=False, legend=True, robust=False, **kwargs
 ):
-
     assert da[y].ndim == 1
 
     axnum = da.get_axis_num(y)
@@ -95,7 +94,6 @@ def linex(
     zorder=-1,
     **kwargs,
 ):
-
     if ax is None:
         ax = plt.gca()
 
@@ -121,7 +119,6 @@ def linex(
 
 
 def liney(var, ax=None, label=None, color="gray", linestyle="--", zorder=-1, **kwargs):
-
     if ax is None:
         ax = plt.gca()
 
@@ -147,7 +144,6 @@ def liney(var, ax=None, label=None, color="gray", linestyle="--", zorder=-1, **k
 
 
 def hist(var, log=False, bins=100, alpha=0.5, normed=True, mark95=False, **kwargs):
-
     var = var.copy()
     if log:
         var = np.log10(abs(var))
@@ -162,7 +158,6 @@ def hist(var, log=False, bins=100, alpha=0.5, normed=True, mark95=False, **kwarg
 
 
 def line45(ax=None, **kwargs):
-
     if ax is None:
         ax = plt.gca()
 
@@ -177,7 +172,6 @@ def line45(ax=None, **kwargs):
 
 
 def symyaxis():
-
     ylim = plt.gca().get_ylim()
     plt.gca().set_ylim(np.array([-1, 1]) * np.max(np.abs(ylim)))
 
@@ -371,7 +365,6 @@ def label_subplots(
 
 
 def contour_overlimit(da, mappable, ax=None, color="w", **kwargs):
-
     clim = mappable.get_clim()
 
     ax = plt.gca() if ax is None else ax
@@ -627,7 +620,6 @@ def annotate_heatmap_string(mesh, annot_data, **kwargs):
 
 
 def fill_step(da, dim=None, coord=None, ax=None, **kwargs):
-
     if ax is None:
         ax = plt.gca()
 
@@ -697,7 +689,6 @@ def pow10Formatter(x, pos):
 
 
 def rain_colormap(subset=slice(None, None)):
-
     import seaborn as sns
 
     cmap = sns.blend_palette(
@@ -726,7 +717,6 @@ def rain_colormap(subset=slice(None, None)):
 
 
 def trim_map(ax, xlim, ylim):
-
     import matplotlib.path as mpath
 
     rect = mpath.Path(
@@ -812,7 +802,6 @@ def set_shade(a, intensity=None, cmap=mpl.cm.jet, scale=10.0, azdeg=165.0, altde
 
 
 def get_shade_field(ds, method="matplotlib", altdeg=45, azdeg=20, vert_exag=25):
-
     """
     Good parameters might be azdeg=315, altdeg=45, vert_exag=45
     """
@@ -959,7 +948,6 @@ def quiver(ds, x, y, u, v, ax=None, **kwargs):
 
 
 def clean_axes(ax):
-
     ax = np.atleast_2d(ax)
 
     [aa.set_title("") for aa in ax[1:, :].flat]
@@ -970,7 +958,6 @@ def clean_axes(ax):
 
 
 def lat_lon_ticks(ax, x="lon", y="lat"):
-
     ylabels = []
     for tt in ax.get_yticks():
         if tt < 0:
@@ -990,7 +977,6 @@ def lat_lon_ticks(ax, x="lon", y="lat"):
 
 
 def plot_mask(ax, mask):
-
     mask.plot.contourf(
         ax=ax, alpha=0.8, levels=[-0.1, 0.1], add_colorbar=False, cmap=mpl.cm.Greys_r
     )
@@ -1000,7 +986,6 @@ def plot_mask(ax, mask):
 
 
 def cbar_inset_axes(ax):
-
     from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
     inset_kwargs = dict(
@@ -1016,12 +1001,17 @@ def cbar_inset_axes(ax):
 
 
 def add_contour_legend(cs, label, numel=None, **kwargs):
-    """Adds a separate legend for a contour. Call this before adding the final legend."""
+    """
+    Adds a separate legend for a contour.
+
+    Call this before adding the final legend.
+    """
 
     ax = cs.ax
     if "$" in label:
         raise ValueError(
-            "'$' found in label. mpl adds this automatically and will raise an error if present."
+            "'$' found in label. mpl adds this automatically "
+            "and will raise an error if present."
         )
     elements = tuple(a[:numel] for a in cs.legend_elements(label))
     ax.add_artist(ax.legend(*elements, **kwargs))

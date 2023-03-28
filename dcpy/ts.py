@@ -31,7 +31,6 @@ def _is_datetime_like(da) -> bool:
 
 
 def _process_time(time, cycles_per="s"):
-
     time = time.copy()
     dt = np.nanmedian(
         np.diff(time.values).astype(np.timedelta64) / np.timedelta64(1, cycles_per)
@@ -105,7 +104,6 @@ def xfilter(
 
 
 def FindLargestSegment(input):
-
     start, stop = FindSegments(input)
     GapLength = stop - start + 1
     imax = np.argmax(GapLength)
@@ -451,7 +449,6 @@ def CenteredFFT(input, dt=1.0, axis=-1):
 
 
 def AliasFreq(f0, dt):
-
     fs = 1 / dt
 
     lower = np.ceil(f0 / fs - 0.5)
@@ -675,18 +672,21 @@ def coh_siglevel(N, repeats=100):
     -----
 
     Follows Farrar's suggestion:
-       if the time series is tapered before using a band-averaged spectral estimate,
-       the effective value of M is less than the actual value of M.
+       if the time series is tapered before using a band-averaged spectral
+       estimate, the effective value of M is less than the actual value of M.
        It is possible to make a good estimate of the effective value of M
-       (or effective number of degrees of freedom), but this is misunderstood by many people.
-       It is always a good idea (and very easy) to check the significance of coherence
-       calculations by Monte Carlo simulation. Simply repeat your coherence calculation many times,
-       replacing one of your time series with random noise, sort the results
-       and find the 95th percentile (or whatever significance level you desire).
+       (or effective number of degrees of freedom), but this is misunderstood
+       by many people.
+       It is always a good idea (and very easy) to check the significance
+       of coherence calculations by Monte Carlo simulation. Simply repeat
+       your coherence calculation many times, replacing one of your time series
+       with random noise, sort the results and find the 95th percentile
+       (or whatever significance level you desire).
 
 
-    Uses lru_cache, so input cannot be DataArray or np.ndarray. I choose to use len(time_series)
-    instead and contruct two synthetic time series.
+    Uses lru_cache, so input cannot be DataArray or np.ndarray.
+    I choose to use len(time_series)  instead and contruct
+    two synthetic time series.
     """
 
     cohs = []
@@ -930,7 +930,6 @@ def PlotCoherence(
     unwrap=False,
     ploty0=True,
 ):
-
     import dcpy.plots
 
     if multitaper:
@@ -1028,7 +1027,6 @@ def BandPassButter(
     returnba=False,
     debug=False,
 ):
-
     b, a = signal.butter(N=order, Wn=np.sort(freqs) * dt / (1 / 2), btype="bandpass")
 
     if returnba:
@@ -1085,7 +1083,6 @@ def BandPassButter(
 
 
 def ImpulseResponse(b, a, eps=1e-2):
-
     implen = EstimateImpulseResponseLength(b, a, eps=eps)
     ntime = implen * 4
 
@@ -1117,14 +1114,12 @@ def ImpulseResponse(b, a, eps=1e-2):
 
 
 def LowPassButter(input, freq, order=1):
-
     b, a = signal.butter(order, freq / (1 / 2), btype="low")
 
     return GappyFilter(input, b, a)
 
 
 def HighPassButter(input, freq, order=1):
-
     b, a = signal.butter(order, freq / (1 / 2), btype="high")
 
     return GappyFilter(input, b, a)
@@ -1145,7 +1140,6 @@ def EstimateImpulseResponseLength(b, a, eps=1e-2):
 
 
 def oldGappyFilter(input, b, a, num_discard=None):
-
     if input.ndim == 1:
         input = np.reshape(input, (len(input), 1))
 
@@ -1179,7 +1173,6 @@ def oldGappyFilter(input, b, a, num_discard=None):
 
 
 def GappyFilter(input, b, a, num_discard="auto"):
-
     out = np.empty(input.shape) * np.nan
 
     if num_discard == "auto":
@@ -1204,7 +1197,6 @@ def GappyFilter(input, b, a, num_discard="auto"):
 
 
 def HighPassAndPlot(input, CutoffFreq, titlestr=None, **kwargs):
-
     start, stop = FindLargestSegment(input)
     filtered = HighPassButter(input, CutoffFreq)
 
@@ -1232,7 +1224,6 @@ def HighPassAndPlot(input, CutoffFreq, titlestr=None, **kwargs):
 
 
 def apply_along_dim_1d(invar, dim, func, args=(), **kwargs):
-
     x = invar.copy()
     idim = invar.get_axis_num(dim)
     stackdims = x.dims[:idim] + x.dims[idim + 1 :]
@@ -1310,7 +1301,6 @@ def FillGaps(y, x=None, maxlen=None):
 
 
 def Spectrogram(var, nfft, shift, time=None, dim=None, **kwargs):
-
     if time is None and dim is not None and isinstance(var, xr.DataArray):
         time = var[dim]
     elif time is None and isinstance(var, xr.DataArray):
@@ -1365,7 +1355,6 @@ def Spectrogram(var, nfft, shift, time=None, dim=None, **kwargs):
 
 
 def PlotSpectrogram(da, nfft, shift, multitaper=False, ax=None, **kwargs):
-
     iscomplex = np.any(np.iscomplex(da))
 
     if ax is None:
@@ -1438,7 +1427,6 @@ def wavelet(var, dt=1):
 
 
 def plot_scalogram(da, dt=1, ax=None, **kwargs):
-
     w = wavelet(da, dt)
 
     if ax is None:
@@ -1478,7 +1466,6 @@ def plot_scalogram(da, dt=1, ax=None, **kwargs):
 
 
 def plot_detailed_scalogram(da, dt=1, **kwargs):
-
     with plt.style.context("ggplot"):
         f, ax = plt.subplots(2, 1, sharex=True, constrained_layout=True)
 
@@ -1492,7 +1479,6 @@ def plot_detailed_scalogram(da, dt=1, **kwargs):
 
 
 def matlab_wavelet(da, dt=1, beta=2.0, gamma=3.0, eng=None, kind="matlab"):
-
     import matlab.engine
 
     if eng is None:
@@ -1588,7 +1574,6 @@ def complex_demodulate(
     debug=False,
     filt="butter",
 ):
-
     if isinstance(ts, xr.DataArray):
         if dim is None:
             dim = ts.dims[0]

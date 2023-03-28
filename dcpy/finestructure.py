@@ -9,7 +9,7 @@ import numpy as np
 import xarray as xr
 from scipy import signal
 
-from . import eos, oceans, plots
+from . import oceans, plots
 
 salt_criteria = {
     "sea_water_salinity": {
@@ -20,9 +20,9 @@ salt_criteria = {
 
 def trim_mld_mode_water(profile, mode=True):
     """
-    Follows Whalen's approach of using a threshold criterion first to identify MLD,
-    trimming that; and then applying again to find mode water. I apply both T, σ criteria
-    and pick the max depth.
+    Follows Whalen's approach of using a threshold criterion
+    first to identify MLD, trimming that; and then applying again
+    to find mode water. I apply both T, σ criteria and pick the max depth.
     """
 
     def find_thresh_delta(delta, thresh):
@@ -113,7 +113,9 @@ def results_to_xarray(results, profile, criteria):
     }
     turb.Tzmean.attrs = {
         "long_name": "$T_z^{quad}$",
-        "description": "mean of quadratic fit of Tz with pressure; like N² fitting for strain",
+        "description": (
+            "mean of quadratic fit of Tz with pressure; " "like N² fitting for strain"
+        ),
     }
     turb.mean_dTdz_seg.attrs = {
         "description": "mean of dTdz values in segment",
@@ -139,7 +141,10 @@ def results_to_xarray(results, profile, criteria):
 
     turb.flag.attrs = {
         "flag_values": [-2, -1, 1, 2, 3, 4, 5],
-        "flag_meanings": "too_coarse too_short N²_variance_too_high too_unstratified too_little_bandwidth no_internal_waves good_data",
+        "flag_meanings": (
+            "too_coarse too_short N²_variance_too_high too_"
+            "too_little_bandwidth no_internal_waves good_data"
+        ),
     }
 
     turb["χ"] = 2 * turb.Kρ * turb.Tzmean**2
@@ -349,7 +354,8 @@ def estimate_turb_segment(P, N2, lat, max_wavelength=256, debug=False, criteria=
     if debug:
         with np.printoptions(precision=2):
             print(
-                f"{P[0]:4.0f} — {P[-1]:4.0f}dbar: ξgmvar: {ξgmvar}, ξvar: {ξvar}, N2: {N2fit.mean()} K: {K}, ε: {ε}"
+                f"{P[0]:4.0f} — {P[-1]:4.0f}dbar: ξgmvar: {ξgmvar}, "
+                f"ξvar: {ξvar}, N2: {N2fit.mean()} K: {K}, ε: {ε}"
             )
 
     return K, ε, ξvar, ξgmvar, N**2, flag
@@ -387,7 +393,6 @@ def mixsea_to_xarray(result):
 
 
 def do_mixsea_shearstrain(profile, dz_segment):
-
     import mixsea
 
     P = profile.cf["sea_water_pressure"]
@@ -440,9 +445,9 @@ def process_profile(profile, dz_segment=200, criteria=None, debug=False):
 
     profile = trim_mld_mode_water(profile)
 
-    with cfxr.set_options(custom_criteria=salt_criteria):
-        S = profile.cf["sea_water_salinity"]
-    T = profile.cf["sea_water_temperature"]
+    # with cfxr.set_options(custom_criteria=salt_criteria):
+    #     profile.cf["sea_water_salinity"]
+    # profile.cf["sea_water_temperature"]
     P = profile.cf["sea_water_pressure"]
 
     Zdim = profile.cf.axes["Z"][0]
@@ -495,7 +500,7 @@ def process_profile(profile, dz_segment=200, criteria=None, debug=False):
         dTdzfull = dTdz_.assign_coords({Zdim: N2full.cf["Z"].data})
         dTdzfull[Zdim].attrs["axis"] = "Z"
 
-    for idx, (l, r) in enumerate(zip(lefts, rights)):
+    for idx, (l, r) in enumerate(zip(lefts, rights)):  # noqa
         seg = profile.cf.sel(Z=slice(l, r))
 
         if seg.sizes[Zdim] == 1:

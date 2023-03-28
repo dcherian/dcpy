@@ -3,7 +3,8 @@
 # TODO: save all handles + check for mappables
 # TODO: save colorbar / colormap params e.g. extend for drawing colorbars
 # TODO: add facetgrid.set_defaults('lines') or 'contours'?
-# TODO: add 'col' and 'row' kwargs to map_row, map_col to apply to single column or row respectively
+# TODO: add 'col' and 'row' kwargs to map_row,
+#       map_col to apply to single column or row respectively
 # TODO: add axes_dict
 
 import functools
@@ -47,7 +48,6 @@ class facetgrid:
         gridspec_kw=dict(),
         plot_kwargs=dict(),
     ):
-
         try:
             self.nrows = len(row)
         except TypeError:
@@ -138,7 +138,6 @@ class facetgrid:
     def map_col(
         self, col_name, data, func=None, x=None, y=None, defaults=True, **kwargs
     ):
-
         if defaults:
             x, y = self._parse_x_y(x, y)
 
@@ -177,7 +176,6 @@ class facetgrid:
     def map_row(
         self, row_name, data, func=None, x=None, y=None, defaults=True, **kwargs
     ):
-
         if x is None or y is None:
             if defaults:
                 x, y = self._parse_x_y(x, y)
@@ -295,7 +293,6 @@ class facetgrid:
         self.set_ylabels(ylabel)
 
     def set_row_labels(self, row_names=None, template="{value}", maxchar=30, **kwargs):
-
         row_names = self.row_locs if row_names is None else row_names
 
         kwargs["size"] = kwargs.pop("size", mpl.rcParams["axes.labelsize"])
@@ -318,7 +315,6 @@ class facetgrid:
         return self
 
     def set_col_labels(self, col_names=None, template="{value}", maxchar=30, **kwargs):
-
         import matplotlib as mpl
 
         col_names = self.col_locs if col_names is None else col_names
@@ -335,7 +331,6 @@ class facetgrid:
         return self
 
     def clean_ticklabels(self, row=None, col=None):
-
         for cc in col:
             if cc not in self.col_axes:
                 raise ValueError(f"Column {cc} not found in col_axes.")

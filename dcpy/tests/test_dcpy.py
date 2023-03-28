@@ -8,7 +8,6 @@ from ..oceans import calc_wind_input
 
 
 def test_xfilter():
-
     time = np.arange(500)
     da = xr.DataArray(np.random.randn(500), dims=["time"], coords=[time])
 

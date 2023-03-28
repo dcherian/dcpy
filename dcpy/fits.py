@@ -1,5 +1,7 @@
-def fit(curve, x, y, weights=None, doplot=False, **kwargs):
+import xarray as xr
 
+
+def fit(curve, x, y, weights=None, doplot=False, **kwargs):
     if weights is None:
         import numpy as np
 

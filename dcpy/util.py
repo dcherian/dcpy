@@ -167,7 +167,6 @@ def datenum2datetime(matlab_datenum):
 
 
 def calc95(input, kind="twosided"):
-
     import numpy as np
 
     input = np.sort(input)
@@ -418,7 +417,6 @@ def index_unindexed_dims(obj):
 
 
 def avg1(da, dim):
-
     return da.isel({dim: slice(-1)}).copy(
         data=(
             da.isel({dim: slice(-1)}).data

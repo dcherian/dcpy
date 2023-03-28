@@ -296,7 +296,6 @@ def TSplot(
     #     np.logical_or(temp > outlierT[1], temp < outlierT[0]))
 
     if kind == "hexbin":
-
         hexbin_defaults = {"cmap": mpl.cm.Blues, "mincnt": 1}
         if not isinstance(color, str):
             hexbin_defaults["C"] = color
@@ -515,7 +514,6 @@ def read_imerg():
 
 
 def read_aquarius(dirname="/home/deepak/datasets/aquarius/oisss/"):
-
     import cftime
 
     def preprocess(ds):
@@ -536,7 +534,6 @@ def read_aquarius(dirname="/home/deepak/datasets/aquarius/oisss/"):
 
 def read_aquarius_l3(dirname="/home/deepak/datasets/aquarius/L3/combined/"):
     def preprocess(ds):
-
         dsnew = ds.copy()
         dsnew["latitude"] = xr.DataArray(
             np.linspace(90, -90, 180), dims=["phony_dim_0"]
@@ -577,7 +574,6 @@ def read_aquarius_l3(dirname="/home/deepak/datasets/aquarius/L3/combined/"):
 
 
 def read_argo_clim(dirname="~/datasets/argoclim/", chunks=None):
-
     if chunks is None:
         chunks = {"LATITUDE": 20, "LONGITUDE": 60}
 
@@ -718,7 +714,6 @@ def calc_wind_power_input(
 
 
 def read_tropflux():
-
     tx = xr.open_mfdataset(
         "/home/deepak/datasets/tropflux/taux_tropflux_1d_*.nc"
     )  # noqa
@@ -746,7 +741,6 @@ def read_oscar(dirname="/home/deepak/work/datasets/oscar/"):
 
 
 def read_mimoc(dirname="~/datasets/mimoc/", globstr="MIMOC_ML_*", year=2014):
-
     dirname = os.path.expanduser(dirname)
     mimoc = xr.open_mfdataset(
         f"{dirname}/{globstr}.nc",
@@ -793,7 +787,6 @@ def read_oaflux():
 
 
 def read_nio():
-
     nio = xr.open_dataset(
         "~/work/datasets/nio-atlas/"
         + "nioa_climatology_seasonal_temp_salt_monsoon_season.nc",
@@ -837,7 +830,6 @@ def sdif(T):
 
 
 def tcond(S, T, P):
-
     ak0 = 0.565403020 + T * (1.6999346e-3 - T * 5.910632e-6)
     f = 0.0690 - 8e-5 * T - 2.0e-7 * P - 1.0e-4 * S
     tcond = ak0 * (1 + f)
@@ -846,7 +838,6 @@ def tcond(S, T, P):
 
 
 def tdif(S, T, P):
-
     return tcond(S, T, P) / sw.eos80.cp(S, T, P) / sw.eos80.dens(S, T, P)
 
 
@@ -1019,7 +1010,8 @@ def mat_to_tree(mat, coords, verbose=False):
             except KeyError:
                 if verbose:
                     print(
-                        f"Skipping {var} becuase I can't infer a dimension name for array of shape {arr.shape}."
+                        f"Skipping {var} becuase I can't infer a dimension name "
+                        f"for array of shape {arr.shape}."
                         f"I know the following sizes: {shapes!r}"
                     )
                     continue
@@ -1243,7 +1235,8 @@ def thorpesort(field, by, core_dim=None, ascending=True):
     if isinstance(by, str):
         if by in field.coords:
             raise ValueError(
-                f"{by} is in .coords. It will not get sorted. This is probably not what you want!"
+                f"{by} is in .coords. It will not get sorted. "
+                "This is probably not what you want!"
             )
         by = field[by]
     if isinstance(field, xr.Dataset):
@@ -1331,7 +1324,6 @@ def get_mld(dens, N2=None, min_delta_dens=0.015, min_N2=1e-5):
 
 
 def _get_max(var, dim="depth"):
-
     # return((xr.where(var == var.max(dim), var[dim], np.nan))
     #       .max(dim))
 

@@ -37,7 +37,6 @@ from dcpy import eos
 @pytest.mark.parametrize("pt", [True, False])
 @pytest.mark.parametrize("func", ["alpha", "beta"])
 def test_eos(func, S, T, P, pt):
-
     actual = getattr(eos, func)(S, T, P, pt)
     expected = getattr(sw, func)(S, T, P, pt)
 
