@@ -953,19 +953,53 @@ def mat_to_tree(mat, coords, verbose=False):
     structs = [name for name in mat.keys() if "__" not in name]
 
     dt = DataTree()
+    shapes = {}
+    shapes.update(
+        {
+            mat[coord].squeeze().shape[0]: coord
+            for coord in coords
+            if coord in mat.keys()
+        }
+    )
+
+    coords = {coord: mat[coord].squeeze() for coord in coords if coord in mat.keys()}
     for sname in structs:
-        varnames = mat[sname].dtype.names
+        struct = mat[sname]
+        varnames = struct.dtype.names
         if verbose:
             print("-----")
             print(f"Structure {sname}: found variables named {varnames!r}")
 
+        if varnames is None and struct.dtype.kind == "V":
+            struct = struct[0, 0]
+            varnames = struct.dtype.names
+
+        if varnames is None:
+            print("Skipping...")
+            print("---")
+            continue
+
         ds = xr.Dataset()
-        shapes = {mat[sname][coord][0, 0].squeeze().shape[0]: coord for coord in coords}
+        shapes.update(
+            {
+                struct[coord][0, 0].squeeze().shape[0]: coord
+                for coord in coords
+                if coord in varnames
+            }
+        )
+        coords.update(
+            {
+                coord: struct[coord][0, 0].squeeze()
+                for coord in coords
+                if coord in varnames
+            }
+        )
+
         if verbose:
             print(f"Using coordinate vars with shapes: {shapes}")
 
         for var in varnames:
-            arr = mat[sname][var][0, 0]
+            arr = struct[var][0, 0]
 
             if np.issubdtype(arr.dtype, np.str_) or np.issubdtype(arr.dtype, np.object):
                 if verbose:
@@ -980,8 +1014,17 @@ def mat_to_tree(mat, coords, verbose=False):
                 )
                 continue
 
-            dims = [shapes[s] for s in arr.shape if s > 1]
+            try:
+                dims = [shapes[s] for s in arr.shape if s > 1]
+            except KeyError:
+                if verbose:
+                    print(
+                        f"Skipping {var} becuase I can't infer a dimension name for array of shape {arr.shape}."
+                        f"I know the following sizes: {shapes!r}"
+                    )
+                    continue
             ds[var] = (dims, arr.squeeze(), {"coordinates": " ".join(dims)})
+            ds.coords.update({k: v for k, v in coords.items() if k in dims})
         dt[sname] = DataTree(ds)
     return dt
 
