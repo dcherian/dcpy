@@ -1039,7 +1039,6 @@ def fill_between_bounds(
     stairs_kwargs=None,
     title=False,
 ):
-
     if ax is None:
         ax = plt.gca()
 
@@ -1047,11 +1046,13 @@ def fill_between_bounds(
         stairs_kwargs = {}
     stairs_kwargs.setdefault("lw", 1)
 
-    ybounds = ds[ds.cf.bounds[y][0]]
-    bdim = ds.cf.get_bounds_dim_name(y)
+    yda = ds[y]
+    ybounds = ds.cf.get_bounds(y)
+    bdim = (set(ybounds.dims) - set(yda.dims)).pop()
+
     yedges = np.append(ybounds.isel({bdim: 0}).data, ybounds[-1, -1])
 
-    ydata = ds[y].data.copy()
+    ydata = yda.data.copy()
 
     if color is None:
         color = ax._get_patches_for_fill.get_next_color()
@@ -1064,9 +1065,8 @@ def fill_between_bounds(
         ax.set_title(long_name)
 
     if fill:
-        bvar = ds.cf.bounds[var][0]
-        bdim = ds.cf.get_bounds_dim_name(var)
-        bounds = ds[bvar]
+        bounds = ds.cf.get_bounds(var)
+        bdim = (set(bounds.dims) - set(ds._variables[var].dims)).pop()
 
         if axis == "x":
             func = ax.fill_betweenx
