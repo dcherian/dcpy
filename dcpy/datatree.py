@@ -33,7 +33,7 @@ class MyDataTreeAccessor:
         )
 
     def subset_nodes(self, varnames) -> DataTree:
-        return self._tree.map_over_subtree(lambda n: n[varnames])
+        return self._tree.map_over_subtree(lambda n: n.cf[varnames])
 
     def clear_root(self) -> DataTree:
         new = self._tree.copy()
