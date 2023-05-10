@@ -7,6 +7,13 @@ class MyDataTreeAccessor:
     def __init__(self, tree):
         self._tree = tree
 
+    def drop_leaves(self, names):
+        newtree = self._tree.copy()
+        for leaf in newtree.leaves:
+            if leaf.name in names:
+                leaf.orphan()
+        return newtree
+
     def extract_leaf(self, leaf):
         return DataTree.from_dict(
             {node.parent.name: node for node in self._tree.leaves if node.name == leaf}
